@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>roreki - db viewer</title>
+  <link rel="icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .viewer-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.2rem;
+      padding: 2rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    input, select {
+      background: #1a1a1a;
+      color: #e0e0e0;
+      border: 1px solid #444;
+      padding: 0.4rem 0.8rem;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .btn {
+      background: #e0e0e0;
+      color: #0a0a0a;
+      border: none;
+      padding: 0.4rem 1.2rem;
+      font-family: monospace;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .btn:hover { background: #fff; }
+    pre {
+      background: #111;
+      color: #a0e0a0;
+      padding: 1rem;
+      font-size: 0.8rem;
+      max-height: 60vh;
+      overflow: auto;
+      width: 90%;
+      max-width: 800px;
+      box-sizing: border-box;
+      text-align: left;
+      border: 1px solid #333;
+    }
+    .status { color: #888; font-family: monospace; font-size: 0.85rem; }
+    a { color: #888; font-family: monospace; font-size: 0.85rem; text-decoration: none; }
+    a:hover { color: #e0e0e0; }
+  </style>
+</head>
+<body>
+  <div class="viewer-wrap">
+    <h1>roreki <span style="font-size:1rem;opacity:0.5">db viewer</span></h1>
+    <div class="row">
+      <label style="color:#888;font-family:monospace;font-size:0.9rem">collection:</label>
+      <input id="collection" value="map" style="width:120px">
+      <label style="color:#888;font-family:monospace;font-size:0.9rem">doc:</label>
+      <select id="docSelect">
+        <option value="japan">japan</option>
+        <option value="japan_16x16">japan_16x16</option>
+        <option value="japan_backup">japan_backup</option>
+      </select>
+      <button class="btn" id="fetchBtn">取得</button>
+    </div>
+    <div class="status" id="status"></div>
+    <pre id="output">ここに結果が表示されます</pre>
+    <a href="admin.html">← admin</a>
+  </div>
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    const app = initializeApp({
+      apiKey: "AIzaSyCtpHqAY9oXWdQdr-DaGFnJWmIfpHUy0ZA",
+      authDomain: "roreki.firebaseapp.com",
+      projectId: "roreki",
+      storageBucket: "roreki.firebasestorage.app",
+      messagingSenderId: "627587600943",
+      appId: "1:627587600943:web:9d895c71e14eeaa2502cda"
+    });
+
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    onAuthStateChanged(auth, user => {
+      if (!user) location.href = 'login.html';
+    });
+
+    document.getElementById('fetchBtn').addEventListener('click', async () => {
+      const col = document.getElementById('collection').value.trim();
+      const docId = document.getElementById('docSelect').value;
+      const status = document.getElementById('status');
+      const output = document.getElementById('output');
+
+      status.textContent = '取得中...';
+      try {
+        const snap = await getDoc(doc(db, col, docId));
+        if (!snap.exists()) {
+          status.textContent = 'ドキュメントが見つかりません';
+          output.textContent = '';
+          return;
+        }
+        const data = snap.data();
+        // gridは長いので先頭だけ表示
+        const display = { ...data };
+        if (display.grid && display.grid.length > 64) {
+          display.grid = [...display.grid.slice(0, 64), `...(${display.grid.length}件)`];
+        }
+        output.textContent = JSON.stringify(display, null, 2);
+        status.textContent = `取得完了 (${Object.keys(data).length} fields)`;
+      } catch (e) {
+        status.textContent = 'エラー: ' + e.message;
+      }
+    });
+  </script>
+</body>
+</html>
