@@ -3,11 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ROREKI</title>
+  <title>roreki</title>
   <link rel="icon" href="favicon.ico">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>ROREKI</h1>
+  <h1>roreki</h1>
+  <table id="grid"></table>
+  <script>
+    const table = document.getElementById('grid');
+    for (let r = 0; r < 16; r++) {
+      const tr = document.createElement('tr');
+      for (let c = 0; c < 16; c++) {
+        const td = document.createElement('td');
+        td.dataset.r = r;
+        td.dataset.c = c;
+        tr.appendChild(td);
+      }
+      table.appendChild(tr);
+    }
+  </script>
 </body>
 </html>
