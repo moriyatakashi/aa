@@ -6,54 +6,12 @@
   <title>roreki - login</title>
   <link rel="icon" href="favicon.ico">
   <link rel="stylesheet" href="style.css">
-  <style>
-    .login-box {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
-    }
-    .login-btn {
-      background: #e0e0e0;
-      color: #0a0a0a;
-      border: none;
-      padding: 0.75rem 2rem;
-      font-family: monospace;
-      font-size: 1rem;
-      cursor: pointer;
-      letter-spacing: 0.1em;
-    }
-    .login-btn:hover { background: #fff; }
-  </style>
 </head>
 <body>
   <div class="login-box">
     <h1>roreki</h1>
     <button class="login-btn" id="loginBtn">Googleでログイン</button>
   </div>
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-
-    const app = initializeApp({
-      apiKey: "AIzaSyCtpHqAY9oXWdQdr-DaGFnJWmIfpHUy0ZA",
-      authDomain: "roreki.firebaseapp.com",
-      projectId: "roreki",
-      storageBucket: "roreki.firebasestorage.app",
-      messagingSenderId: "627587600943",
-      appId: "1:627587600943:web:9d895c71e14eeaa2502cda"
-    });
-
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-
-    onAuthStateChanged(auth, user => {
-      if (user) location.href = 'admin.html';
-    });
-
-    document.getElementById('loginBtn').addEventListener('click', () => {
-      signInWithPopup(auth, provider).catch(console.error);
-    });
-  </script>
+  <script type="module" src="login.js"></script>
 </body>
 </html>

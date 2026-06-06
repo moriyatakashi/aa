@@ -1,0 +1,78 @@
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyCtpHqAY9oXWdQdr-DaGFnJWmIfpHUy0ZA",
+  authDomain: "roreki.firebaseapp.com",
+  projectId: "roreki",
+  storageBucket: "roreki.firebasestorage.app",
+  messagingSenderId: "627587600943",
+  appId: "1:627587600943:web:9d895c71e14eeaa2502cda"
+});
+
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+onAuthStateChanged(auth, user => {
+  if (!user) location.href = 'login.html';
+});
+
+let currentGrid = [];
+let currentColors = {};
+let selectedColor = '0';
+const COLS = 16;
+
+const status = document.getElementById('status');
+
+// Firestoreからロード
+const snap = await getDoc(doc(db, 'map', 'japan'));
+const data = snap.data();
+currentGrid = [...data.grid];
+currentColors = data.colors;
+
+// カラーパレット
+const picker = document.getElementById('colorPicker');
+Object.entries(currentColors).forEach(([key, color]) => {
+  const sw = document.createElement('div');
+  sw.className = 'swatch' + (key === '0' ? ' selected' : '');
+  sw.style.background = color || '#0a0a0a';
+  sw.style.border = key === '0' ? '2px solid #fff' : '2px solid #444';
+  sw.title = data.labels?.[key] || (key === '0' ? '海' : key);
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.swatch').forEach(s => s.style.border = '2px solid #444');
+    sw.style.border = '2px solid #fff';
+    selectedColor = key;
+  });
+  picker.appendChild(sw);
+});
+
+// グリッド描画
+const table = document.getElementById('grid');
+for (let r = 0; r < COLS; r++) {
+  const tr = document.createElement('tr');
+  for (let c = 0; c < COLS; c++) {
+    const td = document.createElement('td');
+    const idx = r * COLS + c;
+    const cell = currentGrid[idx];
+    if (currentColors[cell]) td.style.background = currentColors[cell];
+    td.addEventListener('click', () => {
+      currentGrid[idx] = parseInt(selectedColor);
+      td.style.background = currentColors[selectedColor] || '#0a0a0a';
+    });
+    tr.appendChild(td);
+  }
+  table.appendChild(tr);
+}
+
+// 保存
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  status.textContent = '保存中...';
+  await setDoc(doc(db, 'map', 'japan'), { ...data, grid: currentGrid });
+  status.textContent = '保存しました！';
+});
+
+// ログアウト
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  signOut(auth).then(() => location.href = 'login.html');
+});
