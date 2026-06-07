@@ -39,19 +39,40 @@
       cursor: pointer;
     }
     .btn:hover { background: #fff; }
+    .output-wrap {
+      position: relative;
+      width: 90%;
+      max-width: 800px;
+    }
     pre {
       background: #111;
       color: #a0e0a0;
       padding: 1rem;
+      padding-top: 2.5rem;
       font-size: 0.8rem;
       max-height: 60vh;
       overflow: auto;
-      width: 90%;
-      max-width: 800px;
+      width: 100%;
       box-sizing: border-box;
       text-align: left;
       border: 1px solid #333;
+      margin: 0;
     }
+    .copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: transparent;
+      border: 1px solid #444;
+      color: #888;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.85rem;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+    .copy-btn:hover { color: #e0e0e0; border-color: #888; }
+    .copy-btn.copied { color: #a0e0a0; border-color: #a0e0a0; }
     .status { color: #888; font-family: monospace; font-size: 0.85rem; }
     a { color: #888; font-family: monospace; font-size: 0.85rem; text-decoration: none; }
     a:hover { color: #e0e0e0; }
@@ -72,7 +93,10 @@
       <button class="btn" id="fetchBtn">取得</button>
     </div>
     <div class="status" id="status"></div>
-    <pre id="output">ここに結果が表示されます</pre>
+    <div class="output-wrap">
+      <button class="copy-btn" id="copyBtn" title="コピー">📋</button>
+      <pre id="output">ここに結果が表示されます</pre>
+    </div>
     <a href="admin.html">← admin</a>
   </div>
   <script type="module">
@@ -91,6 +115,7 @@
 
     const auth = getAuth(app);
     const db = getFirestore(app);
+    let fullData = null;
 
     onAuthStateChanged(auth, user => {
       if (!user) location.href = 'login.html';
@@ -103,6 +128,7 @@
       const output = document.getElementById('output');
 
       status.textContent = '取得中...';
+      fullData = null;
       try {
         const snap = await getDoc(doc(db, col, docId));
         if (!snap.exists()) {
@@ -110,17 +136,29 @@
           output.textContent = '';
           return;
         }
-        const data = snap.data();
-        // gridは長いので先頭だけ表示
-        const display = { ...data };
+        fullData = snap.data();
+        const display = { ...fullData };
         if (display.grid && display.grid.length > 64) {
           display.grid = [...display.grid.slice(0, 64), `...(${display.grid.length}件)`];
         }
         output.textContent = JSON.stringify(display, null, 2);
-        status.textContent = `取得完了 (${Object.keys(data).length} fields)`;
+        status.textContent = `取得完了 (${Object.keys(fullData).length} fields)`;
       } catch (e) {
         status.textContent = 'エラー: ' + e.message;
       }
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', () => {
+      const btn = document.getElementById('copyBtn');
+      const text = fullData ? JSON.stringify(fullData) : document.getElementById('output').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✅';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = '📋';
+          btn.classList.remove('copied');
+        }, 1500);
+      });
     });
   </script>
 </body>
