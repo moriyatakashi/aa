@@ -1,27 +1,38 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>n1</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>n1 / 記録一覧</title>
+<style>
+  body { font-family: sans-serif; max-width: 640px; margin: 0 auto; padding: 16px; }
+  .day-card { border: 1px solid #ccc; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; }
+  .day-date { font-weight: bold; }
+  .row { font-size: 0.9rem; margin: 4px 0; color: #333; }
+  .empty { color: #888; text-align: center; padding: 30px 0; }
+</style>
 </head>
 <body>
   <p><a href="../">← 戻る</a></p>
-  <h1>n1</h1>
+  <h1>n1 / 記録一覧</h1>
 
-  <section>
-    <h2>scores</h2>
-    <p>
-      <button data-dataset="empty">0件</button>
-      <button data-dataset="one">1件</button>
-      <button data-dataset="three">3件</button>
-    </p>
-    <p id="scores-summary"></p>
-    <ul id="scores-list"></ul>
-  </section>
+  <div id="login-gate">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div id="g_id_onload"
+      data-client_id="550466095352-50h92anfullp137l4gq4gdi7ogjk0auc.apps.googleusercontent.com"
+      data-callback="handleCredentialResponse">
+    </div>
+    <div class="g_id_signin"></div>
+    <p id="status">未ログイン(ログインすると記録一覧が表示されます)</p>
+  </div>
 
-  <p>更新: 2026-07-07 05:10</p>
+  <div id="content" style="display:none;">
+    <p id="loadStatus">読み込み中...</p>
+    <div id="list"></div>
+    <p class="empty" id="emptyMsg" style="display:none;">記録はまだありません</p>
+  </div>
 
-  <script type="module" src="render.js"></script>
+  <script src="auth.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

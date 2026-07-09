@@ -1,3 +1,4 @@
 User-agent: *
 Disallow: /bell/
 Disallow: /boltz/
+Disallow: /n1/
