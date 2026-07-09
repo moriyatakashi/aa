@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>n3 — NES Emulator</title>
+<style>
+  :root {
+    --bg: #1a1a2e; --panel: #16213e; --border: #0f3460;
+    --text: #e0e0e0; --text-soft: #888; --accent: #4a7c59;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 16px; gap: 10px; min-height: 100vh;
+  }
+  h1 { font-size: 1rem; font-weight: 600; }
+  .updated { font-size: 0.68rem; color: var(--text-soft); }
+  .status  { font-size: 0.72rem; color: var(--text-soft); min-height: 16px; }
+  canvas {
+    display: block; image-rendering: pixelated;
+    border: 2px solid var(--border); border-radius: 4px;
+    width: min(512px, calc(100vw - 32px)); aspect-ratio: 256/240; height: auto;
+  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  button {
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); border-radius: 6px; padding: 6px 14px;
+    font-size: 0.8rem; cursor: pointer; transition: border-color .15s;
+  }
+  button:hover { border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: default; }
+  .keys { font-size: 0.65rem; color: var(--text-soft); text-align: center; line-height: 1.7; }
+  a.back { font-size: 0.72rem; color: var(--text-soft); text-decoration: none; }
+  a.back:hover { color: var(--text); }
+
+  /* エラー表示（コピー用コードブロック） */
+  .error-box {
+    display: none; width: 100%; max-width: 512px;
+    background: #2a1414; border: 1px solid #7a2c2c; border-radius: 8px;
+    padding: 10px 12px; margin-top: 4px;
+  }
+  .error-box.show { display: block; }
+  .error-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .error-title { font-size: 0.75rem; font-weight: 600; color: #f48771; }
+  .btn-copy-err {
+    cursor: pointer; border: 1px solid #f48771; border-radius: 6px;
+    font-size: 0.7rem; padding: 3px 10px; background: transparent;
+    color: #f48771; font-weight: 600;
+  }
+  .btn-copy-err:hover { background: #f48771; color: #2a1414; }
+  .btn-copy-err.copied { background: #4caf50; border-color: #4caf50; color: #fff; }
+  pre.error-text {
+    margin: 0; font-family: monospace; font-size: 0.72rem; line-height: 1.5;
+    color: #f0c0c0; overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+    max-height: 200px; overflow-y: auto;
+  }
+
+  /* タッチ操作用ボタン */
+  .pad-area {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; max-width: 340px; margin-top: 6px;
+    user-select: none; -webkit-user-select: none;
+  }
+  .pad-btn {
+    touch-action: none; -webkit-touch-callout: none;
+    user-select: none; -webkit-user-select: none;
+  }
+  .pad-btn:active, .pad-btn.pressed {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+  }
+  .dpad {
+    display: grid; grid-template-columns: 44px 44px 44px;
+    grid-template-rows: 44px 44px 44px;
+    gap: 2px;
+  }
+  .dpad button { font-size: 1rem; padding: 0; }
+  .dpad-up    { grid-column: 2; grid-row: 1; }
+  .dpad-left  { grid-column: 1; grid-row: 2; }
+  .dpad-right { grid-column: 3; grid-row: 2; }
+  .dpad-down  { grid-column: 2; grid-row: 3; }
+  .ab-buttons {
+    display: flex; gap: 10px; align-items: center;
+  }
+  .ab-buttons button {
+    width: 56px; height: 56px; border-radius: 50%;
+    font-size: 0.95rem; font-weight: 700;
+  }
+  .start-select {
+    display: flex; gap: 8px; justify-content: center; margin-top: 4px;
+  }
+  .start-select button { font-size: 0.68rem; padding: 6px 12px; border-radius: 12px; }
+</style>
+</head>
+<body>
+<a class="back" href="../">← 戻る</a>
+<h1>n3 — NES Emulator</h1>
+<p class="updated">更新: 2026-07-05 08:23 JST</p>
+<p class="status" id="status">ROM を選択してください</p>
+
+<canvas id="screen" width="256" height="240"></canvas>
+<audio id="iosUnlock" loop playsinline style="display:none"
+  src="data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACBgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA"></audio>
+
+<div class="row" style="align-items:center;gap:6px;">
+  <label style="font-size:0.7rem;color:var(--text-soft);">🔊 音量</label>
+  <input type="range" id="volSlider" min="0" max="6" step="0.5" value="3" style="width:120px;">
+  <button id="btnTestSound" style="font-size:0.7rem;padding:4px 10px;">テスト音</button>
+</div>
+
+<div class="row">
+  <button id="btnFile">📂 ROM を開く</button>
+  <button id="btnStop" disabled>■ 停止</button>
+</div>
+<input type="file" id="fileInput" accept=".nes" style="display:none">
+
+<div class="row">
+  <button class="rom-btn" data-rom="rom/hello_nes4.nes">hello_nes4</button>
+  <button class="rom-btn" data-rom="rom/megaari.nes">megaari</button>
+  <button class="rom-btn" data-rom="rom/nittori.nes">nittori</button>
+  <button class="rom-btn" data-rom="rom/bad_apple_2_5.nes">bad_apple</button>
+</div>
+
+<div class="pad-area">
+  <div class="dpad">
+    <button class="pad-btn dpad-up" data-idx="4">▲</button>
+    <button class="pad-btn dpad-left" data-idx="6">◀</button>
+    <button class="pad-btn dpad-right" data-idx="7">▶</button>
+    <button class="pad-btn dpad-down" data-idx="5">▼</button>
+  </div>
+  <div class="ab-buttons">
+    <button class="pad-btn" data-idx="1">B</button>
+    <button class="pad-btn" data-idx="0">A</button>
+  </div>
+</div>
+<div class="start-select">
+  <button class="pad-btn" data-idx="2">SELECT</button>
+  <button class="pad-btn" data-idx="3">START</button>
+</div>
+
+<div class="keys">
+  Z = A &nbsp;/&nbsp; X = B &nbsp;/&nbsp; Enter = Start &nbsp;/&nbsp; Shift = Select<br>
+  矢印キー = 十字キー &nbsp;/&nbsp; スマホは上のボタンをタップ
+</div>
+
+<div class="error-box" id="errorBox">
+  <div class="error-header">
+    <span class="error-title">⚠ エラー内容（コピーしてClaudeに貼り付け可）</span>
+    <button class="btn-copy-err" id="btnCopyError">📋 コピー</button>
+  </div>
+  <pre class="error-text"><code id="errorText"></code></pre>
+</div>
+
+<script>
+// ─── NES 2C02 パレット（64色、RGB フラット配列） ───────────────────────────
+const NES_PAL = new Uint8Array([
+  84,84,84,   0,30,116,  8,16,144, 48,0,136,  68,0,100,  92,0,48,   84,4,0,   60,24,0,
+  32,42,0,    8,58,0,    0,64,0,   0,60,0,    0,50,60,   0,0,0,     0,0,0,    0,0,0,
+  152,150,152,8,76,196,  48,50,236,92,30,228, 136,20,176,160,20,100,152,34,32,120,60,0,
+  84,90,0,    40,114,0,  8,124,0,  0,118,40,  0,102,120, 0,0,0,     0,0,0,    0,0,0,
+  236,238,236,76,154,236,120,124,236,176,98,236,228,84,236,236,88,180,236,106,100,212,136,32,
+  160,170,0,  116,196,0, 76,208,32,56,204,108,56,180,204,60,60,60,  0,0,0,    0,0,0,
+  236,238,236,168,204,236,188,188,236,212,178,236,236,174,236,236,174,212,236,180,176,228,196,144,
+  204,210,120,180,222,120,168,226,144,152,226,180,160,214,228,160,162,160,0,0,0,0,0,0,
+]);
+
+// ─── iNES ROM パーサー ────────────────────────────────────────────────────
+class NESRom {
+  constructor(buf) {
+    const d = new Uint8Array(buf);
+    if (d[0]!==0x4E||d[1]!==0x45||d[2]!==0x53||d[3]!==0x1A)
+      throw new Error('iNES magic bytes not found');
+    const f6=d[6], f7=d[7];
+    this.mapper = (f7&0xF0)|(f6>>4);
+    this.mirrorVertical = !!(f6&1);
+    const offset = 16 + (f6&4 ? 512 : 0);
+    const prgSz = d[4]*16*1024, chrSz = d[5]*8*1024;
+    this.prgRom = d.slice(offset, offset+prgSz);
+    this.chrRom = d.slice(offset+prgSz, offset+prgSz+chrSz);
+    this.chrRam = chrSz===0 ? new Uint8Array(0x2000) : null; // CHR-RAM
+  }
+}
+
+// ─── 6502 ステータスフラグ ────────────────────────────────────────────────
+const FN=0x80,FV=0x40,FU=0x20,FB=0x10,FD=0x08,FI=0x04,FZ=0x02,FC=0x01;
+
+// ─── APU (2A03) ── Pulse×2 / Triangle / Noise（DMCは未実装） ──────────────
+const LEN_TABLE=[10,254,20,2,40,4,80,6,160,8,60,10,14,12,26,14,12,16,24,18,48,20,96,22,192,24,72,26,16,28,32,30];
+const NOISE_PERIOD=[4,8,16,32,64,96,128,160,202,254,380,508,762,1016,1524,2034];
+const DUTY_SEQ=[[0,1,0,0,0,0,0,0],[0,1,1,0,0,0,0,0],[0,1,1,1,1,0,0,0],[1,0,0,1,1,1,1,1]];
+const TRI_SEQ=[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+
+class APU{
+  constructor(){
+    this.p1=this._newPulse(); this.p2=this._newPulse();
+    this.tri={timer:0,period:0,linearCounter:0,linearReload:0,linearReloadFlag:false,ctrlHalt:false,lengthCounter:0,seq:0,enabled:false};
+    this.noise={timer:0,period:NOISE_PERIOD[0],shift:1,mode:false,volume:0,constVol:true,decay:0,envStart:false,envDivider:0,envLoop:false,lengthHalt:false,lengthCounter:0,enabled:false};
+    this.frameCyc=0; this.frameStep=0; this.mode5=false; this.irqInhibit=true; this.frameIRQ=false;
+    this.cpuCycleAcc=0;
+  }
+  _newPulse(){
+    return {duty:0,dutyPos:0,timer:0,period:0,volume:0,constVol:true,decay:0,envStart:false,envDivider:0,envLoop:false,
+      lengthHalt:false,lengthCounter:0,sweepEnabled:false,sweepPeriod:0,sweepNegate:false,sweepShift:0,sweepReload:false,sweepDivider:0,enabled:false};
+  }
+  writeReg(addr,v){
+    if(addr<=0x4003) this._writePulse(this.p1,addr&3,v,false);
+    else if(addr<=0x4007) this._writePulse(this.p2,addr&3,v,true);
+    else if(addr<=0x400B) this._writeTriangle(addr&3,v);
+    else if(addr<=0x400F) this._writeNoise(addr&3,v);
+  }
+  _writePulse(p,reg,v,isP2){
+    p._isP2=isP2;
+    if(reg===0){
+      p.duty=(v>>6)&3; p.lengthHalt=(v&0x20)!==0; p.envLoop=p.lengthHalt;
+      p.constVol=(v&0x10)!==0; p.volume=v&0xF;
+    }else if(reg===1){
+      p.sweepEnabled=(v&0x80)!==0; p.sweepPeriod=(v>>4)&7; p.sweepNegate=(v&8)!==0; p.sweepShift=v&7; p.sweepReload=true;
+    }else if(reg===2){
+      p.period=(p.period&0x700)|v;
+    }else if(reg===3){
+      p.period=(p.period&0xFF)|((v&7)<<8);
+      if(p.enabled) p.lengthCounter=LEN_TABLE[v>>3];
+      p.dutyPos=0; p.envStart=true;
+    }
+  }
+  _writeTriangle(reg,v){
+    const t=this.tri;
+    if(reg===0){ t.ctrlHalt=(v&0x80)!==0; t.linearReload=v&0x7F; }
+    else if(reg===2){ t.period=(t.period&0x700)|v; }
+    else if(reg===3){ t.period=(t.period&0xFF)|((v&7)<<8); t.linearReloadFlag=true; if(t.enabled) t.lengthCounter=LEN_TABLE[v>>3]; }
+  }
+  _writeNoise(reg,v){
+    const n=this.noise;
+    if(reg===0){ n.lengthHalt=(v&0x20)!==0; n.envLoop=n.lengthHalt; n.constVol=(v&0x10)!==0; n.volume=v&0xF; }
+    else if(reg===2){ n.mode=(v&0x80)!==0; n.period=NOISE_PERIOD[v&0xF]; }
+    else if(reg===3){ if(n.enabled) n.lengthCounter=LEN_TABLE[v>>3]; n.envStart=true; }
+  }
+  writeStatus(v){
+    this.p1.enabled=(v&1)!==0; if(!this.p1.enabled) this.p1.lengthCounter=0;
+    this.p2.enabled=(v&2)!==0; if(!this.p2.enabled) this.p2.lengthCounter=0;
+    this.tri.enabled=(v&4)!==0; if(!this.tri.enabled) this.tri.lengthCounter=0;
+    this.noise.enabled=(v&8)!==0; if(!this.noise.enabled) this.noise.lengthCounter=0;
+    // DMC(bit4)は未実装
+  }
+  readStatus(){
+    let v=0;
+    if(this.p1.lengthCounter>0) v|=1;
+    if(this.p2.lengthCounter>0) v|=2;
+    if(this.tri.lengthCounter>0) v|=4;
+    if(this.noise.lengthCounter>0) v|=8;
+    if(this.frameIRQ) v|=0x40;
+    this.frameIRQ=false;
+    return v;
+  }
+  writeFrameCounter(v){
+    this.mode5=(v&0x80)!==0; this.irqInhibit=(v&0x40)!==0;
+    this.frameCyc=0; this.frameStep=0;
+    if(this.irqInhibit) this.frameIRQ=false;
+    if(this.mode5){ this._quarterFrame(); this._halfFrame(); }
+  }
+  _quarterFrame(){
+    for(const p of [this.p1,this.p2]){
+      if(p.envStart){ p.envStart=false; p.decay=15; p.envDivider=p.volume; }
+      else if(p.envDivider>0){ p.envDivider--; }
+      else{ p.envDivider=p.volume; if(p.decay>0) p.decay--; else if(p.envLoop) p.decay=15; }
+    }
+    const n=this.noise;
+    if(n.envStart){ n.envStart=false; n.decay=15; n.envDivider=n.volume; }
+    else if(n.envDivider>0){ n.envDivider--; }
+    else{ n.envDivider=n.volume; if(n.decay>0) n.decay--; else if(n.envLoop) n.decay=15; }
+    const t=this.tri;
+    if(t.linearReloadFlag) t.linearCounter=t.linearReload;
+    else if(t.linearCounter>0) t.linearCounter--;
+    if(!t.ctrlHalt) t.linearReloadFlag=false;
+  }
+  _halfFrame(){
+    for(const p of [this.p1,this.p2]){
+      if(!p.lengthHalt && p.lengthCounter>0) p.lengthCounter--;
+      if(p.sweepDivider===0 && p.sweepEnabled && p.sweepShift>0 && p.period>=8){
+        const delta=p.period>>p.sweepShift;
+        const target=p.sweepNegate?(p.period-delta-(p._isP2?0:1)):(p.period+delta);
+        if(target<=0x7FF) p.period=Math.max(0,target);
+      }
+      if(p.sweepDivider===0 || p.sweepReload){ p.sweepDivider=p.sweepPeriod; p.sweepReload=false; }
+      else p.sweepDivider--;
+    }
+    if(!this.tri.ctrlHalt && this.tri.lengthCounter>0) this.tri.lengthCounter--;
+    if(!this.noise.lengthHalt && this.noise.lengthCounter>0) this.noise.lengthCounter--;
+  }
+  step(cpuCycles){
+    this.frameCyc+=cpuCycles;
+    const steps=this.mode5?[7457,14913,22371,29829,37281]:[7457,14913,22371,29829];
+    let guard=0;
+    while(this.frameStep<steps.length && this.frameCyc>=steps[this.frameStep] && guard++<8){
+      const isLast=this.frameStep===steps.length-1;
+      if(this.mode5){
+        if(this.frameStep!==3){ this._quarterFrame(); if(this.frameStep===1||isLast) this._halfFrame(); }
+      }else{
+        this._quarterFrame();
+        if(this.frameStep===1||isLast) this._halfFrame();
+        if(isLast && !this.irqInhibit) this.frameIRQ=true;
+      }
+      this.frameStep++;
+      if(isLast){ this.frameCyc-=steps[steps.length-1]; this.frameStep=0; }
+    }
+    for(let i=0;i<cpuCycles;i++){
+      this.cpuCycleAcc^=1;
+      if(this.cpuCycleAcc===0){ this._clockPulse(this.p1); this._clockPulse(this.p2); this._clockNoise(); }
+      this._clockTriangle();
+    }
+  }
+  _clockPulse(p){ if(p.timer===0){ p.timer=p.period; p.dutyPos=(p.dutyPos+1)&7; } else p.timer--; }
+  _clockTriangle(){
+    const t=this.tri;
+    if(t.timer===0){ t.timer=t.period; if(t.lengthCounter>0 && t.linearCounter>0) t.seq=(t.seq+1)&31; }
+    else t.timer--;
+  }
+  _clockNoise(){
+    const n=this.noise;
+    if(n.timer===0){
+      n.timer=n.period;
+      const bit=n.mode?((n.shift>>6)&1):((n.shift>>1)&1);
+      const fb=(n.shift&1)^bit;
+      n.shift=(n.shift>>1)|(fb<<14);
+    }else n.timer--;
+  }
+  _pulseOut(p){
+    if(!p.enabled||p.lengthCounter===0||p.period<8) return 0;
+    if(!DUTY_SEQ[p.duty][p.dutyPos]) return 0;
+    return p.constVol?p.volume:p.decay;
+  }
+  _triOut(){
+    const t=this.tri;
+    if(!t.enabled||t.lengthCounter===0) return 0;
+    return TRI_SEQ[t.seq];
+  }
+  _noiseOut(){
+    const n=this.noise;
+    if(!n.enabled||n.lengthCounter===0) return 0;
+    if(n.shift&1) return 0;
+    return n.constVol?n.volume:n.decay;
+  }
+  sample(){
+    const p1=this._pulseOut(this.p1), p2=this._pulseOut(this.p2);
+    const tri=this._triOut(), noise=this._noiseOut();
+    const pulseOut=(p1+p2)===0?0:95.88/((8128/(p1+p2))+100);
+    const tndOut=(tri===0&&noise===0)?0:159.79/(1/((tri/8227)+(noise/12241))+100);
+    return pulseOut+tndOut;
+  }
+}
+
+// ─── 6502 CPU ─────────────────────────────────────────────────────────────
+class CPU {
+  constructor(rom) {
+    this.rom=rom; this.ppu=null;
+    this.A=0; this.X=0; this.Y=0; this.S=0xFD; this.P=0x24; this.PC=0;
+    this.cyc=7;
+    this.ram=new Uint8Array(0x800);
+    this.prgRam=new Uint8Array(0x2000);
+    this.joy1=new Uint8Array(8); this.joy1Strobe=false; this.joy1Idx=0;
+    this.apu=new APU();
+    this.mapper=null;
+    if (rom.mapper===4) {
+      this.mapper=new Mapper4(rom);
+    } else if (rom.mapper!==0) {
+      throw new Error(`未対応 Mapper: ${rom.mapper}`);
+    } else {
+      const p=rom.prgRom;
+      this.prg=p.length===16*1024 ? new Uint8Array([...p,...p]) : p;
+    }
+    this._znTab=new Uint8Array(256);
+    this._znTab[0]=FZ;
+    for(let i=1;i<256;i++) this._znTab[i]=i&FN;
+    this._tbl={};
+    this._buildTable();
+    this.PC=this.get16(0xFFFC);
+  }
+
+  get(addr) {
+    addr&=0xFFFF;
+    if(addr<0x2000) return this.ram[addr&0x7FF];
+    if(addr<0x4000) return this.ppu?this.ppu.readReg(addr&7):0;
+    if(addr===0x4015) return this.apu.readStatus();
+    if(addr===0x4016){
+      if(this.joy1Idx>=8) return 1;
+      const v=this.joy1[this.joy1Idx];
+      if(!this.joy1Strobe) this.joy1Idx++;
+      return v;
+    }
+    if(addr>=0x6000&&addr<0x8000) return this.prgRam[addr-0x6000];
+    if(addr>=0x8000) return this.mapper?this.mapper.cpuRead(addr):this.prg[addr-0x8000];
+    return 0;
+  }
+
+  set(addr,val) {
+    addr&=0xFFFF; val&=0xFF;
+    if(addr<0x2000){this.ram[addr&0x7FF]=val;return;}
+    if(addr<0x4000){if(this.ppu)this.ppu.writeReg(addr&7,val);return;}
+    if(addr<=0x4013){this.apu.writeReg(addr,val);return;}
+    if(addr===0x4014){
+      const base=val<<8;
+      for(let i=0;i<256;i++) if(this.ppu) this.ppu.oam[(this.ppu.oamAddr+i)&0xFF]=this.get(base+i);
+      this.cyc+=513; return;
+    }
+    if(addr===0x4015){this.apu.writeStatus(val);return;}
+    if(addr===0x4016){this.joy1Strobe=(val&1)===1;if(this.joy1Strobe)this.joy1Idx=0;return;}
+    if(addr===0x4017){this.apu.writeFrameCounter(val);return;}
+    if(addr>=0x6000&&addr<0x8000){this.prgRam[addr-0x6000]=val;return;}
+    if(addr>=0x8000&&this.mapper) this.mapper.cpuWrite(addr,val);
+  }
+
+  get16(a){return this.get(a)|(this.get(a+1)<<8);}
+  push(v){this.ram[0x100+this.S]=v&0xFF;this.S=(this.S-1)&0xFF;}
+  pop(){this.S=(this.S+1)&0xFF;return this.ram[0x100+this.S];}
+
+  // アドレッシングモード
+  aImm(){return this.PC++;}
+  aZp(){return this.get(this.PC++);}
+  aZpX(){return(this.aZp()+this.X)&0xFF;}
+  aZpY(){return(this.aZp()+this.Y)&0xFF;}
+  aAbs(){const a=this.get16(this.PC);this.PC+=2;return a;}
+  aAbsX(chk=true){const b=this.aAbs(),a=(b+this.X)&0xFFFF;if(chk&&(a^b)&0x100)this.cyc++;return a;}
+  aAbsY(chk=true){const b=this.aAbs(),a=(b+this.Y)&0xFFFF;if(chk&&(a^b)&0x100)this.cyc++;return a;}
+  aIndX(){const t=(this.aZp()+this.X)&0xFF;return this.get(t)|(this.get((t+1)&0xFF)<<8);}
+  aIndY(chk=true){const t=this.aZp(),b=this.get(t)|(this.get((t+1)&0xFF)<<8);const a=(b+this.Y)&0xFFFF;if(chk&&(a^b)&0x100)this.cyc++;return a;}
+
+  // フラグ共通処理
+  _zn(v){this.P=(this.P&~(FN|FZ))|this._znTab[v&0xFF];}
+  _cmp(r,a){const m=this.get(a),x=(r-m)&0xFF;this.P=(this.P&~(FN|FZ|FC))|this._znTab[x]|(r>=m?FC:0);}
+  _add(d){
+    const c=this.P&FC,t=this.A+d+c;
+    this.P&=0x3C;
+    this.P|=((~(this.A^d)&(this.A^t)&0x80)>>1)&0xFF; // V
+    this.P|=(t>>8)&1;                                   // C
+    this.P|=this._znTab[t&0xFF];
+    this.A=t&0xFF;
+  }
+  _br(cond){
+    const d=this.get(this.PC);
+    if(!cond){this.PC++;return;}
+    const nxt=(this.PC+1)&0xFFFF,s=d>=128?d-256:d;
+    this.PC=(nxt+s)&0xFFFF;
+    this.cyc+=(nxt^this.PC)&0x100?2:1;
+  }
+  _asl(v){this.P=(this.P&~FC)|((v>>7)&1);v=(v<<1)&0xFF;this._zn(v);return v;}
+  _lsr(v){this.P=(this.P&0x7C)|(v&1);v>>=1;this.P|=this._znTab[v];return v;}
+  _rol(v){const c=v>>7;v=((v<<1)&0xFF)|(this.P&FC);this.P=(this.P&0x7C)|c|this._znTab[v];return v;}
+  _ror(v){const c=v&1;v=(v>>1)|((this.P&FC)<<7);this.P=(this.P&0x7C)|c|this._znTab[v];return v;}
+
+  triggerNMI(){
+    this.push(this.PC>>8);this.push(this.PC&0xFF);
+    this.push((this.P&~FB)|FU);
+    this.P|=FI;this.PC=this.get16(0xFFFA);this.cyc+=7;
+  }
+  triggerIRQ(){
+    if(this.P&FI) return;
+    this.push(this.PC>>8);this.push(this.PC&0xFF);
+    this.push((this.P&~FB)|FU);
+    this.P|=FI;this.PC=this.get16(0xFFFE);this.cyc+=7;
+  }
+
+  _buildTable(){
+    const t=this._tbl;
+    // ── ロード/ストア ──
+    const lda=a=>{this.A=this.get(a);this._zn(this.A);};
+    const ldx=a=>{this.X=this.get(a);this._zn(this.X);};
+    const ldy=a=>{this.Y=this.get(a);this._zn(this.Y);};
+    const sta=a=>this.set(a,this.A);
+    const stx=a=>this.set(a,this.X);
+    const sty=a=>this.set(a,this.Y);
+    t[0xA9]=[2,()=>lda(this.aImm())]; t[0xA5]=[3,()=>lda(this.aZp())];
+    t[0xAD]=[4,()=>lda(this.aAbs())]; t[0xB5]=[4,()=>lda(this.aZpX())];
+    t[0xBD]=[4,()=>lda(this.aAbsX())]; t[0xB9]=[4,()=>lda(this.aAbsY())];
+    t[0xA1]=[6,()=>lda(this.aIndX())]; t[0xB1]=[5,()=>lda(this.aIndY())];
+    t[0xA2]=[2,()=>ldx(this.aImm())]; t[0xA6]=[3,()=>ldx(this.aZp())];
+    t[0xAE]=[4,()=>ldx(this.aAbs())]; t[0xB6]=[4,()=>ldx(this.aZpY())];
+    t[0xBE]=[4,()=>ldx(this.aAbsY())];
+    t[0xA0]=[2,()=>ldy(this.aImm())]; t[0xA4]=[3,()=>ldy(this.aZp())];
+    t[0xAC]=[4,()=>ldy(this.aAbs())]; t[0xB4]=[4,()=>ldy(this.aZpX())];
+    t[0xBC]=[4,()=>ldy(this.aAbsX())];
+    t[0x85]=[3,()=>sta(this.aZp())]; t[0x8D]=[4,()=>sta(this.aAbs())];
+    t[0x95]=[4,()=>sta(this.aZpX())]; t[0x9D]=[5,()=>sta(this.aAbsX(false))];
+    t[0x99]=[5,()=>sta(this.aAbsY(false))]; t[0x81]=[6,()=>sta(this.aIndX())];
+    t[0x91]=[6,()=>sta(this.aIndY(false))];
+    t[0x86]=[3,()=>stx(this.aZp())]; t[0x8E]=[4,()=>stx(this.aAbs())]; t[0x96]=[4,()=>stx(this.aZpY())];
+    t[0x84]=[3,()=>sty(this.aZp())]; t[0x8C]=[4,()=>sty(this.aAbs())]; t[0x94]=[4,()=>sty(this.aZpX())];
+
+    // ── 算術・論理 ──
+    const bit=a=>{const x=this.get(a);this.P=(this.P&0x3D)|(this._znTab[x&this.A]&FZ)|(x&0xC0);};
+    const and=a=>{this.A&=this.get(a);this._zn(this.A);};
+    const eor=a=>{this.A^=this.get(a);this._zn(this.A);};
+    const ora=a=>{this.A|=this.get(a);this._zn(this.A);};
+    const adc=a=>this._add(this.get(a));
+    const sbc=a=>this._add((~this.get(a))&0xFF);
+    const inc=a=>{const v=(this.get(a)+1)&0xFF;this._zn(v);this.set(a,v);};
+    const dec=a=>{const v=(this.get(a)-1)&0xFF;this._zn(v);this.set(a,v);};
+    t[0x24]=[3,()=>bit(this.aZp())]; t[0x2C]=[4,()=>bit(this.aAbs())];
+    t[0x29]=[2,()=>and(this.aImm())]; t[0x25]=[3,()=>and(this.aZp())];
+    t[0x2D]=[4,()=>and(this.aAbs())]; t[0x35]=[4,()=>and(this.aZpX())];
+    t[0x3D]=[4,()=>and(this.aAbsX())]; t[0x39]=[4,()=>and(this.aAbsY())];
+    t[0x21]=[6,()=>and(this.aIndX())]; t[0x31]=[5,()=>and(this.aIndY())];
+    t[0x49]=[2,()=>eor(this.aImm())]; t[0x45]=[3,()=>eor(this.aZp())];
+    t[0x4D]=[4,()=>eor(this.aAbs())]; t[0x55]=[4,()=>eor(this.aZpX())];
+    t[0x5D]=[4,()=>eor(this.aAbsX())]; t[0x59]=[4,()=>eor(this.aAbsY())];
+    t[0x41]=[6,()=>eor(this.aIndX())]; t[0x51]=[5,()=>eor(this.aIndY())];
+    t[0x09]=[2,()=>ora(this.aImm())]; t[0x05]=[3,()=>ora(this.aZp())];
+    t[0x0D]=[4,()=>ora(this.aAbs())]; t[0x15]=[4,()=>ora(this.aZpX())];
+    t[0x1D]=[4,()=>ora(this.aAbsX())]; t[0x19]=[4,()=>ora(this.aAbsY())];
+    t[0x01]=[6,()=>ora(this.aIndX())]; t[0x11]=[5,()=>ora(this.aIndY())];
+    t[0xC9]=[2,()=>this._cmp(this.A,this.aImm())]; t[0xC5]=[3,()=>this._cmp(this.A,this.aZp())];
+    t[0xCD]=[4,()=>this._cmp(this.A,this.aAbs())]; t[0xD5]=[4,()=>this._cmp(this.A,this.aZpX())];
+    t[0xDD]=[4,()=>this._cmp(this.A,this.aAbsX())]; t[0xD9]=[4,()=>this._cmp(this.A,this.aAbsY())];
+    t[0xC1]=[6,()=>this._cmp(this.A,this.aIndX())]; t[0xD1]=[5,()=>this._cmp(this.A,this.aIndY())];
+    t[0xE0]=[2,()=>this._cmp(this.X,this.aImm())]; t[0xE4]=[3,()=>this._cmp(this.X,this.aZp())]; t[0xEC]=[4,()=>this._cmp(this.X,this.aAbs())];
+    t[0xC0]=[2,()=>this._cmp(this.Y,this.aImm())]; t[0xC4]=[3,()=>this._cmp(this.Y,this.aZp())]; t[0xCC]=[4,()=>this._cmp(this.Y,this.aAbs())];
+    t[0x69]=[2,()=>adc(this.aImm())]; t[0x65]=[3,()=>adc(this.aZp())];
+    t[0x6D]=[4,()=>adc(this.aAbs())]; t[0x75]=[4,()=>adc(this.aZpX())];
+    t[0x7D]=[4,()=>adc(this.aAbsX())]; t[0x79]=[4,()=>adc(this.aAbsY())];
+    t[0x61]=[6,()=>adc(this.aIndX())]; t[0x71]=[5,()=>adc(this.aIndY())];
+    t[0xE9]=[2,()=>sbc(this.aImm())]; t[0xEB]=[2,()=>sbc(this.aImm())];
+    t[0xE5]=[3,()=>sbc(this.aZp())]; t[0xED]=[4,()=>sbc(this.aAbs())];
+    t[0xF5]=[4,()=>sbc(this.aZpX())]; t[0xFD]=[4,()=>sbc(this.aAbsX())];
+    t[0xF9]=[4,()=>sbc(this.aAbsY())]; t[0xE1]=[6,()=>sbc(this.aIndX())]; t[0xF1]=[5,()=>sbc(this.aIndY())];
+    t[0xE6]=[5,()=>inc(this.aZp())]; t[0xEE]=[6,()=>inc(this.aAbs())];
+    t[0xF6]=[6,()=>inc(this.aZpX())]; t[0xFE]=[7,()=>inc(this.aAbsX(false))];
+    t[0xC6]=[5,()=>dec(this.aZp())]; t[0xCE]=[6,()=>dec(this.aAbs())];
+    t[0xD6]=[6,()=>dec(this.aZpX())]; t[0xDE]=[7,()=>dec(this.aAbsX(false))];
+    t[0xE8]=[2,()=>{this.X=(this.X+1)&0xFF;this._zn(this.X);}];
+    t[0xC8]=[2,()=>{this.Y=(this.Y+1)&0xFF;this._zn(this.Y);}];
+    t[0xCA]=[2,()=>{this.X=(this.X-1)&0xFF;this._zn(this.X);}];
+    t[0x88]=[2,()=>{this.Y=(this.Y-1)&0xFF;this._zn(this.Y);}];
+
+    // ── シフト・ローテート ──
+    const aslM=a=>this.set(a,this._asl(this.get(a)));
+    const lsrM=a=>this.set(a,this._lsr(this.get(a)));
+    const rolM=a=>this.set(a,this._rol(this.get(a)));
+    const rorM=a=>this.set(a,this._ror(this.get(a)));
+    t[0x0A]=[2,()=>{this.A=this._asl(this.A);}];
+    t[0x06]=[5,()=>aslM(this.aZp())]; t[0x0E]=[6,()=>aslM(this.aAbs())];
+    t[0x16]=[6,()=>aslM(this.aZpX())]; t[0x1E]=[7,()=>aslM(this.aAbsX(false))];
+    t[0x4A]=[2,()=>{this.A=this._lsr(this.A);}];
+    t[0x46]=[5,()=>lsrM(this.aZp())]; t[0x4E]=[6,()=>lsrM(this.aAbs())];
+    t[0x56]=[6,()=>lsrM(this.aZpX())]; t[0x5E]=[7,()=>lsrM(this.aAbsX(false))];
+    t[0x2A]=[2,()=>{this.A=this._rol(this.A);}];
+    t[0x26]=[5,()=>rolM(this.aZp())]; t[0x2E]=[6,()=>rolM(this.aAbs())];
+    t[0x36]=[6,()=>rolM(this.aZpX())]; t[0x3E]=[7,()=>rolM(this.aAbsX(false))];
+    t[0x6A]=[2,()=>{this.A=this._ror(this.A);}];
+    t[0x66]=[5,()=>rorM(this.aZp())]; t[0x6E]=[6,()=>rorM(this.aAbs())];
+    t[0x76]=[6,()=>rorM(this.aZpX())]; t[0x7E]=[7,()=>rorM(this.aAbsX(false))];
+
+    // ── 分岐・ジャンプ ──
+    t[0x10]=[2,()=>this._br((this.P&FN)===0)]; t[0x30]=[2,()=>this._br((this.P&FN)!==0)];
+    t[0x50]=[2,()=>this._br((this.P&FV)===0)]; t[0x70]=[2,()=>this._br((this.P&FV)!==0)];
+    t[0x90]=[2,()=>this._br((this.P&FC)===0)]; t[0xB0]=[2,()=>this._br((this.P&FC)!==0)];
+    t[0xD0]=[2,()=>this._br((this.P&FZ)===0)]; t[0xF0]=[2,()=>this._br((this.P&FZ)!==0)];
+    t[0x4C]=[3,()=>{this.PC=this.aAbs();}];
+    t[0x6C]=[5,()=>{const a=this.aAbs(),b=((a+1)&0xFF)|(a&0xFF00);this.PC=this.get(a)|(this.get(b)<<8);}]; // ページ境界バグ再現
+    t[0x20]=[6,()=>{const r=(this.PC+1)&0xFFFF;this.push(r>>8);this.push(r&0xFF);this.PC=this.aAbs();}];
+    t[0x60]=[6,()=>{const lo=this.pop(),hi=this.pop();this.PC=((hi<<8)|lo)+1;}];
+    t[0x40]=[6,()=>{
+      this.P=(this.pop()&~FB&0xFF)|FU; // RTI: Break捨て、Unused=1
+      const lo=this.pop(),hi=this.pop();this.PC=(hi<<8)|lo;
+    }];
+
+    // ── スタック ──
+    t[0x48]=[3,()=>this.push(this.A)];
+    t[0x08]=[3,()=>this.push(this.P|0x30)]; // PHP: B+Unusedを立てて push
+    t[0x68]=[4,()=>{this.A=this.pop();this._zn(this.A);}];
+    t[0x28]=[4,()=>{this.P=(this.pop()&~FB&0xFF)|FU;}]; // PLP: Break捨て、Unused=1
+
+    // ── フラグ ──
+    t[0x38]=[2,()=>{this.P|=FC;}];  t[0x18]=[2,()=>{this.P&=~FC&0xFF;}]; // SEC / CLC（faithjs本家の上書きバグを再現しない）
+    t[0x78]=[2,()=>{this.P|=FI;}];  t[0x58]=[2,()=>{this.P&=~FI&0xFF;}]; // SEI / CLI
+    t[0xF8]=[2,()=>{this.P|=FD;}];  t[0xD8]=[2,()=>{this.P&=~FD&0xFF;}]; // SED / CLD
+    t[0xB8]=[2,()=>{this.P&=~FV&0xFF;}];                                   // CLV
+
+    // ── レジスタ間転送 ──
+    t[0xAA]=[2,()=>{this.X=this.A;this._zn(this.X);}]; // TAX
+    t[0xA8]=[2,()=>{this.Y=this.A;this._zn(this.Y);}]; // TAY
+    t[0x8A]=[2,()=>{this.A=this.X;this._zn(this.A);}]; // TXA
+    t[0x98]=[2,()=>{this.A=this.Y;this._zn(this.A);}]; // TYA
+    t[0xBA]=[2,()=>{this.X=this.S;this._zn(this.X);}]; // TSX
+    t[0x9A]=[2,()=>{this.S=this.X;}];                   // TXS（フラグ変化なし）
+
+    // ── NOP ──
+    const nop=()=>{};
+    t[0xEA]=[2,nop];
+    [0x1A,0x3A,0x5A,0x7A,0xDA,0xFA].forEach(o=>t[o]=[2,nop]);
+    [0x80,0x82,0x89,0xC2,0xE2].forEach(o=>t[o]=[2,()=>this.aImm()]);
+    [0x04,0x44,0x64].forEach(o=>t[o]=[3,()=>this.aZp()]);
+    [0x14,0x34,0x54,0x74,0xD4,0xF4].forEach(o=>t[o]=[4,()=>this.aZpX()]);
+    t[0x0C]=[4,()=>this.aAbs()];
+    [0x1C,0x3C,0x5C,0x7C,0xDC,0xFC].forEach(o=>t[o]=[4,()=>this.aAbsX()]);
+
+    // ── 非公式命令（illegal opcode） ──
+    const lax=a=>{this.A=this.X=this.get(a);this._zn(this.A);};
+    const sax=a=>this.set(a,this.A&this.X);
+    const dcp=a=>{const v=(this.get(a)-1)&0xFF,r=(this.A-v)&0xFF;
+      this.P=(this.P&~(FN|FZ|FC))|this._znTab[r]|(this.A>=v?FC:0);this.set(a,v);};
+    const isb=a=>{const v=(this.get(a)+1)&0xFF;this._add(~v&0xFF);this.set(a,v);};
+    const slo=a=>{let v=this.get(a);this.P=(this.P&~FC)|((v>>7)&1);v=(v<<1)&0xFF;
+      this.A|=v;this._zn(this.A);this.set(a,v);};
+    const rla=a=>{const v=this.get(a),c=v>>7,s=((v<<1)&0xFF)|(this.P&FC);
+      this.P=(this.P&~FC)|c;this.A=(this.A&s)&0xFF;this._zn(this.A);this.set(a,s);};
+    const sre=a=>{let v=this.get(a);this.P=(this.P&~FC)|(v&1);v>>=1;
+      this.A^=v;this._zn(this.A);this.set(a,v);};
+    const rra=a=>{let v=this.get(a),c=v&1;v=(v>>1)|((this.P&FC)<<7);
+      this.P=(this.P&~FC)|c;this._add(v);this.set(a,v);};
+    t[0xA3]=[6,()=>lax(this.aIndX())]; t[0xA7]=[3,()=>lax(this.aZp())];
+    t[0xAF]=[4,()=>lax(this.aAbs())];  t[0xB3]=[5,()=>lax(this.aIndY())];
+    t[0xB7]=[4,()=>lax(this.aZpY())];  t[0xBF]=[4,()=>lax(this.aAbsY())];
+    t[0x83]=[6,()=>sax(this.aIndX())]; t[0x87]=[3,()=>sax(this.aZp())];
+    t[0x8F]=[4,()=>sax(this.aAbs())];  t[0x97]=[4,()=>sax(this.aZpY())];
+    t[0xC3]=[8,()=>dcp(this.aIndX())]; t[0xC7]=[5,()=>dcp(this.aZp())];
+    t[0xCF]=[6,()=>dcp(this.aAbs())];  t[0xD3]=[8,()=>dcp(this.aIndY(false))];
+    t[0xD7]=[6,()=>dcp(this.aZpX())];  t[0xDB]=[7,()=>dcp(this.aAbsY(false))];
+    t[0xDF]=[7,()=>dcp(this.aAbsX(false))];
+    t[0xE3]=[8,()=>isb(this.aIndX())]; t[0xE7]=[5,()=>isb(this.aZp())];
+    t[0xEF]=[6,()=>isb(this.aAbs())];  t[0xF3]=[8,()=>isb(this.aIndY(false))];
+    t[0xF7]=[6,()=>isb(this.aZpX())];  t[0xFB]=[7,()=>isb(this.aAbsY(false))];
+    t[0xFF]=[7,()=>isb(this.aAbsX(false))];
+    t[0x03]=[8,()=>slo(this.aIndX())]; t[0x07]=[5,()=>slo(this.aZp())];
+    t[0x0F]=[6,()=>slo(this.aAbs())];  t[0x13]=[8,()=>slo(this.aIndY(false))];
+    t[0x17]=[6,()=>slo(this.aZpX())];  t[0x1B]=[7,()=>slo(this.aAbsY(false))];
+    t[0x1F]=[7,()=>slo(this.aAbsX(false))];
+    t[0x23]=[8,()=>rla(this.aIndX())]; t[0x27]=[5,()=>rla(this.aZp())];
+    t[0x2F]=[6,()=>rla(this.aAbs())];  t[0x33]=[8,()=>rla(this.aIndY(false))];
+    t[0x37]=[6,()=>rla(this.aZpX())];  t[0x3B]=[7,()=>rla(this.aAbsY(false))];
+    t[0x3F]=[7,()=>rla(this.aAbsX(false))];
+    t[0x43]=[8,()=>sre(this.aIndX())]; t[0x47]=[5,()=>sre(this.aZp())];
+    t[0x4F]=[6,()=>sre(this.aAbs())];  t[0x53]=[8,()=>sre(this.aIndY(false))];
+    t[0x57]=[6,()=>sre(this.aZpX())];  t[0x5B]=[7,()=>sre(this.aAbsY(false))];
+    t[0x5F]=[7,()=>sre(this.aAbsX(false))];
+    t[0x63]=[8,()=>rra(this.aIndX())]; t[0x67]=[5,()=>rra(this.aZp())];
+    t[0x6F]=[6,()=>rra(this.aAbs())];  t[0x73]=[8,()=>rra(this.aIndY(false))];
+    t[0x77]=[6,()=>rra(this.aZpX())];  t[0x7B]=[7,()=>rra(this.aAbsY(false))];
+    t[0x7F]=[7,()=>rra(this.aAbsX(false))];
+  }
+
+  step() {
+    const op=this.get(this.PC++);
+    const e=this._tbl[op];
+    if(!e) throw new Error(`未実装オペコード: 0x${op.toString(16).padStart(2,'0')} PC=0x${(this.PC-1).toString(16).padStart(4,'0')}`);
+    e[1](); this.cyc+=e[0];
+  }
+}
+
+// ─── Mapper4 (MMC3) ───────────────────────────────────────────────────────
+class Mapper4 {
+  constructor(rom) {
+    this.rom=rom; this.prg=rom.prgRom; this.chr=rom.chrRom; this.chrRam=rom.chrRam;
+    this.prgN=Math.max(1,this.prg.length>>13);
+    const cl=(this.chr.length||0x2000);
+    this.chrN=Math.max(1,cl>>10);
+    this.bsel=0; this.regs=new Uint8Array(8);
+    const last=this.prgN-1;
+    this.pf1=last-1; this.pf2=last;
+    this.irqCnt=0; this.irqLat=0; this.irqEnabled=false; this.irqPending=false;
+  }
+  cpuWrite(a,v){
+    const even=(a&1)===0;
+    if(a<=0x9FFF){
+      if(even) this.bsel=v;
+      else{const t=this.bsel&7;this.regs[t]=t<=1?(v&0xFE):v;}
+    }else if(a<=0xBFFF){
+      if(even) this.rom.mirrorVertical=(v&1)===0;
+    }else if(a<=0xDFFF){
+      if(even) this.irqCnt=v; else this.irqLat=v;
+    }else{
+      if(even){this.irqCnt=this.irqLat;this.irqEnabled=false;this.irqPending=false;}
+      else this.irqEnabled=true;
+    }
+  }
+  _prgBank(w){
+    const m=(this.bsel>>6)&1,r=this.regs;
+    const b=m===0?[r[6],r[7],this.pf1,this.pf2]:[this.pf1,r[7],r[6],this.pf2];
+    return b[w]%this.prgN;
+  }
+  cpuRead(a){return this.prg[this._prgBank((a-0x8000)>>13)*0x2000+((a-0x8000)&0x1FFF)];}
+  _chrBank(w){
+    const m=(this.bsel>>7)&1,r=this.regs;
+    const b=m===0?[r[0],r[0]+1,r[1],r[1]+1,r[2],r[3],r[4],r[5]]
+                 :[r[2],r[3],r[4],r[5],r[0],r[0]+1,r[1],r[1]+1];
+    return b[w]%this.chrN;
+  }
+  ppuReadChr(a){
+    a&=0x1FFF; const bk=this._chrBank(a>>10),off=a&0x3FF;
+    if(this.chrRam) return this.chrRam[bk*0x400+off];
+    return this.chr.length?this.chr[bk*0x400+off]:0;
+  }
+  ppuWriteChr(a,v){
+    if(this.chrRam){a&=0x1FFF;this.chrRam[this._chrBank(a>>10)*0x400+(a&0x3FF)]=v;}
+  }
+  hsync(line,rend){
+    if(this.irqEnabled&&line<240&&rend){
+      this.irqCnt=(this.irqCnt-1)&0xFF;
+      if(this.irqCnt===0) this.irqPending=true;
+    }
+  }
+}
+
+// ─── PPU (2C02) ───────────────────────────────────────────────────────────
+class PPU {
+  constructor(rom,mapper){
+    this.rom=rom; this.mapper=mapper;
+    this.nt=[new Uint8Array(0x400),new Uint8Array(0x400)];
+    this.pal=new Uint8Array(0x20);
+    this.oam=new Uint8Array(0x100);
+    this.ctrl=0; this.mask=0; this.status=0; this.oamAddr=0;
+    this.ppuAddr=0; this.addrLatch=false; this.readBuf=0;
+    this.scrollX=0; this.scrollY=0;
+    this.totalDots=0; this.nmiPending=false;
+    this.fb=new Uint8Array(256*240);
+    this._bgOpaque=new Uint8Array(256*240); // スプライト優先度(奥/手前)判定用
+  }
+  tick(cyc){
+    const pl=Math.floor(this.totalDots/341);
+    this.totalDots+=cyc*3;
+    const nl=Math.floor(this.totalDots/341);
+    for(let n=pl+1;n<=nl;n++){
+      const line=n%262;
+      if(line<240){ this._scanline(line); this._spriteLine(line); }
+      if(this.mapper) this.mapper.hsync(line,(this.mask&0x08)!==0);
+      if(line===241){this.status|=0x80;if(this.ctrl&0x80)this.nmiPending=true;}
+      else if(line===261) this.status&=0x1F;
+    }
+  }
+  _scanline(line){
+    if(!(this.mask&0x08)) return;
+    const baseNt=this.ctrl&3, bgBase=(this.ctrl&0x10)?0x1000:0;
+    let absY=this.scrollY+line, ntYFlip=0;
+    if(absY>=240){ absY-=240; ntYFlip=1; }
+    const tileRow=absY>>3, fineY=absY&7;
+
+    let lastTileCol=-1, lastNt=-1, pg=0, p0=0, p1=0;
+    for(let sx=0;sx<256;sx++){
+      let absX=this.scrollX+sx, ntXFlip=0;
+      if(absX>=256){ absX-=256; ntXFlip=1; }
+      const tileCol=absX>>3, fineX=absX&7;
+      const ntIndex=baseNt^ntXFlip^(ntYFlip<<1);
+
+      if(tileCol!==lastTileCol || ntIndex!==lastNt){
+        const ti=this.ppuGet(0x2000+ntIndex*0x400+tileRow*32+tileCol);
+        const adr=0x2000+ntIndex*0x400+0x3C0+Math.floor(tileRow/4)*8+Math.floor(tileCol/4);
+        const attr=this.ppuGet(adr);
+        const q=(Math.floor((tileRow%4)/2)*2)+Math.floor((tileCol%4)/2);
+        pg=(attr>>(q*2))&3;
+        const ta=bgBase+ti*16;
+        p0=this.ppuGet(ta+fineY); p1=this.ppuGet(ta+8+fineY);
+        lastTileCol=tileCol; lastNt=ntIndex;
+      }
+      const b0=(p0>>(7-fineX))&1, b1=(p1>>(7-fineX))&1, ci=b0|(b1<<1);
+      const pal=ci===0?this.pal[0]:this.pal[pg*4+ci];
+      const idx=line*256+sx;
+      this.fb[idx]=pal; this._bgOpaque[idx]=ci!==0?1:0;
+    }
+  }
+  _spriteLine(line){
+    if(!(this.mask&0x10)) return; // スプライト表示OFF
+    const size16=(this.ctrl&0x20)!==0;
+    const spH=size16?16:8;
+    const spBase=(this.ctrl&0x08)?0x1000:0; // 8x8時のパターンテーブル選択
+    const active=[];
+    for(let i=0;i<64;i++){
+      const sy=this.oam[i*4]+1; // NESのスプライトYは1行遅れる
+      if(line>=sy && line<sy+spH){
+        active.push(i);
+        if(active.length>=8) break; // 1ライン最大8枚（実機と同じ制限）
+      }
+    }
+    // OAMの若い番号ほど手前に描く => 後ろ(番号大)から先に描いて上書きさせる
+    for(let k=active.length-1;k>=0;k--){
+      const i=active[k];
+      const base=i*4;
+      const sy=this.oam[base]+1;
+      const tile=this.oam[base+1];
+      const attr=this.oam[base+2];
+      const sx=this.oam[base+3];
+      const vflip=(attr&0x80)!==0, hflip=(attr&0x40)!==0, behind=(attr&0x20)!==0;
+      const pal=attr&3;
+      let row=line-sy;
+      if(vflip) row=spH-1-row;
+      let ta;
+      if(size16){
+        const table=(tile&1)?0x1000:0;
+        let tileIdx=tile&0xFE;
+        if(row>=8){tileIdx+=1;row-=8;}
+        ta=table+tileIdx*16;
+      }else{
+        ta=spBase+tile*16;
+      }
+      const p0=this.ppuGet(ta+row), p1=this.ppuGet(ta+8+row);
+      for(let x=0;x<8;x++){
+        const bx=hflip?x:(7-x);
+        const b0=(p0>>bx)&1, b1=(p1>>bx)&1, ci=b0|(b1<<1);
+        if(ci===0) continue; // 透明
+        const px=sx+x;
+        if(px<0||px>=256) continue;
+        const idx=line*256+px;
+        if(i===0 && this._bgOpaque[idx] && px!==255){
+          this.status|=0x40; // スプライト0ヒット
+        }
+        if(behind && this._bgOpaque[idx]) continue; // 背景の後ろに隠れる
+        this.fb[idx]=this.pal[0x10+pal*4+ci];
+      }
+    }
+  }
+  _ntBank(n){return this.rom.mirrorVertical?(n&1):(n>>1);}
+  _palIdx(a){let p=a&0x1F;if((p&3)===0&&p>=0x10)p&=~0x10;return p;} // $3F10→$3F00 ミラー
+  ppuGet(a){
+    a&=0x3FFF;
+    if(a<0x2000){
+      if(this.mapper) return this.mapper.ppuReadChr(a);
+      if(this.rom.chrRam) return this.rom.chrRam[a];
+      return this.rom.chrRom[a]||0;
+    }
+    if(a<0x3F00){const r=(a-0x2000)&0x0FFF;return this.nt[this._ntBank(r>>10)][r&0x3FF];}
+    return this.pal[this._palIdx(a)];
+  }
+  ppuSet(a,v){
+    a&=0x3FFF; v&=0xFF;
+    if(a<0x2000){
+      if(this.mapper) this.mapper.ppuWriteChr(a,v);
+      else if(this.rom.chrRam) this.rom.chrRam[a]=v;
+    }else if(a<0x3F00){const r=(a-0x2000)&0x0FFF;this.nt[this._ntBank(r>>10)][r&0x3FF]=v;}
+    else this.pal[this._palIdx(a)]=v;
+  }
+  readReg(r){
+    if(r===2){const v=this.status;this.status&=0x7F;this.addrLatch=false;return v;}
+    if(r===4) return this.oam[this.oamAddr];
+    if(r===7){
+      const a=this.ppuAddr&0x3FFF; let v;
+      if(a<0x3F00){v=this.readBuf;this.readBuf=this.ppuGet(a);}
+      else{v=this.ppuGet(a);this.readBuf=this.ppuGet(a-0x1000);}
+      this.ppuAddr=(this.ppuAddr+((this.ctrl&4)?32:1))&0x7FFF;
+      return v;
+    }
+    return 0;
+  }
+  writeReg(r,v){
+    v&=0xFF;
+    if(r===0) this.ctrl=v;
+    else if(r===1) this.mask=v;
+    else if(r===3) this.oamAddr=v;
+    else if(r===4){this.oam[this.oamAddr]=v;this.oamAddr=(this.oamAddr+1)&0xFF;}
+    else if(r===5){
+      if(!this.addrLatch) this.scrollX=v; else this.scrollY=v;
+      this.addrLatch=!this.addrLatch;
+    }
+    else if(r===6){
+      if(!this.addrLatch) this.ppuAddr=(this.ppuAddr&0x00FF)|((v&0x3F)<<8);
+      else this.ppuAddr=(this.ppuAddr&0xFF00)|v;
+      this.addrLatch=!this.addrLatch;
+    }else if(r===7){
+      this.ppuSet(this.ppuAddr&0x3FFF,v);
+      this.ppuAddr=(this.ppuAddr+((this.ctrl&4)?32:1))&0x7FFF;
+    }
+  }
+}
+
+// ─── メインループ / UI ────────────────────────────────────────────────────
+const canvas=document.getElementById('screen');
+const ctx=canvas.getContext('2d');
+const imgData=ctx.createImageData(256,240);
+let cpu=null,ppu=null,rafId=null,running=false;
+
+// ── 音声出力（Web Audio、複数フレーム分をまとめてバッファ再生。継ぎ目のプチノイズ対策済み） ──
+const AUDIO_SR=24000, CPU_HZ=1789773, CYCLES_PER_SAMPLE=CPU_HZ/AUDIO_SR;
+const AUDIO_CHUNK=Math.floor(AUDIO_SR*0.08); // 約80ms分まとめてから再生（継ぎ目を減らす）
+const AUDIO_FADE=64; // 継ぎ目のプチッというノイズを消すためのフェード幅(サンプル数)
+let audioCtx=null, masterGain=null, audioNextTime=0, audioAcc=0, audioSamples=[];
+let lpfPrev=0; // ローパスフィルタの状態（チャンクをまたいで継続、境界でのプチ音を防ぐ）
+
+// iOSの「サイレントスイッチ」対策：無音に近いですが完全な無音ではない
+// <audio>要素を1回再生しておくと、iOS Safariがページの音声を「メディア再生」
+// 扱いにしてくれて、サイレントスイッチの影響を受けなくなる（既知の回避策）
+function unlockIOSAudio(){
+  try{
+    const a=document.getElementById('iosUnlock');
+    if(a && a.paused) a.play().catch(()=>{});
+  }catch(e){}
+}
+
+function flushAudio(){
+  if(!audioCtx || audioSamples.length<AUDIO_CHUNK) return;
+  const n=audioSamples.length;
+  const buf=audioCtx.createBuffer(1, n, AUDIO_SR);
+  const ch=buf.getChannelData(0);
+  ch.set(audioSamples);
+  // 簡易ローパスフィルタ（単純な1次IIR）で高域のガサつき/エイリアシング感を軽減
+  for(let i=0;i<n;i++){ lpfPrev += 0.5*(ch[i]-lpfPrev); ch[i]=lpfPrev; }
+  // バッファの継ぎ目でプチッと鳴らないよう前後をフェードイン/アウト
+  const fade=Math.min(AUDIO_FADE, n>>2);
+  for(let i=0;i<fade;i++){ const g=i/fade; ch[i]*=g; ch[n-1-i]*=g; }
+
+  const src=audioCtx.createBufferSource();
+  src.buffer=buf;
+  src.connect(masterGain);
+  const now=audioCtx.currentTime;
+  // 実時間に対してスケジュールが遅れすぎていたら、少し余裕を持たせて再スタート
+  if(audioNextTime<now+0.02) audioNextTime=now+0.08;
+  src.start(audioNextTime);
+  audioNextTime+=buf.duration;
+  audioSamples=[];
+}
+
+const KEYS={'z':0,'Z':0,'x':1,'X':1,'Shift':2,'Enter':3,
+            'ArrowUp':4,'ArrowDown':5,'ArrowLeft':6,'ArrowRight':7};
+document.addEventListener('keydown',e=>{if(cpu&&e.key in KEYS){cpu.joy1[KEYS[e.key]]=1;e.preventDefault();}});
+document.addEventListener('keyup',  e=>{if(cpu&&e.key in KEYS) cpu.joy1[KEYS[e.key]]=0;});
+
+function blit(){
+  const fb=ppu.fb,d=imgData.data;
+  for(let i=0;i<256*240;i++){
+    const pi=(fb[i]&0x3F)*3, j=i<<2;
+    d[j]=NES_PAL[pi]; d[j+1]=NES_PAL[pi+1]; d[j+2]=NES_PAL[pi+2]; d[j+3]=255;
+  }
+  ctx.putImageData(imgData,0,0);
+}
+
+function loop(){
+  if(!running) return;
+  const target=Math.floor(ppu.totalDots/(341*262))+1;
+  try{
+    while(Math.floor(ppu.totalDots/(341*262))<target){
+      const before=cpu.cyc;
+      cpu.step();
+      const cyc=cpu.cyc-before;
+      ppu.tick(cyc);
+      cpu.apu.step(cyc);
+      audioAcc+=cyc;
+      while(audioAcc>=CYCLES_PER_SAMPLE){
+        audioAcc-=CYCLES_PER_SAMPLE;
+        audioSamples.push(cpu.apu.sample());
+      }
+      if(ppu.nmiPending){ppu.nmiPending=false;cpu.triggerNMI();}
+      if(cpu.mapper?.irqPending){cpu.mapper.irqPending=false;cpu.triggerIRQ();}
+      if(cpu.apu.frameIRQ){cpu.triggerIRQ();}
+    }
+  }catch(e){
+    setStatus('エラー: '+e.message);
+    showError('loop() 実行中', e);
+    stop(); return;
+  }
+  blit();
+  flushAudio();
+  rafId=requestAnimationFrame(loop);
+}
+
+function start(rom){
+  stop();
+  cpu=new CPU(rom); ppu=new PPU(rom,cpu.mapper); cpu.ppu=ppu;
+  if(!audioCtx){
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    masterGain=audioCtx.createGain();
+    masterGain.gain.value=parseFloat(document.getElementById('volSlider')?.value||'3');
+    masterGain.connect(audioCtx.destination);
+  }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  unlockIOSAudio();
+  audioNextTime=audioCtx.currentTime+0.05; audioAcc=0; audioSamples=[];
+  running=true;
+  document.getElementById('btnStop').disabled=false;
+  rafId=requestAnimationFrame(loop);
+}
+
+function stop(){
+  running=false;
+  if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+  if(audioCtx) audioCtx.suspend();
+  document.getElementById('btnStop').disabled=true;
+}
+
+function load(buf,name){
+  window.__lastRomName = name;
+  try{
+    const rom=new NESRom(buf);
+    const chrInfo=rom.chrRam?'CHR-RAM':`CHR:${rom.chrRom.length>>10}KB`;
+    setStatus(`${name} — Mapper${rom.mapper} / PRG:${rom.prgRom.length>>10}KB / ${chrInfo}`);
+    start(rom);
+  }catch(e){
+    setStatus('読み込みエラー: '+e.message);
+    showError('ROM読み込み（'+name+'）', e);
+  }
+}
+
+function setStatus(msg){document.getElementById('status').textContent=msg;}
+
+// ── エラー表示（コピー用コードブロック） ──────────────────────
+function showError(context, err){
+  const box = document.getElementById('errorBox');
+  const textEl = document.getElementById('errorText');
+  const now = new Date().toISOString();
+  const message = err && err.message ? err.message : String(err);
+  const stack = err && err.stack ? err.stack : '(スタックトレースなし)';
+  const romName = (window.__lastRomName || '(未選択)');
+  const text = [
+    `time: ${now}`,
+    `context: ${context}`,
+    `rom: ${romName}`,
+    `message: ${message}`,
+    `stack:`,
+    stack,
+  ].join('\n');
+  textEl.textContent = text;
+  box.classList.add('show');
+}
+
+document.getElementById('btnCopyError').addEventListener('click', async () => {
+  const btn = document.getElementById('btnCopyError');
+  const text = document.getElementById('errorText').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = '✓ コピーしました';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 コピー'; btn.classList.remove('copied'); }, 2000);
+  } catch (e) {
+    alert('コピー失敗: ' + e.message);
+  }
+});
+
+window.addEventListener('error', (e) => {
+  showError('window.onerror', e.error || new Error(e.message));
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const reason = e.reason instanceof Error ? e.reason : new Error(String(e.reason));
+  showError('unhandledrejection', reason);
+});
+// ──────────────────────────────────────────────────────────
+
+// ── オンスクリーンボタン（スマホ用タッチ操作） ──────────────────
+// ── 音量調整・テスト音（ゲーム未起動でも音声パイプラインを確認できる） ──────
+document.getElementById('volSlider').addEventListener('input', (e) => {
+  if(masterGain) masterGain.gain.value = parseFloat(e.target.value);
+});
+document.getElementById('btnTestSound').addEventListener('click', () => {
+  if(!audioCtx){
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    masterGain=audioCtx.createGain();
+    masterGain.gain.value=parseFloat(document.getElementById('volSlider').value);
+    masterGain.connect(audioCtx.destination);
+  }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  unlockIOSAudio();
+  const osc=audioCtx.createOscillator();
+  osc.type='square'; osc.frequency.value=440;
+  osc.connect(masterGain);
+  osc.start();
+  osc.stop(audioCtx.currentTime+0.3);
+});
+// ──────────────────────────────────────────────────────────
+document.querySelectorAll('.pad-btn').forEach(btn=>{
+  const idx = parseInt(btn.dataset.idx, 10);
+  const press = (e) => { e.preventDefault(); if(cpu) cpu.joy1[idx]=1; btn.classList.add('pressed'); };
+  const release = (e) => { e.preventDefault(); if(cpu) cpu.joy1[idx]=0; btn.classList.remove('pressed'); };
+  btn.addEventListener('pointerdown', press);
+  btn.addEventListener('pointerup', release);
+  btn.addEventListener('pointerleave', release);
+  btn.addEventListener('pointercancel', release);
+  btn.addEventListener('contextmenu', e=>e.preventDefault());
+});
+// ──────────────────────────────────────────────────────────
+
+document.getElementById('btnFile').addEventListener('click',()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>load(r.result,f.name);
+  r.readAsArrayBuffer(f);
+  e.target.value='';
+});
+document.getElementById('btnStop').addEventListener('click',stop);
+document.querySelectorAll('.rom-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    setStatus('読み込み中...');
+    fetch(btn.dataset.rom).then(r=>{if(!r.ok)throw new Error(r.status);return r.arrayBuffer();})
+      .then(buf=>load(buf,btn.textContent))
+      .catch(e=>{
+        setStatus('取得エラー: '+e.message);
+        showError('ROM取得（'+btn.dataset.rom+'）', e);
+      });
+  });
+});
+</script>
+</body>
+</html>
