@@ -73,6 +73,78 @@ function drawPoints(visits, proj) {
   return points;
 }
 
+function todayStr() {
+  return new Date().toLocaleDateString("sv-SE");
+}
+
+function withCredential(body = {}) {
+  return { ...body, credential: window.__credential };
+}
+
+// 訪問記録の入力(ab/src/main/n1の訪問記録機能を移植、メモ欄は対象外)
+function initVisitInput() {
+  const elPlaceInput = document.getElementById("placeInput");
+  const elDateInput = document.getElementById("dateInput");
+  const elTimeInput = document.getElementById("timeInput");
+  const elBtnGps = document.getElementById("btnGps");
+  const elBtnAddVisit = document.getElementById("btnAddVisit");
+  const elStatus = document.getElementById("visitInputStatus");
+
+  const today = todayStr();
+  elDateInput.value = today;
+  const now = new Date();
+  elTimeInput.value = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+
+  let _lat = null, _lng = null;
+
+  elBtnGps.addEventListener("click", () => {
+    if (!navigator.geolocation) { alert("位置情報非対応"); return; }
+    elBtnGps.textContent = "取得中...";
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      _lat = lat; _lng = lng;
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=ja`
+        );
+        const data = await res.json();
+        const addr = data.address;
+        const place = [addr.city || addr.town || addr.village, addr.suburb || addr.neighbourhood || addr.quarter]
+          .filter(Boolean).join(" ");
+        elPlaceInput.value = place || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      } catch {
+        elPlaceInput.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      }
+      elBtnGps.textContent = "📍 現在地";
+    }, () => {
+      alert("位置情報を取得できませんでした");
+      elBtnGps.textContent = "📍 現在地";
+    });
+  });
+
+  elBtnAddVisit.addEventListener("click", async () => {
+    const place = elPlaceInput.value.trim();
+    const date = elDateInput.value;
+    const time = elTimeInput.value;
+    if (!place) { elPlaceInput.focus(); return; }
+    try {
+      const res = await fetch(VISITS_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(withCredential({ place, date, time, lat: _lat, lng: _lng })),
+      });
+      if (!res.ok) { elStatus.textContent = "エラー: 追加に失敗しました"; return; }
+      elPlaceInput.value = "";
+      _lat = null; _lng = null;
+      elStatus.textContent = "✓ 追加しました";
+      setTimeout(() => elStatus.textContent = "", 2000);
+      load();
+    } catch (e) {
+      elStatus.textContent = "エラー: " + e.message;
+    }
+  });
+}
+
 function addVisitRow(listEl, v, hasPin, onClick) {
   const row = document.createElement("div");
   row.className = "visit-row";
@@ -92,7 +164,37 @@ function addVisitRow(listEl, v, hasPin, onClick) {
   return row;
 }
 
+let _points = [];
+let _W = 0;
+
+canvas.addEventListener("click", e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (_W / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+  let hit = null;
+  for (const pt of _points) {
+    if (Math.hypot(mx - pt.x, my - pt.y) < 12) { hit = pt; break; }
+  }
+  if (hit) {
+    const v = hit.v;
+    document.getElementById("popupPlace").textContent = v.place || "—";
+    document.getElementById("popupMeta").textContent = `${v.date || ""} ${v.time || ""}${v.memo ? "\n" + v.memo : ""}`;
+    const px = Math.min(hit.x + 10, _W - 200);
+    const py = Math.max(hit.y - 60, 10);
+    popup.style.left = px + "px";
+    popup.style.top = py + "px";
+    popup.classList.add("show");
+  } else {
+    popup.classList.remove("show");
+  }
+});
+
 async function load() {
+  const listEl = document.getElementById("visitList");
+  const emptyMsg = document.getElementById("emptyMsg");
+  listEl.innerHTML = "";
+  emptyMsg.style.display = "none";
+
   const [higashiGeo, osakaCityGeo, visitRes] = await Promise.all([
     fetchGeo("higashiosaka.geojson"),
     fetchGeo("osaka_city.geojson"),
@@ -117,33 +219,11 @@ async function load() {
   ctx.clearRect(0, 0, W, H);
   drawFeatures(osakaCityGeo.features, proj, "#e8f0e0", "#a8c890");
   drawFeatures(higashiGeo.features, proj, "#dce8f5", "#aac4e0");
-  const points = withLatLng.length > 0 ? drawPoints(withLatLng, proj) : [];
+  _W = W;
+  _points = withLatLng.length > 0 ? drawPoints(withLatLng, proj) : [];
 
-  canvas.addEventListener("click", e => {
-    const rect = canvas.getBoundingClientRect();
-    const mx = (e.clientX - rect.left) * (W / rect.width);
-    const my = (e.clientY - rect.top) * (H / rect.height);
-    let hit = null;
-    for (const pt of points) {
-      if (Math.hypot(mx - pt.x, my - pt.y) < 12) { hit = pt; break; }
-    }
-    if (hit) {
-      const v = hit.v;
-      document.getElementById("popupPlace").textContent = v.place || "—";
-      document.getElementById("popupMeta").textContent = `${v.date || ""} ${v.time || ""}${v.memo ? "\n" + v.memo : ""}`;
-      const px = Math.min(hit.x + 10, W - 200);
-      const py = Math.max(hit.y - 60, 10);
-      popup.style.left = px + "px";
-      popup.style.top = py + "px";
-      popup.classList.add("show");
-    } else {
-      popup.classList.remove("show");
-    }
-  });
-
-  const listEl = document.getElementById("visitList");
   if (allVisits.length === 0) {
-    document.getElementById("emptyMsg").style.display = "block";
+    emptyMsg.style.display = "block";
     return;
   }
 
@@ -154,7 +234,7 @@ async function load() {
 
     addVisitRow(listEl, v, hasPin, hasPin ? () => {
       document.querySelectorAll(".visit-row").forEach(r => r.classList.remove("active"));
-      const pt = points[ptIdx];
+      const pt = _points[ptIdx];
       if (pt) {
         document.getElementById("popupPlace").textContent = v.place || "—";
         document.getElementById("popupMeta").textContent = `${v.date || ""} ${v.time || ""}`;
@@ -166,4 +246,7 @@ async function load() {
   });
 }
 
-window.addEventListener("n2-login-success", load, { once: true });
+window.addEventListener("n2-login-success", () => {
+  initVisitInput();
+  load();
+}, { once: true });

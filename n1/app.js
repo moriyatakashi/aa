@@ -14,10 +14,81 @@ function formatDate(s) {
   return { label: `${y}年${parseInt(m)}月${parseInt(d)}日`, dow };
 }
 
+function todayStr() {
+  return new Date().toLocaleDateString("sv-SE");
+}
+
+function withCredential(body = {}) {
+  return { ...body, credential: window.__credential };
+}
+
+// スコア入力(ab/src/main/n1のスコア機能を移植)
+function initScoreInput() {
+  const today = todayStr();
+  const elScoreDate = document.getElementById("scoreDate");
+  const elSlider = document.getElementById("slider");
+  const elScoreNum = document.getElementById("scoreNum");
+  const elNoteInput = document.getElementById("noteInput");
+  const elBtnSaveScore = document.getElementById("btnSaveScore");
+  const elScoreSaved = document.getElementById("scoreSaved");
+
+  elScoreDate.textContent = today;
+
+  function setScore(val) {
+    const v = Math.min(100, Math.max(0, Number(val)));
+    elSlider.value = v;
+    elScoreNum.textContent = v;
+  }
+
+  elSlider.addEventListener("input", () => {
+    elScoreNum.textContent = elSlider.value;
+  });
+
+  async function loadTodayScore() {
+    try {
+      const res = await fetch(`${SCORES_API}/${today}`, { cache: "no-store" });
+      const data = res.ok ? await res.json() : null;
+      if (data) {
+        setScore(data.score);
+        elNoteInput.value = data.note || "";
+        elBtnSaveScore.textContent = "更新";
+      } else {
+        setScore(80);
+        elBtnSaveScore.textContent = "保存";
+      }
+    } catch (e) {
+      setScore(80);
+    }
+  }
+
+  elBtnSaveScore.addEventListener("click", async () => {
+    const score = Number(elSlider.value);
+    const note = elNoteInput.value.trim();
+    try {
+      const res = await fetch(`${SCORES_API}/${today}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(withCredential({ score, note })),
+      });
+      if (!res.ok) { elScoreSaved.textContent = "エラー: 保存に失敗しました"; return; }
+      elBtnSaveScore.textContent = "更新";
+      elScoreSaved.textContent = "✓ 保存しました";
+      setTimeout(() => elScoreSaved.textContent = "", 2000);
+      load();
+    } catch (e) {
+      elScoreSaved.textContent = "エラー: " + e.message;
+    }
+  });
+
+  loadTodayScore();
+}
+
 async function load() {
   const loadStatus = document.getElementById("loadStatus");
   const listEl = document.getElementById("list");
   const emptyMsg = document.getElementById("emptyMsg");
+  listEl.innerHTML = "";
+  emptyMsg.style.display = "none";
 
   try {
     const [scoreRes, visitRes, memoRes] = await Promise.all([
@@ -99,4 +170,7 @@ async function load() {
   }
 }
 
-window.addEventListener("n1-login-success", load, { once: true });
+window.addEventListener("n1-login-success", () => {
+  initScoreInput();
+  load();
+}, { once: true });

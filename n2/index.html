@@ -24,6 +24,15 @@
   .popup-place { font-weight: 700; margin-bottom: 2px; }
   .popup-meta { color: #666; font-size: 0.7rem; }
   .empty { text-align: center; color: #888; padding: 20px 0; }
+  .section { border: 1px solid #ccc; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+  .section-title { font-size: 0.75rem; font-weight: 700; color: #666; margin-bottom: 10px; }
+  .visit-form { display: flex; flex-direction: column; gap: 8px; }
+  .visit-form input { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+  .visit-row-inputs { display: flex; gap: 8px; }
+  .visit-row-inputs input { flex: 1; }
+  .btn-gps { padding: 8px 12px; border: 1px solid #06c; border-radius: 6px; background: #eef6ff; color: #06c; white-space: nowrap; }
+  .btn-add-visit { width: 100%; padding: 10px; border: 1px solid #06c; border-radius: 8px; background: #fff; color: #06c; font-size: 0.95rem; }
+  .visit-input-status { font-size: 0.78rem; color: #666; margin-top: 6px; text-align: center; min-height: 1.2em; }
 </style>
 </head>
 <body>
@@ -41,6 +50,22 @@
   </div>
 
   <div id="content" style="display:none;">
+    <div class="section">
+      <div class="section-title">訪問記録を追加</div>
+      <div class="visit-form">
+        <div class="visit-row-inputs">
+          <input type="text" id="placeInput" placeholder="場所">
+          <button class="btn-gps" id="btnGps" type="button">📍 現在地</button>
+        </div>
+        <div class="visit-row-inputs">
+          <input type="date" id="dateInput">
+          <input type="time" id="timeInput">
+        </div>
+        <button class="btn-add-visit" id="btnAddVisit" type="button">＋ 追加</button>
+      </div>
+      <div class="visit-input-status" id="visitInputStatus"></div>
+    </div>
+
     <div class="stats">
       <div class="stat-item"><div class="stat-num" id="statTotal">—</div><div class="stat-label">訪問件数</div></div>
       <div class="stat-item"><div class="stat-num" id="statPlaces">—</div><div class="stat-label">場所数</div></div>
