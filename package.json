@@ -1,0 +1,8 @@
+{
+  "name": "aa",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "^1.47.0"
+  }
+}
