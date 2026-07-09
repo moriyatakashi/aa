@@ -17,4 +17,6 @@ jobs:
         with:
           node-version: "20"
       - name: Run tests
-        run: node --test n1/
+        # テストファイルは物理学者フォルダ(bell/, bohr/等)配下に置く運用のため、
+        # 特定のパスに固定せずリポジトリ全体から *.test.js を探す
+        run: node --test
