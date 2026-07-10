@@ -360,45 +360,6 @@ def reviews_item(req: func.HttpRequest) -> func.HttpResponse:
     )
 
 
-MEMOS_TABLE = "Memos"
-
-
-@app.function_name(name="memos")
-@app.route(route="memos", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
-def memos(req: func.HttpRequest) -> func.HttpResponse:
-    table = _table_client(MEMOS_TABLE)
-
-    if req.method == "GET":
-        items = [
-            {"id": e["RowKey"], "date": e.get("Date", ""), "memo": e.get("Memo", ""), "createdAt": e.get("CreatedAt", "")}
-            for e in table.list_entities()
-        ]
-        return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
-
-    body = _get_body(req)
-    err = _authorize(body)
-    if err:
-        return err
-
-    memo = (body.get("memo") or "").strip()
-    date = body.get("date") or ""
-    if not memo or not date:
-        return func.HttpResponse("date and memo are required", status_code=400)
-
-    entity = {
-        "PartitionKey": "memo",
-        "RowKey": str(uuid.uuid4()),
-        "Date": date,
-        "Memo": memo,
-        "CreatedAt": datetime.now(timezone.utc).isoformat(),
-    }
-    table.upsert_entity(entity)
-    return func.HttpResponse(
-        json.dumps({"id": entity["RowKey"], "date": date, "memo": memo, "createdAt": entity["CreatedAt"]}, ensure_ascii=False),
-        status_code=201, mimetype="application/json",
-    )
-
-
 VISITS_TABLE = "Visits"
 
 
