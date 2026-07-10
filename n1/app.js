@@ -3,7 +3,6 @@
 const API_BASE = "https://ab-board-api.azurewebsites.net/api";
 const SCORES_API = `${API_BASE}/scores`;
 const VISITS_API = `${API_BASE}/visits`;
-const MEMOS_API  = `${API_BASE}/memos`;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DOW = ["日","月","火","水","木","金","土"];
@@ -91,21 +90,12 @@ async function load() {
   emptyMsg.style.display = "none";
 
   try {
-    const [scoreRes, visitRes, memoRes] = await Promise.all([
+    const [scoreRes, visitRes] = await Promise.all([
       fetch(SCORES_API, { cache: "no-store" }),
-      fetch(VISITS_API, { cache: "no-store" }),
-      fetch(MEMOS_API, { cache: "no-store" })
+      fetch(VISITS_API, { cache: "no-store" })
     ]);
     const scoreRows = scoreRes.ok ? await scoreRes.json() : [];
     const visitRows = visitRes.ok ? await visitRes.json() : [];
-    const memoRows = memoRes.ok ? await memoRes.json() : [];
-
-    const memoMap = {};
-    memoRows.forEach(data => {
-      if (!data.date) return;
-      if (!memoMap[data.date]) memoMap[data.date] = [];
-      memoMap[data.date].push(data.memo);
-    });
 
     const scoreMap = {};
     scoreRows.forEach(r => {
@@ -121,7 +111,7 @@ async function load() {
       visitMap[d.date].push({ place: d.place || "—", time: d.time || "", memo: d.memo || "" });
     });
 
-    const allDates = [...new Set([...Object.keys(scoreMap), ...Object.keys(visitMap), ...Object.keys(memoMap)])]
+    const allDates = [...new Set([...Object.keys(scoreMap), ...Object.keys(visitMap)])]
       .sort((a, b) => b.localeCompare(a));
 
     if (allDates.length === 0) {
@@ -134,7 +124,6 @@ async function load() {
       const { label, dow } = formatDate(date);
       const score = scoreMap[date];
       const visits = (visitMap[date] || []).slice().sort((a, b) => a.time.localeCompare(b.time));
-      const memos = memoMap[date] || [];
 
       const card = document.createElement("div");
       card.className = "day-card";
@@ -156,9 +145,6 @@ async function load() {
       }
       visits.forEach(v => {
         addRow(`📍 ${v.place}${v.time ? " " + v.time : ""}${v.memo ? " — " + v.memo : ""}`);
-      });
-      memos.forEach(m => {
-        addRow(`📝 ${m}`);
       });
 
       listEl.appendChild(card);
