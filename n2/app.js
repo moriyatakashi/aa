@@ -246,7 +246,17 @@ async function load() {
   });
 }
 
-window.addEventListener("n2-login-success", () => {
+// issue #8対応(案B): auth.jsの実行順は変えず、起動時にwindow.__loginStateを直接チェックする。
+// auth.js(通常script)はHTML解析中に同期実行されるため、このモジュール(type="module"でdefer)が
+// 動く時点では既にwindow.__loginStateがセット済みの可能性がある。その場合はイベントを待たずに即実行し、
+// まだ未ログインならこれまで通りn2-login-successイベントを待つ(通常のログインボタン操作に対応)。
+function onLoginSuccess() {
   initVisitInput();
   load();
-}, { once: true });
+}
+
+if (window.__loginState && window.__loginState.loggedIn) {
+  onLoginSuccess();
+} else {
+  window.addEventListener("n2-login-success", onLoginSuccess, { once: true });
+}
