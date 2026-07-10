@@ -202,6 +202,13 @@ async function load() {
   ]);
 
   const allVisits = visitRes.ok ? await visitRes.json() : [];
+  // 訪問記録を日付→時刻の降順(新しい順)に並べ替える
+  allVisits.sort((a, b) => {
+    const da = a.date || "", db = b.date || "";
+    if (da !== db) return db.localeCompare(da);
+    const ta = a.time || "", tb = b.time || "";
+    return tb.localeCompare(ta);
+  });
   const withLatLng = allVisits.filter(v => v.lat && v.lng);
 
   document.getElementById("statTotal").textContent = allVisits.length;
