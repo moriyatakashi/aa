@@ -9,6 +9,7 @@
   <p><a href="../">← 戻る</a></p>
   <h1>boltz</h1>
   <p>n1向けログイン最小実装の検証用(隔離実験フォルダ)</p>
+  <p>このページはissue #8(自動復元時のデータ読み込みスタック)の再現用のベースライン版。修正版はindex-optionA.html / index-optionB.htmlを参照。</p>
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <div id="g_id_onload"
@@ -18,7 +19,9 @@
   <div class="g_id_signin"></div>
 
   <p id="status">未ログイン</p>
+  <p id="loadStatus">(未ログイン)</p>
 
   <script src="auth.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
