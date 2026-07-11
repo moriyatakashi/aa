@@ -232,9 +232,17 @@ def _n4_entry_dict(e):
         "by": e.get("By", ""),
         "ref": e.get("Ref") or None,
         "type": e.get("Type", ""),
+        "seq": e.get("Seq"),
         "createdAt": e.get("CreatedAt", ""),
         **data,
     }
+
+
+def _next_n4_seq(table):
+    """会話で「n4-7」のように参照できる、スレッド起点(new)専用の連番。
+    低頻度な個人利用のため、既存最大値+1という単純な採番(排他制御なし)で十分とした。"""
+    existing = [e.get("Seq") for e in table.query_entities("Type eq 'new'") if e.get("Seq") is not None]
+    return (max(existing) if existing else 0) + 1
 
 
 @app.function_name(name="n4-log")
@@ -287,5 +295,7 @@ def n4_log(req: func.HttpRequest) -> func.HttpResponse:
         "Data": json.dumps(data_fields, ensure_ascii=False),
         "CreatedAt": now.isoformat(),
     }
+    if entry_type == "new":
+        entity["Seq"] = _next_n4_seq(table)
     table.upsert_entity(entity)
     return func.HttpResponse(json.dumps(_n4_entry_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")

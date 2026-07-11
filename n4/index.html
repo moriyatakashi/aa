@@ -91,6 +91,10 @@
   details[open] .chevron { transform: rotate(90deg); }
   @media (prefers-reduced-motion: reduce) { .chevron { transition: none; } }
 
+  .seq-chip {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.7rem;
+    font-weight: 700; color: var(--ink-soft); flex-shrink: 0;
+  }
   .pill { font-size: 0.66rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
   .pill-open { color: var(--open); border: 1px solid var(--open); }
   .pill-closed { color: var(--closed); border: 1px solid var(--closed); }
@@ -146,7 +150,7 @@
   <div class="eyebrow">ロレキ内部メモ</div>
   <h1>路歴（n4） / 気づきログ</h1>
   <p class="lede">Claudeが気づいた課題と、takashiの一言を時系列で積み上げていく場所。GitHub issueと重なる話は番号だけ添える。</p>
-  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-12 06:33</p>
+  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-12 06:42</p>
 
   <div id="login-gate">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -193,7 +197,7 @@
     <div class="thread-list" id="threadList"></div>
   </div>
 
-  <script src="auth.js?v=202607120633"></script>
-  <script type="module" src="app.js?v=202607120633"></script>
+  <script src="auth.js?v=202607120642"></script>
+  <script type="module" src="app.js?v=202607120642"></script>
 </body>
 </html>

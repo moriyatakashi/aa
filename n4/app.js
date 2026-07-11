@@ -109,6 +109,7 @@ function threadCardHtml(thread) {
       <summary>
         <div class="thread-top-row">
           <span class="chevron">▶</span>
+          ${root.seq ? `<span class="seq-chip">n4-${root.seq}</span>` : ""}
           <span class="pill ${isOpen ? "pill-open" : "pill-closed"}">${isOpen ? "open" : "closed"}</span>
           <span class="thread-title">${title}</span>
         </div>
