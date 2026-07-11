@@ -17,9 +17,19 @@ function parseTags(text) {
     .filter(Boolean);
 }
 
+// n4-5対応: サーバーのcreatedAtはUTCで保存されている(function_app.pyがdatetime.now(timezone.utc)
+// で生成)。文字列を単純に切り詰めるとUTCのままJSTのつもりで読まれて混乱するため、
+// 明示的にJSTへ変換した上で「JST」ラベルも付けて曖昧さを無くす。
 function fmtTs(iso) {
   if (!iso) return "";
-  return iso.replace("T", " ").slice(0, 16);
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const jst = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(d);
+  return jst.replace(",", "") + " JST";
 }
 
 // スレッド化: PartitionKey(threadId)でグルーピングし、id===threadIdの行を起点(new)とみなす。
