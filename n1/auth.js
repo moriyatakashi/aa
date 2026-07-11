@@ -25,6 +25,20 @@ function activateSession(credential, payload) {
   window.dispatchEvent(new CustomEvent("n1-login-success"));
 }
 
+// issue #9対応: 自前セッション復元後もGoogle One Tapが自動プロンプトを出してくる問題への対処。
+// data-auto_prompt="false"のような初期化設定側の変更は過去(issue #7)に原因不明のデータ読み込み
+// 不能を引き起こしたため触らない。代わりに、GSIスクリプトの読み込み完了を(onloadイベントに頼らず
+// ポーリングで)待ってから、公式APIのdisableAutoSelect()で自動サインインだけを止める。
+// スクリプトの読み込み順序に依存しない実装のため、issue #8のような順序起因の不具合は起きない。
+function suppressAutoPromptWhenGsiReady(retriesLeft = 100) {
+  if (window.google && window.google.accounts && window.google.accounts.id) {
+    window.google.accounts.id.disableAutoSelect();
+    return;
+  }
+  if (retriesLeft <= 0) return;
+  setTimeout(() => suppressAutoPromptWhenGsiReady(retriesLeft - 1), 50);
+}
+
 window.handleCredentialResponse = (response) => {
   try {
     const payload = decodeJwtPayload(response.credential);
@@ -47,6 +61,7 @@ window.handleCredentialResponse = (response) => {
       return;
     }
     activateSession(credential, decodeJwtPayload(credential));
+    suppressAutoPromptWhenGsiReady();
   } catch (e) {
     localStorage.removeItem(STORAGE_KEY);
   }
