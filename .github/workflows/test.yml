@@ -16,6 +16,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
       - name: Run tests
         # テストファイルは物理学者フォルダ(bell/, bohr/等)配下に置く運用のため、
         # 特定のパスに固定せずリポジトリ全体から *.test.js を探す
