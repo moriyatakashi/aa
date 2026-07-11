@@ -210,3 +210,82 @@ def scores_item(req: func.HttpRequest) -> func.HttpResponse:
     }
     table.upsert_entity(entity)
     return func.HttpResponse(json.dumps(_score_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
+
+
+# n4(気づきログ)。1件=1つの出来事(new/note/correction/priority/status/void/...)を
+# 追記していくだけの台帳。過去の行は書き換えない(赤黒帳票方式)。
+# PartitionKey=スレッド起点のid、RowKey=その出来事自身のid。
+# 種別ごとに変わる中身(body/tags/value/reasonなど)は固定カラムにせず、Dataに
+# JSONのまま自由に持たせる(骨組みだけ決めて中身は増やせるようにする)。
+N4_TABLE = "N4Log"
+N4_HUMAN_ALLOWED_TYPES = {"new", "note", "void", "status"}
+
+
+def _n4_entry_dict(e):
+    try:
+        data = json.loads(e.get("Data") or "{}")
+    except ValueError:
+        data = {}
+    return {
+        "id": e["RowKey"],
+        "threadId": e["PartitionKey"],
+        "by": e.get("By", ""),
+        "ref": e.get("Ref") or None,
+        "type": e.get("Type", ""),
+        "createdAt": e.get("CreatedAt", ""),
+        **data,
+    }
+
+
+@app.function_name(name="n4-log")
+@app.route(route="n4", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def n4_log(req: func.HttpRequest) -> func.HttpResponse:
+    table = _table_client(N4_TABLE)
+
+    if req.method == "GET":
+        items = [_n4_entry_dict(e) for e in table.list_entities()]
+        items.sort(key=lambda x: x["createdAt"])
+        return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+    body = _get_body(req)
+
+    # Claude Codeレーン: n4専用の鍵。有効なら種別自由、そうでなければ人間レーン(Googleログイン)を試す。
+    claude_key = body.get("claude_key", "")
+    n4_claude_key = os.environ.get("N4_CLAUDE_KEY", "")
+    if claude_key and n4_claude_key and claude_key == n4_claude_key:
+        by = "claude"
+    else:
+        err = _authorize(body)
+        if err:
+            return err
+        by = "takashi"
+
+    entry_type = body.get("type") or "new"
+    if by == "takashi" and entry_type not in N4_HUMAN_ALLOWED_TYPES:
+        return func.HttpResponse(
+            f"human lane can only write: {', '.join(sorted(N4_HUMAN_ALLOWED_TYPES))}",
+            status_code=400,
+        )
+
+    ref = (body.get("ref") or "").strip()
+    if entry_type == "new":
+        ref = ""  # newは常に新規スレッドの起点にする
+
+    now = datetime.now(timezone.utc)
+    entry_id = now.strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:8]
+    partition = ref if ref else entry_id
+
+    exclude_keys = {"credential", "claude_key", "type", "ref"}
+    data_fields = {k: v for k, v in body.items() if k not in exclude_keys}
+
+    entity = {
+        "PartitionKey": partition,
+        "RowKey": entry_id,
+        "By": by,
+        "Ref": ref,
+        "Type": entry_type,
+        "Data": json.dumps(data_fields, ensure_ascii=False),
+        "CreatedAt": now.isoformat(),
+    }
+    table.upsert_entity(entity)
+    return func.HttpResponse(json.dumps(_n4_entry_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
