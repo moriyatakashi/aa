@@ -251,6 +251,12 @@ def n4_log(req: func.HttpRequest) -> func.HttpResponse:
     table = _table_client(N4_TABLE)
 
     if req.method == "GET":
+        claude_key = req.headers.get("X-Claude-Key", "")
+        n4_claude_key = os.environ.get("N4_CLAUDE_KEY", "")
+        if not (claude_key and n4_claude_key and claude_key == n4_claude_key):
+            err = _authorize({"credential": req.headers.get("X-N4-Credential", "")})
+            if err:
+                return err
         items = [_n4_entry_dict(e) for e in table.list_entities()]
         items.sort(key=lambda x: x["createdAt"])
         return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")

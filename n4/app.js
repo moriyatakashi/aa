@@ -1,6 +1,6 @@
 // app.js — n4(気づきログ)。1件=1つの出来事(new/note/correction/priority/status/void/...)を
 // 追記していくだけの台帳を表示・操作する。過去の行は書き換えない(赤黒帳票方式)。
-// 画面側ログインゲートを通過した後にのみデータを取得・表示する(GETは無認証のまま)。
+// 画面側ログインゲートを通過した後にのみデータを取得・表示する(GETもcredentialヘッダで認証)。
 const API_BASE = "https://ab-board-api.azurewebsites.net/api";
 const N4_API = `${API_BASE}/n4`;
 
@@ -194,7 +194,7 @@ function attachThreadHandlers(container, thread) {
 async function load() {
   const listEl = document.getElementById("threadList");
   try {
-    const res = await fetch(N4_API, { cache: "no-store" });
+    const res = await fetch(N4_API, { cache: "no-store", headers: { "X-N4-Credential": window.__credential || "" } });
     const items = res.ok ? await res.json() : [];
     const threads = groupThreads(items);
 
