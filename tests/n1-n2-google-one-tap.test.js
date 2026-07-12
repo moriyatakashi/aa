@@ -1,4 +1,4 @@
-// n1/n2は自前でログイン状態をlocalStorageに30分保持し、期限内なら再ログインを省略する
+// n1/n2は自前でログイン状態をlocalStorageに60分保持し、期限内なら再ログインを省略する
 // (auth.jsのrestoreSession)。しかしGoogle Identity Services(GSI)側のOne Tap自動プロンプトは
 // このアプリ独自のセッション状態を一切見ないため、セッション復元済みでもGoogleへ
 // 「今回は自動サインインを出さないで」と伝える処理(disableAutoSelect等)がなければ、
@@ -42,7 +42,7 @@ const GSI_STUB = `
 `;
 
 for (const pageName of ["n1", "n2"]) {
-  test(`${pageName}: 30分以内の復元セッションがあるときはGoogle One Tapの自動プロンプトを止めるべき`, async () => {
+  test(`${pageName}: 60分以内の復元セッションがあるときはGoogle One Tapの自動プロンプトを止めるべき`, async () => {
     const server = await serveStatic();
     const port = server.address().port;
     const browser = await chromium.launch();

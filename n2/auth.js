@@ -4,12 +4,13 @@
 // 訪問記録追加(書き込みAPI)にはGoogle IDトークン自体をab-board-api側で検証するため、
 // デコード結果だけでなく生のcredentialもwindow.__credentialに保持しておく。
 //
-// ログイン状態はlocalStorageに30分だけ保持し、期限内ならページ再訪問時にログインを省略する。
-// Google IDトークン自体の実際の有効期限は約1時間だが、それより短い30分で自主的に区切ることで、
-// 実際には期限切れのトークンをAPIに送ってしまうケースを避けている(n1/n2で共通のキーを使うため、
-// 片方でログインすればもう片方も30分以内なら再ログイン不要になる)。
+// ログイン状態はlocalStorageに60分だけ保持し、期限内ならページ再訪問時にログインを省略する。
+// Google IDトークン自体の実際の有効期限は約1時間なので、ほぼ同じ長さまで許容している
+// (n4-3対応: 30分は頻繁すぎるとの指摘で60分に延長。バッファがほぼ無くなる分、期限ぎりぎりで
+// 保存すると生トークン側は切れていて保存に失敗することがあるが、都度再ログインすれば済む程度の実害)。
+// n1/n2で共通のキーを使うため、片方でログインすればもう片方も60分以内なら再ログイン不要になる。
 const STORAGE_KEY = "aa_credential";
-const SESSION_MS = 30 * 60 * 1000;
+const SESSION_MS = 60 * 60 * 1000;
 
 function decodeJwtPayload(credential) {
   const base64 = credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -50,7 +51,7 @@ window.handleCredentialResponse = (response) => {
   }
 };
 
-// ページ読み込み時、30分以内の保存済みログインがあれば再利用する
+// ページ読み込み時、60分以内の保存済みログインがあれば再利用する
 (function restoreSession() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
