@@ -10,17 +10,26 @@
       background: #000000; color: #eeeeee;
     }
     a { color: #6cf; }
+    .nav-list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+    .nav-item {
+      display: flex; align-items: baseline; gap: 10px;
+      border: 1px solid #444; border-radius: 8px; padding: 10px 14px;
+      text-decoration: none; color: inherit;
+    }
+    .nav-item:hover { border-color: #6cf; }
+    .nav-code { font-weight: bold; color: #6cf; }
+    .nav-desc { color: #ccc; font-size: 0.9rem; }
   </style>
 </head>
 <body>
   <h1>路歴（aa）</h1>
   <p>日々の記録や気づきを、少しずつ積み重ねています。</p>
-  <ul>
-    <li><a href="n1/">n1</a></li>
-    <li><a href="n2/">n2</a></li>
-    <li><a href="k1/">k1</a></li>
-    <li><a href="n4/">n4</a></li>
-  </ul>
-  <p>更新: 2026-07-12 10:14</p>
+  <div class="nav-list">
+    <a class="nav-item" href="n1/"><span class="nav-code">n1</span><span class="nav-desc">記録一覧</span></a>
+    <a class="nav-item" href="n2/"><span class="nav-code">n2</span><span class="nav-desc">訪問地図</span></a>
+    <a class="nav-item" href="k1/"><span class="nav-code">k1</span><span class="nav-desc">NES Emulator</span></a>
+    <a class="nav-item" href="n4/"><span class="nav-code">n4</span><span class="nav-desc">気づきログ</span></a>
+  </div>
+  <p>更新: 2026-07-12 10:50</p>
 </body>
 </html>
