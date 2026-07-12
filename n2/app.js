@@ -59,11 +59,12 @@ function drawFeatures(features, proj, fillColor, strokeColor) {
 
 function drawPoints(visits, proj) {
   const points = [];
-  visits.forEach(v => {
+  visits.forEach((v, i) => {
     const [x, y] = proj(v.lng, v.lat);
+    const isLatest = i === 0; // visitsは新しい順にソート済み → 先頭が最後の訪問場所
     ctx.beginPath();
     ctx.arc(x, y, 6, 0, Math.PI * 2);
-    ctx.fillStyle = "#b5651d";
+    ctx.fillStyle = isLatest ? "#e63946" : "#b5651d";
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
     ctx.fill();
