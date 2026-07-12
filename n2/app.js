@@ -59,18 +59,32 @@ function drawFeatures(features, proj, fillColor, strokeColor) {
 
 function drawPoints(visits, proj) {
   const points = [];
+  // 通常ピンを先に描画し、最後の訪問地(赤)は最後に描画して常に最前面に出す
+  // (同じ場所への複数訪問がある場合、後から描画されるピンに埋もれるのを防ぐ)
   visits.forEach((v, i) => {
     const [x, y] = proj(v.lng, v.lat);
-    const isLatest = i === 0; // visitsは新しい順にソート済み → 先頭が最後の訪問場所
+    points.push({ x, y, v, isLatest: i === 0 });
+  });
+
+  points.filter(p => !p.isLatest).forEach(p => {
     ctx.beginPath();
-    ctx.arc(x, y, 6, 0, Math.PI * 2);
-    ctx.fillStyle = isLatest ? "#e63946" : "#b5651d";
+    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#b5651d";
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
     ctx.fill();
     ctx.stroke();
-    points.push({ x, y, v });
   });
+  points.filter(p => p.isLatest).forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#e63946";
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+  });
+
   return points;
 }
 
