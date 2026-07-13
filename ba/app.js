@@ -196,7 +196,7 @@ function attachThreadHandlers(container, thread) {
 async function load() {
   const listEl = document.getElementById("threadList");
   try {
-    const res = await fetch(BA_API, { cache: "no-store", headers: { "X-N4-Credential": window.__credential || "" } });
+    const res = await fetch(BA_API, { cache: "no-store", headers: { "X-Ba-Credential": window.__credential || "" } });
     const items = res.ok ? await res.json() : [];
     const threads = groupThreads(items);
 

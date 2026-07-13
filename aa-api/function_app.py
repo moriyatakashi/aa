@@ -359,7 +359,7 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
     if req.method == "GET":
         by = _ba_claude_lane(req.headers.get("X-Claude-Key", ""))
         if not by:
-            err = _authorize({"credential": req.headers.get("X-N4-Credential", "")})
+            err = _authorize({"credential": req.headers.get("X-Ba-Credential", "")})
             if err:
                 return err
         items = [_ba_entry_dict(e) for e in table.list_entities()]
