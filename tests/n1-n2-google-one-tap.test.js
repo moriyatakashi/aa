@@ -69,6 +69,16 @@ for (const pageName of ["n1", "n2"]) {
         disableCalled > 0,
         "セッション復元済みなのに、GoogleのOne Tap自動プロンプトを止める指示(disableAutoSelect等)が一度も送られていない"
       );
+
+      // data-auto_prompt属性は実物のGSIクライアントだけが読むためスタブでは検知できない。
+      // 属性の有無を直接確認しないと、n4-3で直した「One Tap浮動UIが毎回自動表示される」
+      // バグの再発をこのテストは見逃す(ba-10)。
+      const autoPrompt = await page.getAttribute("#g_id_onload", "data-auto_prompt");
+      assert.equal(
+        autoPrompt,
+        "false",
+        "g_id_onloadにdata-auto_prompt=\"false\"がない(One Tapの浮動UIが毎回自動表示される)"
+      );
     } finally {
       await browser.close();
       server.close();

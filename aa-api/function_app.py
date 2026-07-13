@@ -387,6 +387,13 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
             status_code=400,
         )
 
+    # 疎通確認用: dry_run=trueなら鍵・種別の検証だけ行い、台帳には書き込まない(ba-5)。
+    if body.get("dry_run"):
+        return func.HttpResponse(
+            json.dumps({"dry_run": True, "by": by, "type": entry_type}, ensure_ascii=False),
+            mimetype="application/json",
+        )
+
     ref = (body.get("ref") or "").strip()
     if entry_type == "new":
         ref = ""  # newは常に新規スレッドの起点にする
