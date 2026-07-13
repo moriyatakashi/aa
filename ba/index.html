@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ba / n4後継ログ</title>
+<link rel="stylesheet" href="../common/ledger.css?v=202607131100">
+</head>
+<body>
+  <p><a href="../">← 戻る</a></p>
+  <div class="eyebrow">ロレキ内部メモ</div>
+  <h1>路歴（ba） / n4後継ログ</h1>
+  <p class="lede">n4の骨組み(追記オンリー・赤黒帳票)を引き継ぎつつ、Claude CodeレーンをPC/スマホで別鍵にした台帳。実機で確認できたことは verified on device として記録する(この項目はPCレーンのみ書込可)。</p>
+  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-13 11:00</p>
+
+  <div id="login-gate">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div id="g_id_onload"
+      data-client_id="550466095352-50h92anfullp137l4gq4gdi7ogjk0auc.apps.googleusercontent.com"
+      data-callback="handleCredentialResponse"
+      data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"></div>
+    <p id="status">未ログイン(ログインするとログが表示されます)</p>
+  </div>
+
+  <div id="content" style="display:none;">
+    <div class="lane-legend">
+      <span><span class="lane-dot lane-dot--claude"></span>Claude Codeレーン — PC/スマホ別鍵、種別は自由(PCのみverified_on_device可)、追記のみ</span>
+      <span><span class="lane-dot lane-dot--human"></span>人間レーン — Googleログイン、種別は note/void/status のみ</span>
+    </div>
+
+    <div class="summary-bar">
+      <div class="stat"><div class="stat-num" id="statTotal">—</div><div class="stat-label">スレッド</div></div>
+      <div class="stat"><div class="stat-num" id="statOpen">—</div><div class="stat-label">オープン</div></div>
+      <div class="stat"><div class="stat-num" id="statClosed">—</div><div class="stat-label">クローズ</div></div>
+      <div class="stat"><div class="stat-num" id="statLatestBy">—</div><div class="stat-label">直近の記入者</div></div>
+    </div>
+
+    <div class="new-entry-card">
+      <div class="new-entry-title">新規スレッドを追加</div>
+      <div class="new-entry-sub">type=new / by=takashi に固定。id・ts は自動採番。</div>
+
+      <label class="lane-form-label">タイトル</label>
+      <input class="field-input" id="newTitle" type="text" placeholder="例: baページのレイアウト崩れ">
+
+      <label class="lane-form-label">タグ(自由・複数可)</label>
+      <input class="field-input" id="newTags" type="text" placeholder="#設計 #ba #スマホ">
+
+      <label class="lane-form-label">本文(任意)</label>
+      <textarea class="field-textarea" id="newBody" placeholder="経緯やメモ、気づいた状況など"></textarea>
+
+      <div class="new-entry-divider">または、スマホClaudeが作ったJSONを貼り付け</div>
+      <textarea class="field-textarea json-paste" id="newJson" placeholder='{"title": "...", "tags": ["...", "..."], "body": "..."}'></textarea>
+
+      <button class="new-entry-submit" type="button" id="btnAddThread">追加する</button>
+    </div>
+
+    <div class="thread-list" id="threadList"></div>
+  </div>
+
+  <script>window.AA_AUTH_EVENT = "ba-login-success";</script>
+  <script src="../common/auth.js?v=202607131100"></script>
+  <script type="module" src="app.js?v=202607131100"></script>
+</body>
+</html>
