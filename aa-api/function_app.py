@@ -305,3 +305,109 @@ def n4_log(req: func.HttpRequest) -> func.HttpResponse:
         entity["Seq"] = _next_n4_seq(table)
     table.upsert_entity(entity)
     return func.HttpResponse(json.dumps(_n4_entry_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
+
+
+# ba(n4の後継)。骨組みはn4と同じ追記オンリー台帳だが、Claude Codeレーンを
+# スマホ/PCで別鍵にし、"実機/実ブラウザで確認できた"ことを主張する種別
+# (verified_on_device)だけはPCレーンのみ書き込み可にする。
+BA_TABLE = "BaLog"
+BA_HUMAN_ALLOWED_TYPES = {"new", "note", "void", "status"}
+BA_DEVICE_VERIFIED_TYPES = {"verified_on_device"}
+
+
+def _ba_entry_dict(e):
+    try:
+        data = json.loads(e.get("Data") or "{}")
+    except ValueError:
+        data = {}
+    return {
+        "id": e["RowKey"],
+        "threadId": e["PartitionKey"],
+        "by": e.get("By", ""),
+        "ref": e.get("Ref") or None,
+        "type": e.get("Type", ""),
+        "seq": e.get("Seq"),
+        "createdAt": e.get("CreatedAt", ""),
+        **data,
+    }
+
+
+def _next_ba_seq(table):
+    existing = [e.get("Seq") for e in table.query_entities("Type eq 'new'") if e.get("Seq") is not None]
+    return (max(existing) if existing else 0) + 1
+
+
+def _ba_claude_lane(claude_key):
+    """渡された鍵がスマホ用/PC用のどちらと一致するかを判定する。
+    一致しなければNoneを返し、人間レーンへフォールバックさせる。"""
+    if not claude_key:
+        return None
+    mobile_key = os.environ.get("BA_CLAUDE_KEY_MOBILE", "")
+    pc_key = os.environ.get("BA_CLAUDE_KEY_PC", "")
+    if pc_key and claude_key == pc_key:
+        return "claude-pc"
+    if mobile_key and claude_key == mobile_key:
+        return "claude-mobile"
+    return None
+
+
+@app.function_name(name="ba-log")
+@app.route(route="ba", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def ba_log(req: func.HttpRequest) -> func.HttpResponse:
+    table = _table_client(BA_TABLE)
+
+    if req.method == "GET":
+        by = _ba_claude_lane(req.headers.get("X-Claude-Key", ""))
+        if not by:
+            err = _authorize({"credential": req.headers.get("X-N4-Credential", "")})
+            if err:
+                return err
+        items = [_ba_entry_dict(e) for e in table.list_entities()]
+        items.sort(key=lambda x: x["createdAt"])
+        return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+    body = _get_body(req)
+
+    by = _ba_claude_lane(body.get("claude_key", ""))
+    if not by:
+        err = _authorize(body)
+        if err:
+            return err
+        by = "takashi"
+
+    entry_type = body.get("type") or "new"
+    if by == "takashi" and entry_type not in BA_HUMAN_ALLOWED_TYPES:
+        return func.HttpResponse(
+            f"human lane can only write: {', '.join(sorted(BA_HUMAN_ALLOWED_TYPES))}",
+            status_code=400,
+        )
+    if entry_type in BA_DEVICE_VERIFIED_TYPES and by != "claude-pc":
+        return func.HttpResponse(
+            f"only claude-pc can write: {', '.join(sorted(BA_DEVICE_VERIFIED_TYPES))}",
+            status_code=400,
+        )
+
+    ref = (body.get("ref") or "").strip()
+    if entry_type == "new":
+        ref = ""  # newは常に新規スレッドの起点にする
+
+    now = datetime.now(timezone.utc)
+    entry_id = now.strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:8]
+    partition = ref if ref else entry_id
+
+    exclude_keys = {"credential", "claude_key", "type", "ref"}
+    data_fields = {k: v for k, v in body.items() if k not in exclude_keys}
+
+    entity = {
+        "PartitionKey": partition,
+        "RowKey": entry_id,
+        "By": by,
+        "Ref": ref,
+        "Type": entry_type,
+        "Data": json.dumps(data_fields, ensure_ascii=False),
+        "CreatedAt": now.isoformat(),
+    }
+    if entry_type == "new":
+        entity["Seq"] = _next_ba_seq(table)
+    table.upsert_entity(entity)
+    return func.HttpResponse(json.dumps(_ba_entry_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
