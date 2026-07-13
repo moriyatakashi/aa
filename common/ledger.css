@@ -137,3 +137,18 @@ details[open] .chevron { transform: rotate(90deg); }
   background: transparent; color: var(--accent); cursor: pointer; white-space: nowrap;
 }
 .lane-form-hint { font-size: 0.62rem; color: var(--ink-soft); margin-top: 6px; }
+
+/* ba: 両視点そろって無効のスレッドは既定で隠し、トグルONのときだけ薄色+取り消し線で表示する */
+.list-controls { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.btn-toggle-voided {
+  font-size: 0.72rem; padding: 5px 12px; border: 1px solid var(--ink-soft); border-radius: 5px;
+  background: transparent; color: var(--ink-soft); cursor: pointer; white-space: nowrap;
+}
+.thread-card--void { opacity: 0.55; }
+.thread-card--void .thread-title { text-decoration: line-through; }
+/* ba: correctionによるタイトル訂正(有事用)。見出しは最新titleで上書き表示し、チップで訂正済みと分かるようにする */
+.title-corrected-chip {
+  font-size: 0.66rem; color: var(--ink-soft); border: 1px dashed var(--ink-soft);
+  border-radius: 10px; padding: 2px 8px; white-space: nowrap;
+}
+.entry-title { font-size: 0.85rem; font-weight: 700; margin-top: 3px; line-height: 1.5; }

@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ba / n4後継ログ</title>
-<link rel="stylesheet" href="../common/ledger.css?v=202607132143">
+<link rel="stylesheet" href="../common/ledger.css?v=202607140442">
 </head>
 <body>
   <p><a href="../">← 戻る</a></p>
   <div class="eyebrow">ロレキ内部メモ</div>
   <h1>路歴（ba） / n4後継ログ</h1>
   <p class="lede">n4の骨組み(追記オンリー・赤黒帳票)を引き継ぎつつ、Claude CodeレーンをPC/スマホで別鍵にした台帳。実機で確認できたことは verified on device として記録する(この項目はPCレーンのみ書込可)。</p>
-  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-13 21:43 JST</p>
+  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-14 04:42 JST</p>
 
   <div id="login-gate">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -56,11 +56,14 @@
       <button class="new-entry-submit" type="button" id="btnAddThread">追加する</button>
     </div>
 
+    <div class="list-controls">
+      <button type="button" class="btn-toggle-voided" id="btnToggleVoid" style="display:none;">無効スレッドも表示</button>
+    </div>
     <div class="thread-list" id="threadList"></div>
   </div>
 
   <script>window.AA_AUTH_EVENT = "ba-login-success";</script>
   <script src="../common/auth.js?v=202607132143"></script>
-  <script type="module" src="app.js?v=202607132153"></script>
+  <script type="module" src="app.js?v=202607140442"></script>
 </body>
 </html>

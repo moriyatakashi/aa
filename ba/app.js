@@ -46,16 +46,27 @@ function groupThreads(items) {
     const root = entries.find((e) => e.id === threadId) || entries[0];
     const children = entries.filter((e) => e.id !== threadId);
 
-    const voidByLane = {};
+    // 無効フラグはclaude視点/takashi視点の2視点で持つ。claudeはPC/スマホの2レーン
+    // あるが視点としては1つに合算する(時系列で最新のvoid値が勝つ)。
+    const voidView = {};
     const priorityByLane = {};
     let status = "open";
+    let displayTitle = root.title;
+    let titleCorrected = false;
     entries.forEach((e) => {
-      if (e.type === "void" && e.by) voidByLane[e.by] = !!e.value;
+      if (e.type === "void" && e.by) voidView[e.by.startsWith("claude") ? "claude" : "takashi"] = !!e.value;
       if (e.type === "priority" && e.by) priorityByLane[e.by] = e.value;
       if (e.type === "status" && e.status) status = e.status;
+      // タイトル訂正(有事用): titleを持つcorrectionが見出し表示だけを上書きする(最新優先)。
+      // 上書きはtitleに限定。本文の間違いは訂正エントリを「並べて見せる」従来方式のまま。
+      if (e.type === "correction" && e.title) { displayTitle = e.title; titleCorrected = true; }
     });
 
-    threads.push({ threadId, root, children, entries, voidByLane, priorityByLane, status });
+    // 両視点そろって無効のときだけ既定で隠す。片方だけ無効=認識が食い違っている
+    // スレッドは、齟齬が拾えるようにあえて隠さない。
+    const hiddenVoid = voidView.claude === true && voidView.takashi === true;
+
+    threads.push({ threadId, root, children, entries, voidView, priorityByLane, status, displayTitle, titleCorrected, hiddenVoid });
   });
 
   threads.sort((a, b) => b.root.createdAt.localeCompare(a.root.createdAt));
@@ -86,19 +97,24 @@ function renderSummary(threads) {
 function entryRowHtml(e) {
   const voidClass = e.type === "void" ? (e.value ? " entry--void-true" : " entry--void-false") : "";
   const typeClass = e.type === "correction" ? " entry--correction" : e.type === "priority" ? " entry--priority" : e.type === "status" ? " entry--status" : e.type === "new" ? " entry--new" : e.type === "verified_on_device" ? " entry--verified" : " entry--note";
+  // new/correctionのtitleはタイムライン上にも出す。訂正で見出しが変わっても、
+  // 元のタイトルと訂正の経緯がスレッドを開けば読めるようにするため。
+  const titleLine = e.title && (e.type === "new" || e.type === "correction")
+    ? `<div class="entry-title">${e.type === "correction" ? "タイトル → " : ""}${e.title}</div>` : "";
   return `
     <div class="entry${voidClass || typeClass}">
       <div class="entry-rail"></div>
       <div>
         <div class="entry-head"><span class="entry-type">${entryTypeLabel(e)}</span><span>${fmtTs(e.createdAt)}</span><span>${e.by}</span></div>
+        ${titleLine}
         <div class="entry-body">${e.body || e.reason || ""}</div>
       </div>
     </div>`;
 }
 
-function perspectiveRowHtml(voidByLane) {
-  const c = voidByLane.claude;
-  const t = voidByLane.takashi;
+function perspectiveRowHtml(voidView) {
+  const c = voidView.claude;
+  const t = voidView.takashi;
   if (c === undefined && t === undefined) return "";
   const chip = (val, label) =>
     val === undefined
@@ -109,24 +125,25 @@ function perspectiveRowHtml(voidByLane) {
 
 function threadCardHtml(thread) {
   const { threadId, root, children, status } = thread;
-  const title = root.title || root.body || "(無題)";
+  const title = thread.displayTitle || root.body || "(無題)";
   const tags = Array.isArray(root.tags) ? root.tags : [];
   const tagsHtml = tags.map((t) => `<span class="tag">#${t}</span>`).join("");
   const ghHtml = root.github_issue ? `<span class="gh-chip">gh #${root.github_issue}</span>` : "";
   const isOpen = status === "open";
-  const takashiVoid = thread.voidByLane.takashi;
+  const takashiVoid = thread.voidView.takashi;
 
   return `
-    <details class="thread-card" data-thread-id="${threadId}" ${isOpen ? "open" : ""}>
+    <details class="thread-card${thread.hiddenVoid ? " thread-card--void" : ""}" data-thread-id="${threadId}" ${isOpen ? "open" : ""}>
       <summary>
         <div class="thread-top-row">
           <span class="chevron">▶</span>
           ${root.seq ? `<span class="seq-chip">ba-${root.seq}</span>` : ""}
           <span class="pill ${isOpen ? "pill-open" : "pill-closed"}">${isOpen ? "open" : "closed"}</span>
           <span class="thread-title">${title}</span>
+          ${thread.titleCorrected ? `<span class="title-corrected-chip">タイトル訂正済</span>` : ""}
         </div>
         <div class="meta-row">${tagsHtml}${ghHtml}</div>
-        ${perspectiveRowHtml(thread.voidByLane)}
+        ${perspectiveRowHtml(thread.voidView)}
       </summary>
       <div class="thread-timeline">
         ${entryRowHtml(root)}
@@ -176,7 +193,7 @@ function attachThreadHandlers(container, thread) {
 
   card.querySelector(".btn-toggle-void").addEventListener("click", async () => {
     try {
-      await postEntry({ ref: thread.threadId, type: "void", value: !thread.voidByLane.takashi });
+      await postEntry({ ref: thread.threadId, type: "void", value: !thread.voidView.takashi });
       load();
     } catch (e) {
       alert("無効フラグの切り替えに失敗しました: " + e.message);
@@ -193,16 +210,31 @@ function attachThreadHandlers(container, thread) {
   });
 }
 
+// 両視点そろって無効のスレッドは既定で一覧から隠す。トグルONのときだけ薄色で表示する。
+let showVoided = false;
+let cachedThreads = [];
+
+function render() {
+  const listEl = document.getElementById("threadList");
+  const hiddenCount = cachedThreads.filter((t) => t.hiddenVoid).length;
+  const visible = showVoided ? cachedThreads : cachedThreads.filter((t) => !t.hiddenVoid);
+
+  renderSummary(cachedThreads);
+  const toggleEl = document.getElementById("btnToggleVoid");
+  toggleEl.style.display = hiddenCount ? "" : "none";
+  toggleEl.textContent = showVoided ? `無効スレッドを隠す(${hiddenCount})` : `無効スレッドも表示(${hiddenCount})`;
+
+  listEl.innerHTML = visible.map(threadCardHtml).join("") || `<p class="empty">まだ何もありません</p>`;
+  visible.forEach((t) => attachThreadHandlers(listEl, t));
+}
+
 async function load() {
   const listEl = document.getElementById("threadList");
   try {
     const res = await fetch(BA_API, { cache: "no-store", headers: { "X-Ba-Credential": window.__credential || "" } });
     const items = res.ok ? await res.json() : [];
-    const threads = groupThreads(items);
-
-    renderSummary(threads);
-    listEl.innerHTML = threads.map(threadCardHtml).join("") || `<p class="empty">まだ何もありません</p>`;
-    threads.forEach((t) => attachThreadHandlers(listEl, t));
+    cachedThreads = groupThreads(items);
+    render();
   } catch (e) {
     listEl.innerHTML = `<p class="empty">読み込みエラー: ${e.message}</p>`;
   }
@@ -241,6 +273,10 @@ function initNewEntryForm() {
 // issue #8対応(案B)の踏襲: auth.jsの実行順は変えず、起動時にwindow.__loginStateを直接チェックする。
 function onLoginSuccess() {
   initNewEntryForm();
+  document.getElementById("btnToggleVoid").addEventListener("click", () => {
+    showVoided = !showVoided;
+    render();
+  });
   load();
 }
 
