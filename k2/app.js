@@ -1,7 +1,11 @@
-// app.js — k2(baリーダーチャート)。baの生ログを読み、投稿者3人を軸にした
-// レーダーチャート(三角形)で「参加スレッド数(クローズ含む)」を可視化する。読み取り専用。
+// app.js — k2(baリーダーチャート)。baの生ログを読み、
+// (1)投稿者別: 投稿者3人を軸にした参加スレッド数、
+// (2)分類別: ba-32規約の4分類(案件/確定仕様/気づき/保留論点)ごとのスレッド数
+// をタブ切り替えでレーダーチャート表示する。読み取り専用。
 const API_BASE = "https://ab-board-api.azurewebsites.net/api";
 const BA_API = `${API_BASE}/ba`;
+
+const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];
 
 // ba/app.jsのgroupThreadsを踏襲(status判定・PartitionKeyグルーピングのロジックを合わせるため)。
 function groupThreads(items) {
@@ -40,15 +44,34 @@ function computePosterCounts(threads) {
   return counts;
 }
 
+// 分類別の判定基準: スレッド内のnoteエントリでtagsに4分類のいずれかが付いたもののうち、
+// 最も新しいcreatedAtのものを「そのスレッドの現在の分類」とする
+// (ba-32運用: 分類の訂正・バックフィルは新しいnoteの追記で上書きする方式のため)。
+function computeClassificationCounts(threads) {
+  const counts = new Map(CLASSIFICATIONS.map((c) => [c, 0]));
+
+  threads.forEach((thread) => {
+    let latest = null; // entriesはcreatedAt昇順ソート済みなので、最後に見つかったものが最新
+    thread.entries.forEach((e) => {
+      const tags = e.tags || [];
+      const found = tags.find((t) => CLASSIFICATIONS.includes(t));
+      if (found) latest = found;
+    });
+    if (latest) counts.set(latest, counts.get(latest) + 1);
+  });
+
+  return counts;
+}
+
 const COLOR = "#6cf";
 
-// 軸=投稿者3人、頂点の値=投稿数(スレッド数)。1つの三角形として描画する。
-function drawRadar(svg, posterCounts) {
-  const posters = Array.from(posterCounts.keys());
+// 軸=Mapのkey、頂点の値=Mapのvalue。多角形1つとして描画する(軸数は可変)。
+function drawRadar(svg, counts) {
+  const labels = Array.from(counts.keys());
   const cx = 160, cy = 150, r = 100;
-  const maxVal = Math.max(1, ...posters.map((p) => posterCounts.get(p)));
+  const maxVal = Math.max(1, ...labels.map((l) => counts.get(l)));
 
-  const angleFor = (i) => (Math.PI * 2 * i) / posters.length - Math.PI / 2;
+  const angleFor = (i) => (Math.PI * 2 * i) / labels.length - Math.PI / 2;
   const pointFor = (i, val) => {
     const a = angleFor(i);
     const dist = (val / maxVal) * r;
@@ -60,62 +83,97 @@ function drawRadar(svg, posterCounts) {
   // グリッド(同心の多角形、4分割)
   for (let ring = 1; ring <= 4; ring++) {
     const ringR = (r * ring) / 4;
-    const pts = posters.map((_, i) => {
+    const pts = labels.map((_, i) => {
       const a = angleFor(i);
       return `${cx + ringR * Math.cos(a)},${cy + ringR * Math.sin(a)}`;
     }).join(" ");
     svgParts.push(`<polygon points="${pts}" fill="none" stroke="#444" stroke-width="1"/>`);
   }
 
-  // 軸線とラベル(投稿者名+件数)
-  posters.forEach((by, i) => {
+  // 軸線とラベル(ラベル名+件数)
+  labels.forEach((label, i) => {
     const a = angleFor(i);
     const x2 = cx + r * Math.cos(a), y2 = cy + r * Math.sin(a);
     svgParts.push(`<line x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}" stroke="#444" stroke-width="1"/>`);
     const lx = cx + (r + 30) * Math.cos(a), ly = cy + (r + 30) * Math.sin(a);
-    svgParts.push(`<text x="${lx}" y="${ly}" fill="#eee" font-size="13" text-anchor="middle" dominant-baseline="middle">${by} (${posterCounts.get(by)})</text>`);
+    svgParts.push(`<text x="${lx}" y="${ly}" fill="#eee" font-size="13" text-anchor="middle" dominant-baseline="middle">${label} (${counts.get(label)})</text>`);
   });
 
-  // 三角形(1つ)
-  const pts = posters.map((by, i) => pointFor(i, posterCounts.get(by)).join(",")).join(" ");
+  // 多角形(1つ)
+  const pts = labels.map((label, i) => pointFor(i, counts.get(label)).join(",")).join(" ");
   svgParts.push(`<polygon points="${pts}" fill="${COLOR}" fill-opacity="0.25" stroke="${COLOR}" stroke-width="2"/>`);
-  posters.forEach((by, i) => {
-    const [px, py] = pointFor(i, posterCounts.get(by));
+  labels.forEach((label, i) => {
+    const [px, py] = pointFor(i, counts.get(label));
     svgParts.push(`<circle cx="${px}" cy="${py}" r="3" fill="${COLOR}"/>`);
   });
 
   svg.innerHTML = svgParts.join("\n");
 }
 
-function renderTable(tbody, posterCounts) {
-  const posters = Array.from(posterCounts.keys());
-  tbody.innerHTML = posters.map((by) => {
-    return `<tr><td>${by}</td><td>${posterCounts.get(by)}</td></tr>`;
+function renderTable(theadRow, tbody, counts, labelHeader, valueHeader) {
+  theadRow.innerHTML = `<th>${labelHeader}</th><th>${valueHeader}</th>`;
+  const labels = Array.from(counts.keys());
+  tbody.innerHTML = labels.map((label) => {
+    return `<tr><td>${label}</td><td>${counts.get(label)}</td></tr>`;
   }).join("");
 }
 
-async function load() {
+const VIEWS = {
+  poster: {
+    compute: computePosterCounts,
+    labelHeader: "投稿者",
+    valueHeader: "投稿数(スレッド数・クローズ含む)",
+  },
+  classification: {
+    compute: computeClassificationCounts,
+    labelHeader: "分類",
+    valueHeader: "スレッド数",
+  },
+};
+
+let currentThreads = [];
+let currentView = "poster";
+
+function render() {
   const svg = document.getElementById("radarSvg");
   const tbody = document.getElementById("radarTableBody");
+  const theadRow = document.getElementById("radarTableHead");
+  const emptyEl = document.getElementById("radarEmpty");
+
+  if (!currentThreads.length) {
+    emptyEl.style.display = "";
+    svg.innerHTML = "";
+    tbody.innerHTML = "";
+    return;
+  }
+  emptyEl.style.display = "none";
+
+  const view = VIEWS[currentView];
+  const counts = view.compute(currentThreads);
+
+  drawRadar(svg, counts);
+  renderTable(theadRow, tbody, counts, view.labelHeader, view.valueHeader);
+}
+
+function setupTabs() {
+  const tabs = document.querySelectorAll(".view-tab");
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      currentView = tab.dataset.view;
+      tabs.forEach((t) => t.classList.toggle("active", t === tab));
+      render();
+    });
+  });
+}
+
+async function load() {
   const emptyEl = document.getElementById("radarEmpty");
 
   try {
     const res = await fetch(BA_API, { cache: "no-store", headers: { "X-Ba-Credential": window.__credential || "" } });
     const items = res.ok ? await res.json() : [];
-    const threads = groupThreads(items);
-
-    if (!threads.length) {
-      emptyEl.style.display = "";
-      svg.innerHTML = "";
-      tbody.innerHTML = "";
-      return;
-    }
-    emptyEl.style.display = "none";
-
-    const posterCounts = computePosterCounts(threads);
-
-    drawRadar(svg, posterCounts);
-    renderTable(tbody, posterCounts);
+    currentThreads = groupThreads(items);
+    render();
   } catch (e) {
     emptyEl.textContent = `読み込みエラー: ${e.message}`;
     emptyEl.style.display = "";
@@ -123,6 +181,7 @@ async function load() {
 }
 
 function onLoginSuccess() {
+  setupTabs();
   load();
 }
 
