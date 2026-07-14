@@ -1,5 +1,5 @@
 // app.js — ab/src/main/m1(記録一覧)のロジックをaa向けに移植したもの。
-// 画面側ログインゲートを通過した後にのみデータを取得・表示する(APIは無認証のまま)。
+// 画面側ログインゲートを通過した後にのみデータを取得・表示する。GETもcredentialヘッダで認証する(ba-16)。
 const API_BASE = "https://ab-board-api.azurewebsites.net/api";
 const SCORES_API = `${API_BASE}/scores`;
 const VISITS_API = `${API_BASE}/visits`;
@@ -45,7 +45,7 @@ function initScoreInput() {
 
   async function loadTodayScore() {
     try {
-      const res = await fetch(`${SCORES_API}/${today}`, { cache: "no-store" });
+      const res = await fetch(`${SCORES_API}/${today}`, { cache: "no-store", headers: { "X-Scores-Credential": window.__credential || "" } });
       const data = res.ok ? await res.json() : null;
       if (data) {
         setScore(data.score);
@@ -91,8 +91,8 @@ async function load() {
 
   try {
     const [scoreRes, visitRes] = await Promise.all([
-      fetch(SCORES_API, { cache: "no-store" }),
-      fetch(VISITS_API, { cache: "no-store" })
+      fetch(SCORES_API, { cache: "no-store", headers: { "X-Scores-Credential": window.__credential || "" } }),
+      fetch(VISITS_API, { cache: "no-store", headers: { "X-Visits-Credential": window.__credential || "" } })
     ]);
     const scoreRows = scoreRes.ok ? await scoreRes.json() : [];
     const visitRows = visitRes.ok ? await visitRes.json() : [];
