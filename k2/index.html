@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>k2 / baリーダーチャート</title>
+<link rel="stylesheet" href="../common/ledger.css?v=202607140442">
+<style>
+  .radar-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 14px; margin: 20px 0;
+  }
+  #radarSvg { width: 100%; max-width: 420px; height: auto; }
+  .radar-table {
+    width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85rem;
+  }
+  .radar-table th, .radar-table td {
+    border: 1px solid var(--line, #444); padding: 6px 8px; text-align: center;
+  }
+  .radar-table th:first-child, .radar-table td:first-child { text-align: left; }
+  .radar-empty { color: var(--ink-soft, #999); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+  <p><a href="../">← 戻る</a></p>
+  <div class="eyebrow">ロレキ内部メモ</div>
+  <h1>路歴（k2） / baリーダーチャート</h1>
+  <p class="lede">ba(n4後継の追記ログ)に登場する投稿者3人（発言したentryのby基準）を軸にした三角形で、参加スレッド数（クローズ含む）を表示する。</p>
+  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-14 07:45 JST</p>
+
+  <div id="login-gate">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div id="g_id_onload"
+      data-client_id="550466095352-50h92anfullp137l4gq4gdi7ogjk0auc.apps.googleusercontent.com"
+      data-callback="handleCredentialResponse"
+      data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"></div>
+    <p id="status">未ログイン(ログインするとチャートが表示されます)</p>
+  </div>
+
+  <div id="content" style="display:none;">
+    <div class="radar-wrap">
+      <svg id="radarSvg" viewBox="0 0 320 320"></svg>
+    </div>
+    <table class="radar-table" id="radarTable">
+      <thead>
+        <tr><th>投稿者</th><th>投稿数(スレッド数・クローズ含む)</th></tr>
+      </thead>
+      <tbody id="radarTableBody"></tbody>
+    </table>
+    <p class="radar-empty" id="radarEmpty" style="display:none;">スレッドがまだありません</p>
+  </div>
+
+  <script>window.AA_AUTH_EVENT = "k2-login-success";</script>
+  <script src="../common/auth.js?v=202607132143"></script>
+  <script type="module" src="app.js?v=202607140510"></script>
+</body>
+</html>
