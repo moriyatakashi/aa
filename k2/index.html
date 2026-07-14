@@ -11,11 +11,6 @@
     gap: 14px; margin: 20px 0;
   }
   #radarSvg { width: 100%; max-width: 420px; height: auto; }
-  .radar-legend {
-    display: flex; flex-wrap: wrap; gap: 10px 18px; justify-content: center;
-  }
-  .radar-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
-  .radar-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
   .radar-table {
     width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85rem;
   }
@@ -30,8 +25,8 @@
   <p><a href="../">← 戻る</a></p>
   <div class="eyebrow">ロレキ内部メモ</div>
   <h1>路歴（k2） / baリーダーチャート</h1>
-  <p class="lede">ba(n4後継の追記ログ)に登場する投稿者3人（発言したentryのby基準）ごとに、参加スレッド数を「合計・open・closed」の3軸でレーダーチャート表示する。</p>
-  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-14 05:10 JST</p>
+  <p class="lede">ba(n4後継の追記ログ)に登場する投稿者3人（発言したentryのby基準）を軸にした三角形で、参加スレッド数（クローズ含む）を表示する。</p>
+  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-14 07:45 JST</p>
 
   <div id="login-gate">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -47,11 +42,10 @@
   <div id="content" style="display:none;">
     <div class="radar-wrap">
       <svg id="radarSvg" viewBox="0 0 320 320"></svg>
-      <div class="radar-legend" id="radarLegend"></div>
     </div>
     <table class="radar-table" id="radarTable">
       <thead>
-        <tr><th>投稿者</th><th>合計</th><th>open</th><th>closed</th></tr>
+        <tr><th>投稿者</th><th>投稿数(スレッド数・クローズ含む)</th></tr>
       </thead>
       <tbody id="radarTableBody"></tbody>
     </table>
