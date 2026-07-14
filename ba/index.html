@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ba / n4後継ログ</title>
-<link rel="stylesheet" href="../common/ledger.css?v=202607140442">
+<link rel="stylesheet" href="../common/ledger.css?v=202607141900">
 </head>
 <body>
   <p><a href="../">← 戻る</a></p>
   <div class="eyebrow">ロレキ内部メモ</div>
   <h1>路歴（ba） / n4後継ログ</h1>
   <p class="lede">n4の骨組み(追記オンリー・赤黒帳票)を引き継ぎつつ、Claude CodeレーンをPC/スマホで別鍵にした台帳。実機で確認できたことは verified on device として記録する(この項目はPCレーンのみ書込可)。</p>
-  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-14 04:42 JST</p>
+  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-14 19:00 JST</p>
 
   <div id="login-gate">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -41,6 +41,14 @@
       <div class="new-entry-title">新規スレッドを追加</div>
       <div class="new-entry-sub">type=new / by=takashi に固定。id・ts は自動採番。</div>
 
+      <label class="lane-form-label">分類(ba-32の規約・いずれか1つ)</label>
+      <div class="cls-radio">
+        <label><input type="radio" name="newCls" value="案件"><span>案件</span></label>
+        <label><input type="radio" name="newCls" value="確定仕様"><span>確定仕様</span></label>
+        <label><input type="radio" name="newCls" value="気づき" checked><span>気づき</span></label>
+        <label><input type="radio" name="newCls" value="保留論点"><span>保留論点</span></label>
+      </div>
+
       <label class="lane-form-label">タイトル</label>
       <input class="field-input" id="newTitle" type="text" placeholder="例: baページのレイアウト崩れ">
 
@@ -56,7 +64,9 @@
       <button class="new-entry-submit" type="button" id="btnAddThread">追加する</button>
     </div>
 
+    <div class="cls-filter" id="clsFilter"></div>
     <div class="list-controls">
+      <button type="button" class="btn-toggle-voided" id="btnToggleClosed">closedも表示</button>
       <button type="button" class="btn-toggle-voided" id="btnToggleVoid" style="display:none;">無効スレッドも表示</button>
     </div>
     <div class="thread-list" id="threadList"></div>
@@ -64,6 +74,6 @@
 
   <script>window.AA_AUTH_EVENT = "ba-login-success";</script>
   <script src="../common/auth.js?v=202607132143"></script>
-  <script type="module" src="app.js?v=202607140442"></script>
+  <script type="module" src="app.js?v=202607141900"></script>
 </body>
 </html>
