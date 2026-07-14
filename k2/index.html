@@ -19,14 +19,25 @@
   }
   .radar-table th:first-child, .radar-table td:first-child { text-align: left; }
   .radar-empty { color: var(--ink-soft, #999); font-size: 0.9rem; }
+
+  .view-tabs {
+    display: flex; gap: 1px; background: var(--line); border: 1px solid var(--line);
+    border-radius: 8px; overflow: hidden; margin: 14px 0 4px;
+  }
+  .view-tab {
+    flex: 1; text-align: center; padding: 9px 6px; font-size: 0.78rem;
+    background: var(--paper-band); color: var(--ink-soft); cursor: pointer;
+    border: none; font-family: inherit;
+  }
+  .view-tab.active { background: var(--paper); color: var(--accent); font-weight: 700; }
 </style>
 </head>
 <body>
   <p><a href="../">← 戻る</a></p>
   <div class="eyebrow">ロレキ内部メモ</div>
   <h1>路歴（k2） / baリーダーチャート</h1>
-  <p class="lede">ba(n4後継の追記ログ)に登場する投稿者3人（発言したentryのby基準）を軸にした三角形で、参加スレッド数（クローズ含む）を表示する。</p>
-  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-14 07:45 JST</p>
+  <p class="lede">ba(n4後継の追記ログ)を軸にしたレーダーチャート。投稿者別(参加スレッド数)と、分類別(ba-32規約の4分類ごとのスレッド数)を切り替えて見られる。</p>
+  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-14 18:54 JST</p>
 
   <div id="login-gate">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -40,12 +51,16 @@
   </div>
 
   <div id="content" style="display:none;">
+    <div class="view-tabs">
+      <button type="button" class="view-tab active" data-view="poster">投稿者別</button>
+      <button type="button" class="view-tab" data-view="classification">分類別</button>
+    </div>
     <div class="radar-wrap">
       <svg id="radarSvg" viewBox="0 0 320 320"></svg>
     </div>
     <table class="radar-table" id="radarTable">
       <thead>
-        <tr><th>投稿者</th><th>投稿数(スレッド数・クローズ含む)</th></tr>
+        <tr id="radarTableHead"><th>投稿者</th><th>投稿数(スレッド数・クローズ含む)</th></tr>
       </thead>
       <tbody id="radarTableBody"></tbody>
     </table>
@@ -54,6 +69,6 @@
 
   <script>window.AA_AUTH_EVENT = "k2-login-success";</script>
   <script src="../common/auth.js?v=202607132143"></script>
-  <script type="module" src="app.js?v=202607140510"></script>
+  <script type="module" src="app.js?v=202607141854"></script>
 </body>
 </html>
