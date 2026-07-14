@@ -76,6 +76,9 @@ def _check_dict(e):
 @app.function_name(name="checks")
 @app.route(route="checks", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
 def checks(req: func.HttpRequest) -> func.HttpResponse:
+    err = _authorize({"credential": req.headers.get("X-Checks-Credential", "")})
+    if err:
+        return err
     table = _table_client(CHECKS_TABLE)
     items = [{"date": e["RowKey"], **_check_dict(e)} for e in table.list_entities()]
     return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
@@ -88,6 +91,9 @@ def checks_item(req: func.HttpRequest) -> func.HttpResponse:
     table = _table_client(CHECKS_TABLE)
 
     if req.method == "GET":
+        err = _authorize({"credential": req.headers.get("X-Checks-Credential", "")})
+        if err:
+            return err
         try:
             body = _check_dict(table.get_entity(partition_key="check", row_key=date))
         except Exception:
@@ -134,6 +140,9 @@ def visits(req: func.HttpRequest) -> func.HttpResponse:
     table = _table_client(VISITS_TABLE)
 
     if req.method == "GET":
+        err = _authorize({"credential": req.headers.get("X-Visits-Credential", "")})
+        if err:
+            return err
         items = [_visit_dict(e) for e in table.list_entities()]
         return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
 
@@ -174,6 +183,9 @@ def _score_dict(e):
 @app.function_name(name="scores")
 @app.route(route="scores", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
 def scores(req: func.HttpRequest) -> func.HttpResponse:
+    err = _authorize({"credential": req.headers.get("X-Scores-Credential", "")})
+    if err:
+        return err
     table = _table_client(SCORES_TABLE)
     items = [{"date": e["RowKey"], **_score_dict(e)} for e in table.list_entities()]
     return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
@@ -186,6 +198,9 @@ def scores_item(req: func.HttpRequest) -> func.HttpResponse:
     table = _table_client(SCORES_TABLE)
 
     if req.method == "GET":
+        err = _authorize({"credential": req.headers.get("X-Scores-Credential", "")})
+        if err:
+            return err
         try:
             body = _score_dict(table.get_entity(partition_key="score", row_key=date))
         except Exception:
