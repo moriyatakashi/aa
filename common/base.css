@@ -1,0 +1,15 @@
+/* common/base.css — root/n1/n2で完全一致していた基本スタイルの切り出し(ba-9, 2026-07-14)
+   対象は「本当にbyte単位で重複していた」部分のみ:
+     - bodyの基本レイアウト・配色(ba-13で決着した基準色 #14170f を反映)
+     - .section / .section-title (n1/n2で完全一致していたカードパターン)
+   .emptyはpaddingが数値違いだったため、あえて対象外・各ページ側に残している。
+   ページ固有のスタイルは引き続き各index.html側のインラインstyleに残す方針。
+   k1(NESエミュレータ)は見た目の系統が異なるため対象外(--bgのみ自前でこの値に合わせている)。 */
+
+body {
+  font-family: sans-serif; max-width: 640px; margin: 0 auto; padding: 16px;
+  background: #14170f; color: #eeeeee;
+}
+
+.section { border: 1px solid #444; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+.section-title { font-size: 0.75rem; font-weight: 700; color: #aaa; margin-bottom: 10px; }
