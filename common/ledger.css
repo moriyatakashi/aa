@@ -152,3 +152,49 @@ details[open] .chevron { transform: rotate(90deg); }
   border-radius: 10px; padding: 2px 8px; white-space: nowrap;
 }
 .entry-title { font-size: 0.85rem; font-weight: 700; margin-top: 3px; line-height: 1.5; }
+
+/* ba: 分類バッジ・分類フィルタ(ba-32の4分類、ba-33で表示対応。2026-07-14)
+   朱=案件(手を動かす)、金茶=確定仕様(恒久)、若葉=気づき、鈍青=保留論点 */
+:root {
+  --cls-anken: #c2452f;
+  --cls-shiyou: #b98a2e;
+  --cls-kizuki: #6e9448;
+  --cls-horyu: #5a7d99;
+  --cls-anken-ink: #e8a294;
+  --cls-shiyou-ink: #ddba6e;
+  --cls-kizuki-ink: #a8c887;
+  --cls-horyu-ink: #9dbdd6;
+}
+.cls-badge {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+  padding: 1px 8px; border-left: 3px solid; background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
+}
+.cls-badge--anken { color: var(--cls-anken-ink); border-color: var(--cls-anken); }
+.cls-badge--shiyou { color: var(--cls-shiyou-ink); border-color: var(--cls-shiyou); }
+.cls-badge--kizuki { color: var(--cls-kizuki-ink); border-color: var(--cls-kizuki); }
+.cls-badge--horyu { color: var(--cls-horyu-ink); border-color: var(--cls-horyu); }
+.cls-via { font-weight: 400; opacity: 0.55; font-size: 0.6rem; margin-left: 3px; }
+
+.cls-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.cls-chip {
+  font-size: 0.74rem; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px;
+  background: transparent; color: var(--ink-soft); cursor: pointer; font-family: inherit;
+}
+.cls-cnt { opacity: 0.7; margin-left: 4px; font-size: 0.66rem; }
+.cls-chip--on { color: var(--ink); border-color: var(--ink-soft); background: var(--paper-band); }
+.cls-chip--on.cls-chip--anken { color: var(--cls-anken-ink); border-color: var(--cls-anken); }
+.cls-chip--on.cls-chip--shiyou { color: var(--cls-shiyou-ink); border-color: var(--cls-shiyou); }
+.cls-chip--on.cls-chip--kizuki { color: var(--cls-kizuki-ink); border-color: var(--cls-kizuki); }
+.cls-chip--on.cls-chip--horyu { color: var(--cls-horyu-ink); border-color: var(--cls-horyu); }
+
+.list-controls { gap: 8px; }
+
+/* ba: 新規フォームの分類ラジオ(ba-33) */
+.cls-radio { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.cls-radio label {
+  font-size: 0.76rem; padding: 4px 12px; border: 1px solid var(--line); border-radius: 5px;
+  color: var(--ink-soft); cursor: pointer;
+}
+.cls-radio input { display: none; }
+.cls-radio label:has(input:checked) { color: var(--ink); border-color: var(--ink-soft); background: var(--paper-band); }
