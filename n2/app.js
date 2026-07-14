@@ -1,5 +1,5 @@
 // app.js — ab/src/main/m5(訪問地図)のロジックをaa向けに移植したもの。
-// 画面側ログインゲートを通過した後にのみデータを取得・表示する(APIは無認証のまま)。
+// 画面側ログインゲートを通過した後にのみデータを取得・表示する。GETもcredentialヘッダで認証する(ba-16)。
 const API_BASE = "https://ab-board-api.azurewebsites.net/api";
 const VISITS_API = `${API_BASE}/visits`;
 
@@ -213,7 +213,7 @@ async function load() {
   const [higashiGeo, osakaCityGeo, visitRes] = await Promise.all([
     fetchGeo("higashiosaka.geojson"),
     fetchGeo("osaka_city.geojson"),
-    fetch(VISITS_API, { cache: "no-store" })
+    fetch(VISITS_API, { cache: "no-store", headers: { "X-Visits-Credential": window.__credential || "" } })
   ]);
 
   const allVisits = visitRes.ok ? await visitRes.json() : [];
