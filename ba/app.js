@@ -6,6 +6,16 @@ const BA_API = `${API_BASE}/ba`;
 
 const HUMAN_TYPES = ["note", "void", "status"];
 
+// ba-32: tagの予約語4種による分類。newのtagsと分類note(tagsに予約語を含むnote)を
+// 時系列で走査し、最新の分類を採用する(追記オンリーの訂正方式と整合)。
+const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];
+const CLS_KEY = { "案件": "anken", "確定仕様": "shiyou", "気づき": "kizuki", "保留論点": "horyu" };
+
+// ba-29: title/body/tags等をinnerHTMLへ流し込む前のHTMLエスケープ。
+function esc(v) {
+  return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 function withCredential(body = {}) {
   return { ...body, credential: window.__credential };
 }
@@ -62,11 +72,20 @@ function groupThreads(items) {
       if (e.type === "correction" && e.title) { displayTitle = e.title; titleCorrected = true; }
     });
 
+    // 分類(ba-32/ba-33): new/noteのtagsから予約語を拾い、時系列で最新を採用。
+    let cls = null;
+    let clsVia = null;
+    entries.forEach((e) => {
+      if (e.type !== "new" && e.type !== "note") return;
+      const found = (Array.isArray(e.tags) ? e.tags : []).find((t) => CLASSIFICATIONS.includes(t));
+      if (found) { cls = found; clsVia = e.type; }
+    });
+
     // 両視点そろって無効のときだけ既定で隠す。片方だけ無効=認識が食い違っている
     // スレッドは、齟齬が拾えるようにあえて隠さない。
     const hiddenVoid = voidView.claude === true && voidView.takashi === true;
 
-    threads.push({ threadId, root, children, entries, voidView, priorityByLane, status, displayTitle, titleCorrected, hiddenVoid });
+    threads.push({ threadId, root, children, entries, voidView, priorityByLane, status, displayTitle, titleCorrected, hiddenVoid, cls, clsVia });
   });
 
   threads.sort((a, b) => b.root.createdAt.localeCompare(a.root.createdAt));
@@ -75,7 +94,7 @@ function groupThreads(items) {
 
 function entryTypeLabel(e) {
   if (e.type === "void") return `void = ${e.value ? "true" : "false"}`;
-  if (e.type === "status") return `status → ${e.status}`;
+  if (e.type === "status") return `status → ${esc(e.status)}`;
   if (e.type === "priority") return `priority`;
   // ba-1: verified_on_device(実機/実ブラウザで確認できた、という主張。PCレーンのみ書込可)
   if (e.type === "verified_on_device") return `verified on device`;
@@ -100,14 +119,14 @@ function entryRowHtml(e) {
   // new/correctionのtitleはタイムライン上にも出す。訂正で見出しが変わっても、
   // 元のタイトルと訂正の経緯がスレッドを開けば読めるようにするため。
   const titleLine = e.title && (e.type === "new" || e.type === "correction")
-    ? `<div class="entry-title">${e.type === "correction" ? "タイトル → " : ""}${e.title}</div>` : "";
+    ? `<div class="entry-title">${e.type === "correction" ? "タイトル → " : ""}${esc(e.title)}</div>` : "";
   return `
     <div class="entry${voidClass || typeClass}">
       <div class="entry-rail"></div>
       <div>
-        <div class="entry-head"><span class="entry-type">${entryTypeLabel(e)}</span><span>${fmtTs(e.createdAt)}</span><span>${e.by}</span></div>
+        <div class="entry-head"><span class="entry-type">${entryTypeLabel(e)}</span><span>${fmtTs(e.createdAt)}</span><span>${esc(e.by)}</span></div>
         ${titleLine}
-        <div class="entry-body">${e.body || e.reason || ""}</div>
+        <div class="entry-body">${esc(e.body || e.reason || "")}</div>
       </div>
     </div>`;
 }
@@ -127,8 +146,13 @@ function threadCardHtml(thread) {
   const { threadId, root, children, status } = thread;
   const title = thread.displayTitle || root.body || "(無題)";
   const tags = Array.isArray(root.tags) ? root.tags : [];
-  const tagsHtml = tags.map((t) => `<span class="tag">#${t}</span>`).join("");
-  const ghHtml = root.github_issue ? `<span class="gh-chip">gh #${root.github_issue}</span>` : "";
+  // 分類はバッジで出すため、自由タグ列からは除外して二重表示を避ける(ba-33)。
+  const tagsHtml = tags.filter((t) => !CLASSIFICATIONS.includes(t)).map((t) => `<span class="tag">#${esc(t)}</span>`).join("");
+  const ghHtml = root.github_issue ? `<span class="gh-chip">gh #${esc(root.github_issue)}</span>` : "";
+  // 分類バッジ(ba-33)。note由来の分類は来歴として小さく「note」を添える(赤黒帳票の思想)。
+  const clsHtml = thread.cls
+    ? `<span class="cls-badge cls-badge--${CLS_KEY[thread.cls]}">${thread.cls}${thread.clsVia === "note" ? '<span class="cls-via">note</span>' : ""}</span>`
+    : "";
   const isOpen = status === "open";
   const takashiVoid = thread.voidView.takashi;
 
@@ -139,7 +163,8 @@ function threadCardHtml(thread) {
           <span class="chevron">▶</span>
           ${root.seq ? `<span class="seq-chip">ba-${root.seq}</span>` : ""}
           <span class="pill ${isOpen ? "pill-open" : "pill-closed"}">${isOpen ? "open" : "closed"}</span>
-          <span class="thread-title">${title}</span>
+          ${clsHtml}
+          <span class="thread-title">${esc(title)}</span>
           ${thread.titleCorrected ? `<span class="title-corrected-chip">タイトル訂正済</span>` : ""}
         </div>
         <div class="meta-row">${tagsHtml}${ghHtml}</div>
@@ -212,20 +237,42 @@ function attachThreadHandlers(container, thread) {
 
 // 両視点そろって無効のスレッドは既定で一覧から隠す。トグルONのときだけ薄色で表示する。
 let showVoided = false;
+// ba-33: 既定はopenのみ表示。確定仕様はcloseしない規約(ba-32)なので参照の邪魔にならない。
+let showClosed = false;
+// ba-33: 分類フィルタ(単一選択)。"all"は分類なしスレッドも含めて表示。
+let filterCls = "all";
 let cachedThreads = [];
 
 function render() {
   const listEl = document.getElementById("threadList");
   const hiddenCount = cachedThreads.filter((t) => t.hiddenVoid).length;
-  const visible = showVoided ? cachedThreads : cachedThreads.filter((t) => !t.hiddenVoid);
+  const closedCount = cachedThreads.filter((t) => t.status !== "open").length;
+  let visible = showVoided ? cachedThreads : cachedThreads.filter((t) => !t.hiddenVoid);
+  if (!showClosed) visible = visible.filter((t) => t.status === "open");
+  if (filterCls !== "all") visible = visible.filter((t) => t.cls === filterCls);
 
   renderSummary(cachedThreads);
+  renderClsFilter();
+
   const toggleEl = document.getElementById("btnToggleVoid");
   toggleEl.style.display = hiddenCount ? "" : "none";
   toggleEl.textContent = showVoided ? `無効スレッドを隠す(${hiddenCount})` : `無効スレッドも表示(${hiddenCount})`;
 
-  listEl.innerHTML = visible.map(threadCardHtml).join("") || `<p class="empty">まだ何もありません</p>`;
+  const closedEl = document.getElementById("btnToggleClosed");
+  closedEl.textContent = showClosed ? `closedを隠す(${closedCount})` : `closedも表示(${closedCount})`;
+
+  listEl.innerHTML = visible.map(threadCardHtml).join("") || `<p class="empty">表示できるスレッドがありません(分類フィルタと「closedも表示」を確認)</p>`;
   visible.forEach((t) => attachThreadHandlers(listEl, t));
+}
+
+// ba-33: 分類フィルタのチップ(単一選択+件数)。分類なしスレッドは「すべて」でのみ表示される。
+function renderClsFilter() {
+  const el = document.getElementById("clsFilter");
+  if (!el) return;
+  const count = (c) => cachedThreads.filter((t) => t.cls === c).length;
+  const chip = (value, label, n) =>
+    `<button type="button" class="cls-chip${filterCls === value ? " cls-chip--on" : ""}${value !== "all" ? ` cls-chip--${CLS_KEY[value]}` : ""}" data-cls="${value}">${label}<span class="cls-cnt">${n}</span></button>`;
+  el.innerHTML = chip("all", "すべて", cachedThreads.length) + CLASSIFICATIONS.map((c) => chip(c, c, count(c))).join("");
 }
 
 async function load() {
@@ -258,6 +305,12 @@ function initNewEntryForm() {
         if (!title) { elTitle.focus(); return; }
         payload = { type: "new", title, tags: parseTags(elTags.value), body: elBody.value.trim() };
       }
+      // ba-32/ba-33: 分類を必ずtagsに含める(JSON貼り付け側に既に分類があればそれを尊重)。
+      const curTags = Array.isArray(payload.tags) ? payload.tags : [];
+      if (!curTags.some((t) => CLASSIFICATIONS.includes(t))) {
+        const clsEl = document.querySelector('input[name="newCls"]:checked');
+        if (clsEl) payload.tags = [clsEl.value, ...curTags];
+      }
       await postEntry(payload);
       elTitle.value = "";
       elTags.value = "";
@@ -275,6 +328,16 @@ function onLoginSuccess() {
   initNewEntryForm();
   document.getElementById("btnToggleVoid").addEventListener("click", () => {
     showVoided = !showVoided;
+    render();
+  });
+  document.getElementById("btnToggleClosed").addEventListener("click", () => {
+    showClosed = !showClosed;
+    render();
+  });
+  document.getElementById("clsFilter").addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".cls-chip");
+    if (!btn) return;
+    filterCls = btn.dataset.cls;
     render();
   });
   load();
