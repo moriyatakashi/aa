@@ -277,11 +277,8 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
     table = _table_client(BA_TABLE)
 
     if req.method == "GET":
-        by = _ba_claude_lane(req.headers.get("X-Claude-Key", ""))
-        if not by:
-            err = _authorize({"credential": req.headers.get("X-Ba-Credential", "")})
-            if err:
-                return err
+        # 読み取りは無認証で公開(2026-07-15 takashi判断)。ba-16「GETは認証必須」の
+        # 一部撤回であり、ba-35の「閲覧専用の軽い経路」に相当。POST側の認証は従来どおり。
         items = [_ba_entry_dict(e) for e in table.list_entities()]
         items.sort(key=lambda x: x["createdAt"])
         return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
