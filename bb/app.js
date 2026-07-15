@@ -125,7 +125,8 @@ function renderRecent(items) {
 async function load() {
   const secEl = document.getElementById("sections");
   try {
-    const res = await fetch(BA_API, { cache: "no-store", headers: { "X-Ba-Credential": window.__credential || "" } });
+    // GETは無認証で公開(2026-07-15、ba-16一部撤回)。credentialヘッダーは送らない。
+    const res = await fetch(BA_API, { cache: "no-store" });
     if (!res.ok) throw new Error(`status=${res.status}`);
     const items = await res.json();
     cached = project(items);
@@ -136,16 +137,8 @@ async function load() {
   }
 }
 
-function onLoginSuccess() {
-  document.getElementById("btnToggleClosed").addEventListener("click", () => {
-    showClosed = !showClosed;
-    render();
-  });
-  load();
-}
-
-if (window.__loginState && window.__loginState.loggedIn) {
-  onLoginSuccess();
-} else {
-  window.addEventListener("bb-login-success", onLoginSuccess, { once: true });
-}
+document.getElementById("btnToggleClosed").addEventListener("click", () => {
+  showClosed = !showClosed;
+  render();
+});
+load();
