@@ -1,6 +1,9 @@
 // bb/app.js — baの現在形ビューワ(読み取り専用の投影)。
 // 恒久制約: baを読むだけで一切書かない(POSTコードを持たない)。正本はba。
 // スレッド束ね・分類解決のロジックはba/app.js(ba-32/ba-33)と同じ規則に従う。
+// config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
+// 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
+import "../common/config.js";
 const BA_API = `${window.AA_API_BASE}/ba`; // common/config.js から(ba-9)
 
 const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];

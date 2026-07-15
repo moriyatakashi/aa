@@ -1,6 +1,9 @@
 // app.js — ba(n4後継の追記ログ)。1件=1つの出来事(new/note/correction/priority/status/void/...)を
 // 追記していくだけの台帳を表示・操作する。過去の行は書き換えない(赤黒帳票方式)。
 // 画面側ログインゲートを通過した後にのみデータを取得・表示する(GETもcredentialヘッダで認証)。
+// config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
+// 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
+import "../common/config.js";
 const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
 const BA_API = `${API_BASE}/ba`;
 
