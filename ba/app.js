@@ -282,7 +282,9 @@ async function load() {
   const listEl = document.getElementById("threadList");
   try {
     const res = await fetch(BA_API, { cache: "no-store", headers: { "X-Ba-Credential": window.__credential || "" } });
-    const items = res.ok ? await res.json() : [];
+    // 失敗ステータスを黙って空一覧にしない(2026-07-16の不具合でエラーが不可視だった教訓)
+    if (!res.ok) throw new Error(`status=${res.status}`);
+    const items = await res.json();
     cachedThreads = groupThreads(items);
     render();
   } catch (e) {
