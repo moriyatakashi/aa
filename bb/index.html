@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bb / ba現在形ビュー</title>
+<link rel="stylesheet" href="../common/ledger.css?v=202607141900">
+<style>
+  /* bb固有: 分類セクションの見出し(トップページのcat-labelと同じ流儀) */
+  .sec-label {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.7rem; letter-spacing: 0.12em; color: var(--ink-soft, #8b9280);
+    margin: 26px 0 8px; display: flex; align-items: center; gap: 10px;
+  }
+  .sec-label::after { content: ""; flex: 1; height: 1px; background: #333a28; }
+  .ro-banner {
+    font-size: 0.75rem; color: var(--ink-soft, #8b9280);
+    border: 1px dashed #556; border-radius: 8px; padding: 6px 10px; margin: 10px 0;
+  }
+  .bb-item { padding: 8px 0; border-bottom: 1px dotted #333; }
+  .bb-item-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .bb-item-title { font-weight: 600; }
+  .bb-item-sub { font-size: 0.75rem; color: var(--ink-soft, #8b9280); margin-top: 2px; }
+  .bb-latest { font-size: 0.8rem; color: #bbb; margin-top: 4px; }
+  .recent-row { font-size: 0.8rem; padding: 5px 0; border-bottom: 1px dotted #333; }
+  .recent-row .entry-type { margin-right: 6px; }
+</style>
+</head>
+<body>
+  <p><a href="../">← 戻る</a></p>
+  <div class="eyebrow">ロレキ内部メモ</div>
+  <h1>路歴（bb） / ba現在形ビュー</h1>
+  <p class="lede">追記オンリー台帳(ba)から「いまの姿」を計算して見せる投影ページ。正本はあくまでba。</p>
+  <p class="ro-banner">読み取り専用 — bbはbaを読むだけで、一切書かない(恒久制約)。</p>
+  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-15 18:40 JST</p>
+
+  <div id="login-gate">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div id="g_id_onload"
+      data-client_id="550466095352-50h92anfullp137l4gq4gdi7ogjk0auc.apps.googleusercontent.com"
+      data-callback="handleCredentialResponse"
+      data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"></div>
+    <p id="status">未ログイン(ログインすると現在形ビューが表示されます)</p>
+  </div>
+
+  <div id="content" style="display:none;">
+    <div class="summary-bar">
+      <div class="stat"><div class="stat-num" id="statTotal">—</div><div class="stat-label">スレッド</div></div>
+      <div class="stat"><div class="stat-num" id="statOpen">—</div><div class="stat-label">オープン</div></div>
+      <div class="stat"><div class="stat-num" id="statShiyou">—</div><div class="stat-label">確定仕様</div></div>
+      <div class="stat"><div class="stat-num" id="statLatest">—</div><div class="stat-label">直近更新</div></div>
+    </div>
+
+    <div class="list-controls">
+      <button type="button" class="btn-toggle-voided" id="btnToggleClosed">closedも表示</button>
+    </div>
+
+    <div id="sections"></div>
+
+    <div class="sec-label">直近の動き</div>
+    <div id="recent"></div>
+  </div>
+
+  <script>window.AA_AUTH_EVENT = "bb-login-success";</script>
+  <script src="../common/auth.js?v=202607132143"></script>
+  <script type="module" src="app.js?v=202607151840"></script>
+</body>
+</html>
