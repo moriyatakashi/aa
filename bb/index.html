@@ -31,21 +31,10 @@
   <div class="eyebrow">ロレキ内部メモ</div>
   <h1>路歴（bb） / ba現在形ビュー</h1>
   <p class="lede">追記オンリー台帳(ba)から「いまの姿」を計算して見せる投影ページ。正本はあくまでba。</p>
-  <p class="ro-banner">読み取り専用 — bbはbaを読むだけで、一切書かない(恒久制約)。</p>
-  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-15 18:40 JST</p>
+  <p class="ro-banner">読み取り専用 — bbはbaを読むだけで、一切書かない(恒久制約)。ログイン不要(2026-07-15から)。</p>
+  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-15 20:00 JST</p>
 
-  <div id="login-gate">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <div id="g_id_onload"
-      data-client_id="550466095352-50h92anfullp137l4gq4gdi7ogjk0auc.apps.googleusercontent.com"
-      data-callback="handleCredentialResponse"
-      data-auto_prompt="false">
-    </div>
-    <div class="g_id_signin"></div>
-    <p id="status">未ログイン(ログインすると現在形ビューが表示されます)</p>
-  </div>
-
-  <div id="content" style="display:none;">
+  <div id="content">
     <div class="summary-bar">
       <div class="stat"><div class="stat-num" id="statTotal">—</div><div class="stat-label">スレッド</div></div>
       <div class="stat"><div class="stat-num" id="statOpen">—</div><div class="stat-label">オープン</div></div>
@@ -63,8 +52,6 @@
     <div id="recent"></div>
   </div>
 
-  <script>window.AA_AUTH_EVENT = "bb-login-success";</script>
-  <script src="../common/auth.js?v=202607132143"></script>
-  <script type="module" src="app.js?v=202607151840"></script>
+  <script type="module" src="app.js?v=202607152000"></script>
 </body>
 </html>
