@@ -1,6 +1,6 @@
 // app.js — ab/src/main/m5(訪問地図)のロジックをaa向けに移植したもの。
 // 画面側ログインゲートを通過した後にのみデータを取得・表示する。GETもcredentialヘッダで認証する(ba-16)。
-const API_BASE = "https://ab-board-api.azurewebsites.net/api";
+const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
 const VISITS_API = `${API_BASE}/visits`;
 
 const canvas = document.getElementById("mapCanvas");

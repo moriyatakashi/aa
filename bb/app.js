@@ -1,7 +1,7 @@
 // bb/app.js — baの現在形ビューワ(読み取り専用の投影)。
 // 恒久制約: baを読むだけで一切書かない(POSTコードを持たない)。正本はba。
 // スレッド束ね・分類解決のロジックはba/app.js(ba-32/ba-33)と同じ規則に従う。
-const BA_API = "https://ab-board-api.azurewebsites.net/api/ba";
+const BA_API = `${window.AA_API_BASE}/ba`; // common/config.js から(ba-9)
 
 const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];
 const CLS_KEY = { "案件": "anken", "確定仕様": "shiyou", "気づき": "kizuki", "保留論点": "horyu" };

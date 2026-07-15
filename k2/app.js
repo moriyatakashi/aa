@@ -2,7 +2,7 @@
 // (1)投稿者別: 投稿者3人を軸にした参加スレッド数、
 // (2)分類別: ba-32規約の4分類(案件/確定仕様/気づき/保留論点)ごとのスレッド数
 // をタブ切り替えでレーダーチャート表示する。読み取り専用。
-const API_BASE = "https://ab-board-api.azurewebsites.net/api";
+const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
 const BA_API = `${API_BASE}/ba`;
 
 const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];
