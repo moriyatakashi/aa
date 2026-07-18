@@ -24,3 +24,19 @@ jobs:
         # テストファイルは ts/ 配下に置く運用だが、
         # 特定のパスに固定せずリポジトリ全体から *.test.js を探す
         run: node --test
+
+  test-python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r pt/requirements.txt
+      - name: Run tests
+        # ap/function_app.py(Azure Functionsバックエンド)のユニットテスト。
+        # テーブルストレージ・Google認証はpt/conftest.pyでフェイク/スタブに差し替える。
+        run: pytest pt/

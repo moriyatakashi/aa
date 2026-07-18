@@ -4,3 +4,5 @@ playwright-report/
 __pycache__/
 *.pyc
 local.settings.json
+.venv/
+.pytest_cache/

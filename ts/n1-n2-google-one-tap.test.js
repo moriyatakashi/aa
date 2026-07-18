@@ -2,8 +2,8 @@
 // (auth.jsのrestoreSession)。しかしGoogle Identity Services(GSI)側のOne Tap自動プロンプトは
 // このアプリ独自のセッション状態を一切見ないため、セッション復元済みでもGoogleへ
 // 「今回は自動サインインを出さないで」と伝える処理(disableAutoSelect等)がなければ、
-// 毎回ログインを尋ねられうる。現状のauth.js/index.htmlにはその指示が存在しないため、
-// このテストは意図的に赤くなる(既知の未修正バグを可視化するためのテスト)。
+// 毎回ログインを尋ねられうる。issue #9でこのテストを赤の状態で追加した後、
+// 615bda4でauth.js側にdisableAutoSelect呼び出しを実装済み(以降はリグレッション防止用)。
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";

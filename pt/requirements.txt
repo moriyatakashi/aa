@@ -1,0 +1,2 @@
+-r ../ap/requirements.txt
+pytest
