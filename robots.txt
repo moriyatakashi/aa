@@ -1,4 +1,3 @@
 User-agent: *
-Disallow: /bell/
-Disallow: /n1/
-Disallow: /n2/
+Disallow: /src/n1/
+Disallow: /src/n2/

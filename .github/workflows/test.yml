@@ -21,6 +21,6 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
       - name: Run tests
-        # テストファイルは物理学者フォルダ(bell/, bohr/等)配下に置く運用のため、
+        # テストファイルは ts/ 配下に置く運用だが、
         # 特定のパスに固定せずリポジトリ全体から *.test.js を探す
         run: node --test

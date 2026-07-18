@@ -2,8 +2,8 @@
 // 画面側ログインゲートを通過した後にのみデータを取得・表示する。GETもcredentialヘッダで認証する(ba-16)。
 // config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
 // 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
-import "../common/config.js";
-const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
+import "../cm/config.js";
+const API_BASE = window.AA_API_BASE; // cm/config.js から(ba-9)
 const SCORES_API = `${API_BASE}/scores`;
 const VISITS_API = `${API_BASE}/visits`;
 

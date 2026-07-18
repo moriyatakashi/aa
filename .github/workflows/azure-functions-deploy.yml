@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - 'aa-api/**'
+      - 'ap/**'
   workflow_dispatch:
 
 env:
   AZURE_FUNCTIONAPP_NAME: ab-board-api
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'aa-api'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'ap'
   PYTHON_VERSION: '3.11'
 
 permissions:

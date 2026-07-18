@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assemble } from "../bc/assembler.js";
-import { Comet2 } from "../bc/comet2.js";
+import { assemble } from "../src/bc/assembler.js";
+import { Comet2 } from "../src/bc/comet2.js";
 
 function run(source, { entryLabel = "", input = [] } = {}) {
   const result = assemble(source, { entryLabel });

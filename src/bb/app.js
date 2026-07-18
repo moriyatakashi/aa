@@ -3,8 +3,8 @@
 // スレッド束ね・分類解決のロジックはba/app.js(ba-32/ba-33)と同じ規則に従う。
 // config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
 // 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
-import "../common/config.js";
-const BA_API = `${window.AA_API_BASE}/ba`; // common/config.js から(ba-9)
+import "../cm/config.js";
+const BA_API = `${window.AA_API_BASE}/ba`; // cm/config.js から(ba-9)
 
 const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];
 const CLS_KEY = { "案件": "anken", "確定仕様": "shiyou", "気づき": "kizuki", "保留論点": "horyu" };

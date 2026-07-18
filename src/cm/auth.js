@@ -1,4 +1,4 @@
-// common/auth.js — n1/n2/n4で共通のログインゲート実装(2026-07-13 共通化)
+// cm/auth.js — n1/n2/n4で共通のログインゲート実装(2026-07-13 共通化)
 // GSIのdata-callbackから呼ばれる。ログイン成功後、呼び出し元ページが待っている
 // カスタムイベント(window.AA_AUTH_EVENTで指定、未指定時は"aa-login-success")を発火する。
 // 各ページのindex.htmlは、このスクリプトを読み込む前に

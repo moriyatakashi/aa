@@ -57,7 +57,7 @@ for (const pageName of ["n1", "n2"]) {
         localStorage.setItem("aa_credential", JSON.stringify({ credential: cred, savedAt: Date.now() }));
       });
 
-      await page.goto(`http://localhost:${port}/${pageName}/`);
+      await page.goto(`http://localhost:${port}/src/${pageName}/`);
       await page.waitForFunction(() => window.google !== undefined);
       await page.waitForTimeout(300);
 
