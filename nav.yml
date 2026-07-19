@@ -1,0 +1,29 @@
+updated: "2026-07-18 13:00"
+categories:
+  - label: 記録
+    items:
+      - code: n1
+        desc: 記録一覧
+        href: src/n1/
+      - code: n2
+        desc: 訪問地図
+        href: src/n2/
+  - label: 内部メモ
+    items:
+      - code: ba
+        desc: 気づきログ(n4後継)
+        href: src/ba/
+      - code: bb
+        desc: ba現在形ビューワ
+        href: src/bb/
+      - code: k2
+        desc: baリーダーチャート
+        href: src/k2/
+  - label: あそび
+    items:
+      - code: k1
+        desc: NES Emulator
+        href: src/k1/
+      - code: bc
+        desc: CASL II シミュレータ
+        href: src/bc/
