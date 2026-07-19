@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<script src="../common/config.js?v=202607160712"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>be / スコア推移</title>
@@ -35,10 +36,10 @@
   <div id="login-gate">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <div id="g_id_onload"
-      data-client_id="550466095352-50h92anfullp137l4gq4gdi7ogjk0auc.apps.googleusercontent.com"
       data-callback="handleCredentialResponse"
       data-auto_prompt="false">
     </div>
+    <script>document.getElementById('g_id_onload').setAttribute('data-client_id', window.AA_GOOGLE_CLIENT_ID);</script>
     <div class="g_id_signin"></div>
     <p id="status">未ログイン(ログインするとグラフが表示されます)</p>
   </div>
@@ -58,7 +59,6 @@
   <div class="score-tooltip" id="scoreTooltip"></div>
 
   <script>window.AA_AUTH_EVENT = "be-login-success";</script>
-  <script src="../common/config.js?v=202607160712"></script>
   <script src="../common/auth.js?v=202607131100"></script>
   <script type="module" src="app.js?v=202607190900"></script>
 </body>

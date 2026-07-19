@@ -21,8 +21,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" };
 const EXPECTED_CLIENT_ID = "550466095352-50h92anfullp137l4gq4gdi7ogjk0auc.apps.googleusercontent.com";
 
-// Stage 2はk2のみが対象(パイロット)。Stage 4で残り4ページを追加する。
-const PAGES = ["k2"];
+// Stage 2はk2のみが対象(パイロット)、Stage 4で残り4ページを追加。
+const PAGES = ["k2", "n1", "n2", "ba", "be"];
 
 function serveStatic() {
   return new Promise((resolve) => {
