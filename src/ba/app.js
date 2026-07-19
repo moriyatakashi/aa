@@ -4,104 +4,16 @@
 // config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
 // 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
 import "../cm/config.js";
+import { esc, fmtTs, CLASSIFICATIONS, CLS_KEY, parseTags, filterFreeTags } from "../cm/utils.js";
+import { groupThreads, entryTypeLabel } from "../cm/thread-logic.js";
+
 const API_BASE = window.AA_API_BASE; // cm/config.js から(ba-9)
 const BA_API = `${API_BASE}/ba`;
 
 const HUMAN_TYPES = ["note", "void", "status"];
 
-// ba-32: tagの予約語4種による分類。newのtagsと分類note(tagsに予約語を含むnote)を
-// 時系列で走査し、最新の分類を採用する(追記オンリーの訂正方式と整合)。
-const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];
-const CLS_KEY = { "案件": "anken", "確定仕様": "shiyou", "気づき": "kizuki", "保留論点": "horyu" };
-
-// ba-29: title/body/tags等をinnerHTMLへ流し込む前のHTMLエスケープ。
-function esc(v) {
-  return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
 function withCredential(body = {}) {
   return { ...body, credential: window.__credential };
-}
-
-function parseTags(text) {
-  return text
-    .split(/[\s,、]+/)
-    .map((t) => t.trim().replace(/^#/, ""))
-    .filter(Boolean);
-}
-
-// n4-5対応: サーバーのcreatedAtはUTCで保存されている(function_app.pyがdatetime.now(timezone.utc)
-// で生成)。文字列を単純に切り詰めるとUTCのままJSTのつもりで読まれて混乱するため、
-// 明示的にJSTへ変換した上で「JST」ラベルも付けて曖昧さを無くす。
-function fmtTs(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const jst = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", hour12: false,
-  }).format(d);
-  return jst.replace(",", "") + " JST";
-}
-
-// スレッド化: PartitionKey(threadId)でグルーピングし、id===threadIdの行を起点(new)とみなす。
-function groupThreads(items) {
-  const byThread = new Map();
-  items.forEach((it) => {
-    if (!byThread.has(it.threadId)) byThread.set(it.threadId, []);
-    byThread.get(it.threadId).push(it);
-  });
-
-  const threads = [];
-  byThread.forEach((entries, threadId) => {
-    entries.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    const root = entries.find((e) => e.id === threadId) || entries[0];
-    const children = entries.filter((e) => e.id !== threadId);
-
-    // 無効フラグはclaude視点/takashi視点の2視点で持つ。claudeはPC/スマホの2レーン
-    // あるが視点としては1つに合算する(時系列で最新のvoid値が勝つ)。
-    const voidView = {};
-    const priorityByLane = {};
-    let status = "open";
-    let displayTitle = root.title;
-    let titleCorrected = false;
-    entries.forEach((e) => {
-      if (e.type === "void" && e.by) voidView[e.by.startsWith("claude") ? "claude" : "takashi"] = !!e.value;
-      if (e.type === "priority" && e.by) priorityByLane[e.by] = e.value;
-      if (e.type === "status" && e.status) status = e.status;
-      // タイトル訂正(有事用): titleを持つcorrectionが見出し表示だけを上書きする(最新優先)。
-      // 上書きはtitleに限定。本文の間違いは訂正エントリを「並べて見せる」従来方式のまま。
-      if (e.type === "correction" && e.title) { displayTitle = e.title; titleCorrected = true; }
-    });
-
-    // 分類(ba-32/ba-33): new/noteのtagsから予約語を拾い、時系列で最新を採用。
-    let cls = null;
-    let clsVia = null;
-    entries.forEach((e) => {
-      if (e.type !== "new" && e.type !== "note") return;
-      const found = (Array.isArray(e.tags) ? e.tags : []).find((t) => CLASSIFICATIONS.includes(t));
-      if (found) { cls = found; clsVia = e.type; }
-    });
-
-    // 両視点そろって無効のときだけ既定で隠す。片方だけ無効=認識が食い違っている
-    // スレッドは、齟齬が拾えるようにあえて隠さない。
-    const hiddenVoid = voidView.claude === true && voidView.takashi === true;
-
-    threads.push({ threadId, root, children, entries, voidView, priorityByLane, status, displayTitle, titleCorrected, hiddenVoid, cls, clsVia });
-  });
-
-  threads.sort((a, b) => b.root.createdAt.localeCompare(a.root.createdAt));
-  return threads;
-}
-
-function entryTypeLabel(e) {
-  if (e.type === "void") return `void = ${e.value ? "true" : "false"}`;
-  if (e.type === "status") return `status → ${esc(e.status)}`;
-  if (e.type === "priority") return `priority`;
-  // ba-1: verified_on_device(実機/実ブラウザで確認できた、という主張。PCレーンのみ書込可)
-  if (e.type === "verified_on_device") return `verified on device`;
-  return e.type;
 }
 
 function renderSummary(threads) {
@@ -118,7 +30,7 @@ function renderSummary(threads) {
 
 function entryRowHtml(e) {
   const voidClass = e.type === "void" ? (e.value ? " entry--void-true" : " entry--void-false") : "";
-  const typeClass = e.type === "correction" ? " entry--correction" : e.type === "priority" ? " entry--priority" : e.type === "status" ? " entry--status" : e.type === "new" ? " entry--new" : e.type === "verified_on_device" ? " entry--verified" : " entry--note";
+  const typeClass = e.type === "correction" ? " entry--correction" : e.type === "priority" ? " entry--priority" : e.type === "status" ? " entry--status" : e.type === "new" ? " entry--new" : e.type === "verified_on_device" ? " entry--verified" : "";
   // new/correctionのtitleはタイムライン上にも出す。訂正で見出しが変わっても、
   // 元のタイトルと訂正の経緯がスレッドを開けば読めるようにするため。
   const titleLine = e.title && (e.type === "new" || e.type === "correction")
@@ -150,7 +62,7 @@ function threadCardHtml(thread) {
   const title = thread.displayTitle || root.body || "(無題)";
   const tags = Array.isArray(root.tags) ? root.tags : [];
   // 分類はバッジで出すため、自由タグ列からは除外して二重表示を避ける(ba-33)。
-  const tagsHtml = tags.filter((t) => !CLASSIFICATIONS.includes(t)).map((t) => `<span class="tag">#${esc(t)}</span>`).join("");
+  const tagsHtml = filterFreeTags(tags).map((t) => `<span class="tag">#${esc(t)}</span>`).join("");
   const ghHtml = root.github_issue ? `<span class="gh-chip">gh #${esc(root.github_issue)}</span>` : "";
   // 分類バッジ(ba-33)。note由来の分類は来歴として小さく「note」を添える(赤黒帳票の思想)。
   const clsHtml = thread.cls
@@ -274,7 +186,7 @@ function renderClsFilter() {
   if (!el) return;
   const count = (c) => cachedThreads.filter((t) => t.cls === c).length;
   const chip = (value, label, n) =>
-    `<button type="button" class="cls-chip${filterCls === value ? " cls-chip--on" : ""}${value !== "all" ? ` cls-chip--${CLS_KEY[value]}` : ""}" data-cls="${value}">${label}<span class="cls-cnt">${n}</span></button>`;
+    `<button type="button" class="cls-chip${filterCls === value ? " cls-chip--on" : ""}${value !== "all" ? ` cls-chip--${CLS_KEY[value]}` : ""}" data-cls="${value}">${label}<span class="cls-cnt">[${n}]</span></button>`;
   el.innerHTML = chip("all", "すべて", cachedThreads.length) + CLASSIFICATIONS.map((c) => chip(c, c, count(c))).join("");
 }
 

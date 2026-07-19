@@ -4,72 +4,17 @@
 // config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
 // 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
 import "../cm/config.js";
+import { esc, fmtTs, CLASSIFICATIONS, CLS_KEY, filterFreeTags } from "../cm/utils.js";
+import { projectThreads } from "../cm/thread-logic.js";
+
 const BA_API = `${window.AA_API_BASE}/ba`; // cm/config.js から(ba-9)
 
-const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];
-const CLS_KEY = { "案件": "anken", "確定仕様": "shiyou", "気づき": "kizuki", "保留論点": "horyu" };
 // 現在形ビューとしての並び順: 参照し続けるもの→動かすもの→考えるもの→ながめるもの
 const SECTION_ORDER = ["確定仕様", "案件", "保留論点", "気づき", null];
 
-// ba-29踏襲: innerHTMLへ流し込む前のHTMLエスケープ。
-function esc(v) {
-  return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
-// n4-5踏襲: createdAtはUTC保存のためJSTへ明示変換して表示する。
-function fmtTs(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const jst = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", hour12: false,
-  }).format(d);
-  return jst.replace(",", "") + " JST";
-}
-
-// スレッド化と現在形の計算(ba/app.jsのgroupThreadsと同じ規則+最新記述の抽出)。
-function project(items) {
-  const byThread = new Map();
-  items.forEach((it) => {
-    if (!byThread.has(it.threadId)) byThread.set(it.threadId, []);
-    byThread.get(it.threadId).push(it);
-  });
-
-  const threads = [];
-  byThread.forEach((entries, threadId) => {
-    entries.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    const root = entries.find((e) => e.id === threadId) || entries[0];
-
-    const voidView = {};
-    let status = "open";
-    let displayTitle = root.title;
-    let cls = null;
-    let latestText = null; // 現在形 = 最新の実質記述(new/note/correctionのbody)
-    entries.forEach((e) => {
-      if (e.type === "void" && e.by) voidView[e.by.startsWith("claude") ? "claude" : "takashi"] = !!e.value;
-      if (e.type === "status" && e.status) status = e.status;
-      if (e.type === "correction" && e.title) displayTitle = e.title;
-      if (e.type === "new" || e.type === "note" || e.type === "correction") {
-        const found = (Array.isArray(e.tags) ? e.tags : []).find((t) => CLASSIFICATIONS.includes(t));
-        if (found) cls = found;
-        if (e.body) latestText = e.body;
-      }
-    });
-
-    const hiddenVoid = voidView.claude === true && voidView.takashi === true;
-    const lastAt = entries[entries.length - 1].createdAt;
-    threads.push({ threadId, root, status, displayTitle, cls, hiddenVoid, latestText, lastAt, count: entries.length });
-  });
-
-  threads.sort((a, b) => b.lastAt.localeCompare(a.lastAt));
-  return threads;
-}
-
 function itemHtml(t) {
   const isOpen = t.status === "open";
-  const tags = (Array.isArray(t.root.tags) ? t.root.tags : []).filter((x) => !CLASSIFICATIONS.includes(x));
+  const tags = filterFreeTags(t.root.tags);
   const excerpt = t.latestText ? esc(t.latestText.length > 120 ? t.latestText.slice(0, 120) + "…" : t.latestText) : "";
   return `
     <div class="bb-item">
@@ -120,7 +65,7 @@ function renderRecent(items) {
       const t = cached.find((x) => x.threadId === e.threadId);
       const seq = t && t.root.seq ? `ba-${t.root.seq}` : "";
       const label = e.type === "status" ? `status → ${esc(e.status || "")}` : e.type;
-      return `<div class="recent-row"><span class="entry-type">${label}</span>${seq ? `<span class="seq-chip">${seq}</span> ` : ""}${esc((t && t.displayTitle) || "")} <span style="color:var(--ink-soft);">${fmtTs(e.createdAt)} / ${esc(e.by)}</span></div>`;
+      return `<div class="recent-row"><span class="entry-type">${label}</span>${seq ? `<span class="seq-chip">${seq}</span> ` : ""}${esc((t && t.displayTitle) || "")} <span style="color:var(--ink-soft);">${fmtTs(e.createdAt)}</span></div>`;
     });
   document.getElementById("recent").innerHTML = rows.join("") || `<p class="empty">まだ動きがありません</p>`;
 }
@@ -132,7 +77,7 @@ async function load() {
     const res = await fetch(BA_API, { cache: "no-store" });
     if (!res.ok) throw new Error(`status=${res.status}`);
     const items = await res.json();
-    cached = project(items);
+    cached = projectThreads(items);
     render();
     renderRecent(items);
   } catch (e) {
