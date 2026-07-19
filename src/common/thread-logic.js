@@ -40,8 +40,12 @@ export function groupThreads(items) {
       if (found) { cls = found; clsVia = e.type; }
     });
 
-    // 両視点そろって無効のときだけ既定で隠す
-    const hiddenVoid = voidView.claude === true && voidView.takashi === true;
+    // 根なしスレッド(起点がnewでない=ref誤記事故等の産物)は、両視点の合意を待たず既定で隠す。
+    // 正規コンテンツではなくバグの副産物のため、後始末の片方(claude/takashi)が漏れただけで
+    // 永久に一覧へ残り続ける事態を避ける(ba-44/ba-9で実際に発生)。「無効スレッドも表示」で確認可能。
+    const isRootless = root.type !== "new";
+    // 両視点そろって無効のときも既定で隠す
+    const hiddenVoid = isRootless || (voidView.claude === true && voidView.takashi === true);
 
     threads.push({ threadId, root, children, entries, voidView, priorityByLane, status, displayTitle, titleCorrected, hiddenVoid, cls, clsVia });
   });
@@ -79,7 +83,9 @@ export function projectThreads(items) {
       }
     });
 
-    const hiddenVoid = voidView.claude === true && voidView.takashi === true;
+    // ba側と同じ理由(ba-44/ba-9)で、根なしスレッドは既定で隠す
+    const isRootless = root.type !== "new";
+    const hiddenVoid = isRootless || (voidView.claude === true && voidView.takashi === true);
     const lastAt = entries[entries.length - 1].createdAt;
     threads.push({ threadId, root, status, displayTitle, cls, hiddenVoid, latestText, lastAt, count: entries.length });
   });
