@@ -46,6 +46,15 @@ function renderLoginLink() {
   document.body.appendChild(a);
 }
 
+// ba-35残課題(2) Stage5: 公開閲覧モードで書き込みを試みた際、ログインへ誘導するための
+// 共通ヘルパー。「ログイン」リンクをクリックした時と同じ操作(フルゲート表示)を行う。
+window.aaShowLoginGate = () => {
+  const link = document.getElementById("aa-login-link");
+  if (link) link.remove();
+  const gate = document.getElementById("login-gate");
+  if (gate) gate.style.display = "block";
+};
+
 function renderLogoutLink() {
   if (document.getElementById("aa-logout-link")) return;
   const a = document.createElement("a");

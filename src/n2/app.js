@@ -141,6 +141,13 @@ function initVisitInput() {
   });
 
   elBtnAddVisit.addEventListener("click", async () => {
+    // ba-35残課題(2): 公開閲覧モードでは未ログインでも閲覧できるため、書き込み時に
+    // credentialの有無を確認し、無ければ通信(401)ではなくログインへ誘導する。
+    if (!window.__credential) {
+      elStatus.textContent = "追加にはログインが必要です";
+      if (window.aaShowLoginGate) window.aaShowLoginGate();
+      return;
+    }
     const place = elPlaceInput.value.trim();
     const date = elDateInput.value;
     const time = elTimeInput.value;

@@ -64,6 +64,13 @@ function initScoreInput() {
   }
 
   elBtnSaveScore.addEventListener("click", async () => {
+    // ba-35残課題(2): 公開閲覧モードでは未ログインでも閲覧できるため、書き込み時に
+    // credentialの有無を確認し、無ければ通信(401)ではなくログインへ誘導する。
+    if (!window.__credential) {
+      elScoreSaved.textContent = "保存にはログインが必要です";
+      if (window.aaShowLoginGate) window.aaShowLoginGate();
+      return;
+    }
     const score = Number(elSlider.value);
     const note = elNoteInput.value.trim();
     try {
