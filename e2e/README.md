@@ -9,6 +9,7 @@
 | `2-4-k1-nes-smoke.test.js` | `k1` |
 | `2-5-k2-radar-chart.test.js` | `k2` |
 | `2-6-n1-n2-google-one-tap.test.js` | `n1`, `n2` |
+| `2-7-bd-password-decoder.test.js` | `bd` |
 
 ## 実行
 初回のみ依存パッケージをインストール。

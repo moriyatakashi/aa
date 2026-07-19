@@ -1,4 +1,4 @@
-updated: "2026-07-18 13:00"
+updated: "2026-07-19 13:00"
 categories:
   - label: 記録
     items:
@@ -30,3 +30,6 @@ categories:
       - code: bc
         desc: CASL II シミュレータ
         href: src/bc/
+      - code: bd
+        desc: ふっかつのじゅもん解析器
+        href: src/bd/
