@@ -1,5 +1,5 @@
 # e2e
-[`src/`](../src/README.md)各アプリのPlaywright E2Eテスト。ファイル名の`2-`は「グループ2」を表す通し番号(グループ1は[`pt/`](../pt/README.md)のpytestテスト)。
+[`src/`](../src/README.md)各アプリのPlaywright E2Eテスト。ファイル名の`2-`は「グループ2」を表す通し番号(グループ1は[`api-tests/`](../api-tests/README.md)のpytestテスト)。
 
 | ファイル | 対応する`src/` |
 |---|---|
