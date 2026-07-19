@@ -1,4 +1,4 @@
-updated: "2026-07-19 13:00"
+updated: "2026-07-19 19:30"
 categories:
   - label: 記録
     items:
@@ -33,3 +33,6 @@ categories:
       - code: bd
         desc: ふっかつのじゅもん解析器
         href: src/bd/
+      - code: bf
+        desc: DQ2 ふっかつのじゅもん生成器
+        href: src/bf/

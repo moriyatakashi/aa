@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bf / ふっかつのじゅもん生成器</title>
+<style>
+  :root {
+    --bg: #14170f;
+    --panel-bg: #1c2117;
+    --border: #3a4234;
+    --text: #eeeeee;
+    --text-dim: #9aa590;
+    --accent: #6cf;
+    --accent-text: #0c1220;
+    --mono: "SF Mono", "Consolas", "Menlo", monospace;
+    --error-bg: #3a1c1e;
+    --error-text: #ff9b9b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: sans-serif; max-width: 640px; margin: 0 auto; padding: 16px;
+    background: var(--bg); color: var(--text); font-size: 14px;
+  }
+  a.back { font-size: 0.72rem; color: var(--text-dim); text-decoration: none; }
+  a.back:hover { color: var(--text); }
+  h1 { font-size: 1.1rem; margin: 10px 0 2px; }
+  .lede { color: var(--text-dim); margin: 0 0 6px; font-size: 0.85rem; }
+  .lede a { color: var(--accent); }
+  .updated { font-size: 0.68rem; color: var(--text-dim); margin: 0 0 14px; }
+
+  .panel {
+    background: var(--panel-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.9rem; margin-bottom: 1rem;
+  }
+  .panel h2 {
+    font-size: 0.8rem; font-weight: 700;
+    color: var(--text); margin: 0 0 0.6rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .panel h2 .hint { font-size: 0.68rem; font-weight: 400; color: var(--text-dim); }
+
+  label.flag-toggle { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; margin-bottom: 0.6rem; }
+
+  .field-grid { display: grid; grid-template-columns: 6.5em 1fr; gap: 0.5rem 0.6rem; align-items: center; margin-bottom: 0.5rem; }
+  .field-grid label { font-size: 0.82rem; color: var(--text-dim); }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%; font-family: inherit; font-size: 13px;
+    padding: 0.4rem 0.5rem; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text);
+  }
+  input[type="text"] { font-family: var(--mono); }
+  .name-count { font-size: 0.68rem; color: var(--text-dim); margin-top: 2px; }
+
+  .items-block { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.4rem; }
+  .item-row { display: flex; gap: 0.4rem; align-items: center; }
+  .item-row select { flex: 1; }
+  .item-row label { font-size: 0.78rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
+  .items-hint { font-size: 0.68rem; color: var(--text-dim); margin-top: 0.4rem; }
+
+  fieldset.member-body { border: none; padding: 0; margin: 0; }
+  fieldset.member-body:disabled { opacity: 0.4; }
+
+  .crest-row { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 0.5rem; }
+  .crest-row label { font-size: 0.82rem; display: flex; align-items: center; gap: 0.3rem; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+  button {
+    font: inherit; padding: 0.5rem 0.9rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--panel-bg); color: var(--text);
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
+
+  #error { font-size: 0.85rem; color: var(--error-text); }
+  #error:not(:empty) { background: var(--error-bg); padding: 0.5rem 0.7rem; border-radius: 6px; margin-top: 0.6rem; }
+
+  #jumon-output {
+    font-family: var(--mono); font-size: 1rem; line-height: 1.9; white-space: pre-wrap;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.8rem; text-align: center; letter-spacing: 0.05em;
+  }
+
+  #steps summary { cursor: pointer; color: var(--text-dim); font-size: 0.8rem; }
+  #steps-body {
+    font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-all;
+    color: var(--text-dim); margin-top: 0.5rem; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<a class="back" href="../../">← 戻る</a>
+<h1>路歴（bf） / ふっかつのじゅもん生成器</h1>
+<p class="lede">
+  FC版ドラゴンクエスト2のステータスから「ふっかつのじゅもん」を生成します。
+  (<a href="https://musemyuzu.com/programming/fukkatsu-mechanism2/" target="_blank" rel="noopener">元Notebook: ミューズの情報教室</a>)
+</p>
+<p class="updated">更新: 2026-07-19 JST</p>
+
+<div class="panel">
+  <h2>ローレシア王子(主人公)</h2>
+  <div class="field-grid">
+    <label for="ro-name">なまえ</label>
+    <div>
+      <input type="text" id="ro-name" maxlength="8" spellcheck="false" autocomplete="off" value="００００">
+      <div class="name-count" id="ro-name-count"></div>
+    </div>
+    <label for="ro-exp">経験値</label>
+    <input type="number" id="ro-exp" min="0" max="1000000" value="0">
+  </div>
+  <div class="items-block" id="ro-items"></div>
+  <p class="items-hint">どうぐは上から詰めて選んでください(「なし」の後ろに置いたどうぐは無視されます)</p>
+</div>
+
+<div class="panel">
+  <label class="flag-toggle"><input type="checkbox" id="sa-flag"> サマルトリア王子が仲間になっている</label>
+  <fieldset class="member-body" id="sa-body" disabled>
+    <div class="field-grid">
+      <label for="sa-exp">経験値</label>
+      <input type="number" id="sa-exp" min="0" max="1000000" value="0">
+    </div>
+    <div class="items-block" id="sa-items"></div>
+  </fieldset>
+</div>
+
+<div class="panel">
+  <label class="flag-toggle"><input type="checkbox" id="mu-flag" disabled> ムーンブルク王女が仲間になっている <span class="hint">(サマルトリア王子が仲間の時のみ)</span></label>
+  <fieldset class="member-body" id="mu-body" disabled>
+    <div class="field-grid">
+      <label for="mu-exp">経験値</label>
+      <input type="number" id="mu-exp" min="0" max="1000000" value="0">
+    </div>
+    <div class="items-block" id="mu-items"></div>
+  </fieldset>
+</div>
+
+<div class="panel">
+  <h2>その他</h2>
+  <div class="field-grid">
+    <label for="gold">ゴールド</label>
+    <input type="number" id="gold" min="0" max="65535" value="0">
+    <label for="town">復活場所</label>
+    <select id="town"></select>
+    <label for="flag-moon">月のかけら</label>
+    <select id="flag-moon"></select>
+    <label for="flag-gate">テパの水門</label>
+    <select id="flag-gate"></select>
+    <label for="flag-plumage">みずのはごろも</label>
+    <select id="flag-plumage"></select>
+    <label for="stat-ship">ルプガナの船</label>
+    <select id="stat-ship"></select>
+    <label for="stat-prince">サマルトリア探索</label>
+    <select id="stat-prince"></select>
+    <label for="pattern">パターン(0〜7)</label>
+    <input type="number" id="pattern" min="0" max="7" value="0">
+  </div>
+  <h2 style="margin-top:0.8rem;">紋章(入手済みならチェック)</h2>
+  <div class="crest-row">
+    <label><input type="checkbox" id="crest-life"> 命の紋章</label>
+    <label><input type="checkbox" id="crest-water"> 水の紋章</label>
+    <label><input type="checkbox" id="crest-moon"> 月の紋章</label>
+    <label><input type="checkbox" id="crest-star"> 星の紋章</label>
+    <label><input type="checkbox" id="crest-sun"> 太陽の紋章</label>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="toolbar">
+    <button id="btn-generate" class="primary" type="button">じゅもんを生成する</button>
+  </div>
+  <div id="error"></div>
+</div>
+
+<div class="panel" id="result" style="display:none;">
+  <h2>ふっかつのじゅもん</h2>
+  <div id="jumon-output"></div>
+</div>
+
+<div class="panel">
+  <details id="steps">
+    <summary>計算過程を表示</summary>
+    <div id="steps-body"></div>
+  </details>
+</div>
+
+<script type="module" src="app.js?v=202607191800"></script>
+</body>
+</html>
