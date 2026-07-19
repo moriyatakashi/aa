@@ -6,23 +6,38 @@
   <title>aa</title>
   <link rel="stylesheet" href="src/common/base.css?v=202607141905">
   <style>
-    a { color: #6cf; }
+    /* ba-8(2026-07-20): このページ固有の色(base.cssの共通変数でカバーされない分)をローカル変数化 */
+    :root {
+      --link: #66ccff;
+      --nav-desc: #cccccc;
+      --cat-label: #8b9280;
+      --cat-line: #333a28;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --link: #0a6c96;
+        --nav-desc: #6b7160;
+        --cat-label: #6b7160;
+        --cat-line: #d8d5c4;
+      }
+    }
+    a { color: var(--link); }
     .nav-list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
     .nav-item {
       display: flex; align-items: baseline; gap: 10px;
-      border: 1px solid #444; border-radius: 8px; padding: 10px 14px;
+      border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px;
       text-decoration: none; color: inherit;
     }
-    .nav-item:hover { border-color: #6cf; }
-    .nav-code { font-weight: bold; color: #6cf; }
-    .nav-desc { color: #ccc; font-size: 0.9rem; }
+    .nav-item:hover { border-color: var(--link); }
+    .nav-code { font-weight: bold; color: var(--link); }
+    .nav-desc { color: var(--nav-desc); font-size: 0.9rem; }
     /* ba-34: カテゴリ見出し(baのeyebrowと同じ流儀の小ラベル+罫線) */
     .cat-label {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.7rem; letter-spacing: 0.12em; color: #8b9280;
+      font-size: 0.7rem; letter-spacing: 0.12em; color: var(--cat-label);
       margin: 22px 0 8px; display: flex; align-items: center; gap: 10px;
     }
-    .cat-label::after { content: ""; flex: 1; height: 1px; background: #333a28; }
+    .cat-label::after { content: ""; flex: 1; height: 1px; background: var(--cat-line); }
   </style>
 </head>
 <body>

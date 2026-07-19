@@ -4,12 +4,46 @@
      - .section / .section-title (n1/n2で完全一致していたカードパターン)
    .emptyはpaddingが数値違いだったため、あえて対象外・各ページ側に残している。
    ページ固有のスタイルは引き続き各index.html側のインラインstyleに残す方針。
-   k1(NESエミュレータ)は見た目の系統が異なるため対象外(--bgのみ自前でこの値に合わせている)。 */
+   k1(NESエミュレータ)は見た目の系統が異なるため対象外(--bgのみ自前でこの値に合わせている)。
+
+   ba-8(2026-07-20): ライト/ダーク両対応のためCSS変数化。既定値(ダーク)は従来と同じ。
+   root/n1/n2の各インラインstyleもこの変数を参照する(--accentはn1/n2共通のボタン色用)。 */
+
+:root {
+  --paper: #14170f;
+  --ink: #eeeeee;
+  --ink-soft: #aaaaaa;
+  --line: #444444;
+  --accent: #0066cc;
+  --input-bg: #111111;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --paper: #f7f6f0;
+    --ink: #22261c;
+    --ink-soft: #6b7160;
+    --line: #d8d5c4;
+    --accent: #0a6c96;
+    --input-bg: #ffffff;
+  }
+}
 
 body {
   font-family: sans-serif; max-width: 640px; margin: 0 auto; padding: 16px;
-  background: #14170f; color: #eeeeee;
+  background: var(--paper); color: var(--ink);
 }
 
-.section { border: 1px solid #444; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
-.section-title { font-size: 0.75rem; font-weight: 700; color: #aaa; margin-bottom: 10px; }
+.section { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+.section-title { font-size: 0.75rem; font-weight: 700; color: var(--ink-soft); margin-bottom: 10px; }
+
+/* ba-8: common/auth.jsのログイン/ログアウトピル(.aa-corner-link)は、色がダーク前提の
+   固定インラインstyleのまま(rgba(0,0,0,0.35)+#888)。ba/bb/k2/be等の常時ダークな
+   ページではそのままで問題ないためインラインstyle自体は変更せず、ライトモード時だけ
+   ここで上書きしてコントラストを保つ(ledger.css側は今回未対応のため対象外)。 */
+@media (prefers-color-scheme: light) {
+  .aa-corner-link {
+    background: rgba(0, 0, 0, 0.12) !important;
+    color: #3d4235 !important;
+  }
+}

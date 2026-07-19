@@ -35,6 +35,7 @@ function renderLoginLink() {
   a.id = "aa-login-link";
   a.href = "#";
   a.textContent = "ログイン";
+  a.className = "aa-corner-link";
   a.style.cssText =
     "position:fixed; top:8px; right:8px; font-size:0.72rem; color:#888; " +
     "background:rgba(0,0,0,0.35); padding:3px 8px; border-radius:5px; z-index:1000; text-decoration:none;";
@@ -61,6 +62,7 @@ function renderLogoutLink() {
   a.id = "aa-logout-link";
   a.href = "#";
   a.textContent = "ログアウト";
+  a.className = "aa-corner-link";
   a.style.cssText =
     "position:fixed; top:8px; right:8px; font-size:0.72rem; color:#888; " +
     "background:rgba(0,0,0,0.35); padding:3px 8px; border-radius:5px; z-index:1000; text-decoration:none;";
