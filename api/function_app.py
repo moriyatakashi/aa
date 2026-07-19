@@ -1,5 +1,8 @@
+import hashlib
+import hmac
 import json
 import os
+import secrets
 import uuid
 from datetime import datetime, timezone
 
@@ -16,6 +19,10 @@ ALLOWED_EMAIL = os.environ["ALLOWED_EMAIL"]
 # Azure Function Appの環境変数に設定した場合のみ有効になる。未設定なら
 # この経路は使われない（デフォルトでは何も変わらない、安全側）。
 TEMP_PASSCODE = os.environ.get("TEMP_PASSCODE", "")
+# 永続セッション機能（ba-XX 永続認証移行）の署名鍵。未設定ならこの機能自体を
+# 無効化する（session()は503を返し、_authorizeはsession:トークンを一切受け付けない）。
+# 既存のGoogle IDトークン直検証フローには影響しない（デフォルトでは何も変わらない、安全側）。
+SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
 
 
 def _table_client(table_name):
@@ -30,18 +37,9 @@ def _get_body(req):
         return {}
 
 
-def _authorize(body):
-    """ab個人データの書き込みをALLOWED_EMAIL本人のGoogleログインのみに制限する。
-    問題なければNone、問題があればそのまま返すHttpResponseを返す。
-    TEMP_PASSCODEが設定されている場合のみ、"manual:<パスコード>"形式の
-    credentialでも通す（Googleログインが壊れた時の一時避難用）。"""
-    credential = (body or {}).get("credential", "")
-    if not credential:
-        return func.HttpResponse("credential is required", status_code=401)
-
-    if TEMP_PASSCODE and credential == f"manual:{TEMP_PASSCODE}":
-        return None
-
+def _verify_google_credential(credential):
+    """GoogleのIDトークンをtokeninfoエンドポイントに問い合わせて検証する。
+    ALLOWED_EMAIL本人のトークンであればNone、そうでなければ401のHttpResponseを返す。"""
     try:
         resp = requests.get(
             "https://oauth2.googleapis.com/tokeninfo",
@@ -62,6 +60,68 @@ def _authorize(body):
     if payload.get("email_verified") != "true" or payload.get("email", "").lower() != ALLOWED_EMAIL.lower():
         return func.HttpResponse("invalid credential", status_code=401)
     return None
+
+
+SESSIONS_TABLE = "Sessions"
+SESSIONS_PARTITION = "session"
+
+
+def _sign_session_id(session_id):
+    return hmac.new(SESSION_SECRET.encode(), session_id.encode(), hashlib.sha256).hexdigest()
+
+
+def _make_session_token(session_id):
+    return f"session:{session_id}.{_sign_session_id(session_id)}"
+
+
+def _parse_session_token(credential):
+    """"session:<id>.<署名>"形式を検証し、正当ならidを、そうでなければNoneを返す。
+    ここではSESSION_SECRETによる署名検証のみ行い、テーブル上の失効確認は呼び出し側で行う。"""
+    if not credential.startswith("session:"):
+        return None
+    rest = credential[len("session:"):]
+    if "." not in rest:
+        return None
+    session_id, _, sig = rest.rpartition(".")
+    if not session_id or not sig:
+        return None
+    if not hmac.compare_digest(_sign_session_id(session_id), sig):
+        return None
+    return session_id
+
+
+def _authorize_session(credential):
+    """署名済みの永続セッショントークンを検証する。Sessionsテーブルに該当行が
+    残っていれば有効(ログアウト等で行を削除すると、無期限トークンでも即座に失効する)。"""
+    session_id = _parse_session_token(credential)
+    if not session_id:
+        return func.HttpResponse("invalid credential", status_code=401)
+    table = _table_client(SESSIONS_TABLE)
+    try:
+        table.get_entity(partition_key=SESSIONS_PARTITION, row_key=session_id)
+    except Exception:
+        return func.HttpResponse("invalid credential", status_code=401)
+    return None
+
+
+def _authorize(body):
+    """ab個人データの書き込みをALLOWED_EMAIL本人のGoogleログインのみに制限する。
+    問題なければNone、問題があればそのまま返すHttpResponseを返す。
+    TEMP_PASSCODEが設定されている場合のみ、"manual:<パスコード>"形式の
+    credentialでも通す（Googleログインが壊れた時の一時避難用）。
+    SESSION_SECRETが設定されている場合のみ、"session:<id>.<署名>"形式の
+    永続セッショントークン（POST /api/sessionで発行）でも通す。"""
+    credential = (body or {}).get("credential", "")
+    if not credential:
+        return func.HttpResponse("credential is required", status_code=401)
+
+    if TEMP_PASSCODE and credential == f"manual:{TEMP_PASSCODE}":
+        return None
+
+    if SESSION_SECRET and credential.startswith("session:"):
+        return _authorize_session(credential)
+
+    return _verify_google_credential(credential)
 
 
 CHECKS_TABLE = "Checks"
@@ -353,3 +413,47 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
         entity["Seq"] = _next_ba_seq(table)
     table.upsert_entity(entity)
     return func.HttpResponse(json.dumps(_ba_entry_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
+
+
+# 永続認証移行(ba-XX)。POSTはGoogle IDトークンを無期限の署名済みセッション
+# トークンに交換し、DELETEはそのトークンを即座に失効させる(ログアウト)。
+# SESSION_SECRETが未設定の間はこのエンドポイント自体が503を返すだけで、
+# 既存のGoogle直接検証フローには一切影響しない。
+@app.function_name(name="session")
+@app.route(route="session", methods=["POST", "DELETE"], auth_level=func.AuthLevel.ANONYMOUS)
+def session(req: func.HttpRequest) -> func.HttpResponse:
+    if not SESSION_SECRET:
+        return func.HttpResponse("session feature not configured", status_code=503)
+
+    body = _get_body(req)
+    credential = (body or {}).get("credential", "")
+    table = _table_client(SESSIONS_TABLE)
+
+    if req.method == "DELETE":
+        session_id = _parse_session_token(credential)
+        if not session_id:
+            return func.HttpResponse("invalid credential", status_code=401)
+        try:
+            table.delete_entity(partition_key=SESSIONS_PARTITION, row_key=session_id)
+        except Exception:
+            pass
+        return func.HttpResponse(status_code=204)
+
+    # POST: 新規発行は必ず生のGoogle IDトークンからのみ行う(session:や manual:
+    # トークンからの自己更新を許すと、一度発行した無期限トークンが無期限に延長
+    # され続けてしまい、ログアウトによる失効の意味が薄れるため)。
+    err = _verify_google_credential(credential)
+    if err:
+        return err
+
+    session_id = secrets.token_urlsafe(24)
+    table.upsert_entity({
+        "PartitionKey": SESSIONS_PARTITION,
+        "RowKey": session_id,
+        "CreatedAt": datetime.now(timezone.utc).isoformat(),
+    })
+    return func.HttpResponse(
+        json.dumps({"sessionToken": _make_session_token(session_id)}, ensure_ascii=False),
+        status_code=201,
+        mimetype="application/json",
+    )

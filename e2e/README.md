@@ -10,6 +10,7 @@
 | `2-5-k2-radar-chart.test.js` | `k2` |
 | `2-6-n1-n2-google-one-tap.test.js` | `n1`, `n2` |
 | `2-7-bd-password-decoder.test.js` | `bd` |
+| `2-8-persistent-session.test.js` | `n1`(`common/auth.js`) |
 
 ## 実行
 初回のみ依存パッケージをインストール。

@@ -30,6 +30,9 @@ class FakeTable:
     def upsert_entity(self, entity):
         self.rows[(entity["PartitionKey"], entity["RowKey"])] = dict(entity)
 
+    def delete_entity(self, partition_key, row_key):
+        self.rows.pop((partition_key, row_key), None)
+
 
 @pytest.fixture
 def tables(monkeypatch):
