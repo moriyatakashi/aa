@@ -3,11 +3,11 @@
 // スレッド束ね・分類解決のロジックはba/app.js(ba-32/ba-33)と同じ規則に従う。
 // config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
 // 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
-import "../cm/config.js";
-import { esc, fmtTs, CLASSIFICATIONS, CLS_KEY, filterFreeTags } from "../cm/utils.js";
-import { projectThreads } from "../cm/thread-logic.js";
+import "../common/config.js";
+import { esc, fmtTs, CLASSIFICATIONS, CLS_KEY, filterFreeTags } from "../common/utils.js";
+import { projectThreads } from "../common/thread-logic.js";
 
-const BA_API = `${window.AA_API_BASE}/ba`; // cm/config.js から(ba-9)
+const BA_API = `${window.AA_API_BASE}/ba`; // common/config.js から(ba-9)
 
 // 現在形ビューとしての並び順: 参照し続けるもの→動かすもの→考えるもの→ながめるもの
 const SECTION_ORDER = ["確定仕様", "案件", "保留論点", "気づき", null];

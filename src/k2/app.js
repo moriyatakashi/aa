@@ -4,8 +4,8 @@
 // をタブ切り替えでレーダーチャート表示する。読み取り専用。
 // config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
 // 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
-import "../cm/config.js";
-const API_BASE = window.AA_API_BASE; // cm/config.js から(ba-9)
+import "../common/config.js";
+const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
 const BA_API = `${API_BASE}/ba`;
 
 const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];

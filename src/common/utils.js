@@ -1,4 +1,4 @@
-// cm/utils.js — ba/bb共通のユーティリティ関数・定数
+// common/utils.js — ba/bb共通のユーティリティ関数・定数
 
 // ba-29: HTMLエスケープ
 export function esc(v) {

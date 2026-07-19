@@ -55,4 +55,4 @@ cd api && func start
 ```
 `http://localhost:7071/api/checks` などにリクエストが通れば起動確認完了。
 
-`src/`の各アプリと繋いで確認したい場合は、[`cm/config.js`](../src/cm/config.js)の`AA_API_BASE`が本番URLに直書きされているため、一時的に`http://localhost:7071/api`へ書き換える必要がある。
+`src/`の各アプリと繋いで確認したい場合は、[`common/config.js`](../src/common/config.js)の`AA_API_BASE`が本番URLに直書きされているため、一時的に`http://localhost:7071/api`へ書き換える必要がある。

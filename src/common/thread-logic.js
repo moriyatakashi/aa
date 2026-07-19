@@ -1,4 +1,4 @@
-// cm/thread-logic.js — ba/bb共通のスレッド処理ロジック
+// common/thread-logic.js — ba/bb共通のスレッド処理ロジック
 
 import { CLASSIFICATIONS, findClassification } from "./utils.js";
 
