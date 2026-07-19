@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>be / スコア推移</title>
+<link rel="stylesheet" href="../common/ledger.css?v=202607190900">
+<style>
+  .chart-wrap { margin: 20px 0 4px; }
+  #scoreSvg { width: 100%; height: auto; display: block; overflow: visible; }
+  .gridline { stroke: var(--line); stroke-width: 1; }
+  .baseline { stroke: var(--ink-soft); stroke-width: 1; }
+  .axis-label { fill: var(--ink-soft); font-size: 11px; }
+  .score-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .score-area { fill: var(--accent); opacity: 0.12; }
+  .score-dot { fill: var(--paper); stroke: var(--accent); stroke-width: 2; }
+  .crosshair { stroke: var(--ink-soft); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; pointer-events: none; }
+  .hit-area { fill: transparent; }
+  .score-tooltip {
+    position: absolute; pointer-events: none; background: var(--paper-band);
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
+    font-size: 0.78rem; color: var(--ink); opacity: 0; transition: opacity 0.08s ease;
+    white-space: nowrap;
+  }
+  .score-tooltip .t-date { color: var(--ink-soft); font-size: 0.68rem; margin-bottom: 2px; }
+  .score-tooltip .t-score { font-weight: 700; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+  <p><a href="../../">← 戻る</a></p>
+  <div class="eyebrow">ロレキ記録</div>
+  <h1>路歴（be） / スコア推移</h1>
+  <p class="lede">n1(日々のスコア記録)を折れ線グラフで見せる読み取り専用ページ。</p>
+
+  <div id="login-gate">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div id="g_id_onload"
+      data-client_id="550466095352-50h92anfullp137l4gq4gdi7ogjk0auc.apps.googleusercontent.com"
+      data-callback="handleCredentialResponse"
+      data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"></div>
+    <p id="status">未ログイン(ログインするとグラフが表示されます)</p>
+  </div>
+
+  <div id="content" style="display:none;">
+    <div class="chart-wrap">
+      <svg id="scoreSvg" viewBox="0 0 680 300"></svg>
+    </div>
+    <div class="summary-bar">
+      <div class="stat"><div class="stat-num" id="statLatest">—</div><div class="stat-label">最新</div></div>
+      <div class="stat"><div class="stat-num" id="statAvg">—</div><div class="stat-label">平均</div></div>
+      <div class="stat"><div class="stat-num" id="statMax">—</div><div class="stat-label">最高</div></div>
+      <div class="stat"><div class="stat-num" id="statMin">—</div><div class="stat-label">最低</div></div>
+    </div>
+    <p class="empty" id="emptyMsg" style="display:none;">記録はまだありません</p>
+  </div>
+  <div class="score-tooltip" id="scoreTooltip"></div>
+
+  <script>window.AA_AUTH_EVENT = "be-login-success";</script>
+  <script src="../common/config.js?v=202607160712"></script>
+  <script src="../common/auth.js?v=202607131100"></script>
+  <script type="module" src="app.js?v=202607190900"></script>
+</body>
+</html>

@@ -8,6 +8,9 @@ categories:
       - code: n2
         desc: 訪問地図
         href: src/n2/
+      - code: be
+        desc: スコア推移(折れ線グラフ)
+        href: src/be/
   - label: 内部メモ
     items:
       - code: ba
