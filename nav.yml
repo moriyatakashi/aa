@@ -17,7 +17,7 @@ categories:
         desc: ba現在形ビューワ
         href: src/bb/
       - code: k2
-        desc: baリーダーチャート
+        desc: baレーダーチャート
         href: src/k2/
   - label: あそび
     items:
