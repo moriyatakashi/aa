@@ -49,6 +49,12 @@ def test_authorize_temp_passcode_wrong_value_falls_back_to_google(monkeypatch, g
     assert resp.status_code == 401
 
 
+def test_authorize_rejects_when_google_unreachable(google_auth_unreachable):
+    # tokeninfoへの疎通自体が例外を投げても、クラッシュせず401を返すこと(フェイルクローズ)
+    resp = fa._authorize({"credential": "token"})
+    assert resp.status_code == 401
+
+
 # ---- checks (list) --------------------------------------------------------
 
 def test_checks_list_requires_auth_on_get(tables):

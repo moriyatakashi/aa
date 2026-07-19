@@ -11,6 +11,7 @@ os.environ.setdefault("GOOGLE_CLIENT_ID", "test-client-id")
 os.environ.setdefault("ALLOWED_EMAIL", "owner@example.com")
 
 import pytest
+import requests
 import function_app as fa  # noqa: E402
 
 
@@ -80,4 +81,12 @@ def google_auth_invalid(monkeypatch):
     """Google側がトークンを拒否するスタブ(401想定)。"""
     def _get(url, params=None, timeout=None):
         return FakeGoogleResponse(400, {})
+    monkeypatch.setattr(fa.requests, "get", _get)
+
+
+@pytest.fixture
+def google_auth_unreachable(monkeypatch):
+    """tokeninfoへの疎通自体が失敗するスタブ(ネットワーク不通・タイムアウト等を想定、401想定)。"""
+    def _get(url, params=None, timeout=None):
+        raise requests.exceptions.ConnectionError("simulated network failure")
     monkeypatch.setattr(fa.requests, "get", _get)
