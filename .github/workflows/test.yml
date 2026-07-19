@@ -21,7 +21,7 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
       - name: Run tests
-        # テストファイルは ts/ 配下に置く運用だが、
+        # テストファイルは e2e/ 配下に置く運用だが、
         # 特定のパスに固定せずリポジトリ全体から *.test.js を探す
         run: node --test
 
@@ -35,8 +35,8 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install dependencies
-        run: pip install -r pt/requirements.txt
+        run: pip install -r api-tests/requirements.txt
       - name: Run tests
-        # ap/function_app.py(Azure Functionsバックエンド)のユニットテスト。
-        # テーブルストレージ・Google認証はpt/conftest.pyでフェイク/スタブに差し替える。
-        run: pytest pt/
+        # api/function_app.py(Azure Functionsバックエンド)のユニットテスト。
+        # テーブルストレージ・Google認証はapi-tests/conftest.pyでフェイク/スタブに差し替える。
+        run: pytest api-tests/

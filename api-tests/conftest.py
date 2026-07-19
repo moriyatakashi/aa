@@ -5,7 +5,7 @@ from pathlib import Path
 
 # function_app.pyは環境変数をモジュール読み込み時に参照するため、importより前に設定する。
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "ap"))
+sys.path.insert(0, str(ROOT / "api"))
 
 os.environ.setdefault("TABLE_CONNECTION_STRING", "UseDevelopmentStorage=true")
 os.environ.setdefault("GOOGLE_CLIENT_ID", "test-client-id")

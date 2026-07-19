@@ -12,4 +12,4 @@
 | `n1` | 日々のスコア記録・一覧(Googleログイン必須) |
 | `n2` | 大阪市・東大阪の地図(GeoJSON) |
 
-各アプリのAPI呼び出し先は[`ap/`](../ap/README.md)（`cm/config.js`の`AA_API_BASE`）。E2Eテストは[`e2e/`](../e2e/README.md)を参照。
+各アプリのAPI呼び出し先は[`api/`](../api/README.md)（`cm/config.js`の`AA_API_BASE`）。E2Eテストは[`e2e/`](../e2e/README.md)を参照。
