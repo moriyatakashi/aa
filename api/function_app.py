@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 import azure.functions as func
 import requests
+from azure.core.exceptions import ResourceNotFoundError
 from azure.data.tables import TableServiceClient
 
 app = func.FunctionApp()
@@ -324,10 +325,13 @@ BA_SEQ_ROW = "ba_seq"
 def _next_ba_seq(table):
     """採番用の専用カウンタエンティティをインクリメントする。
     以前は台帳全件をスキャンしてSeqの最大値を求めていたが、台帳が育つほど
-    書き込みが遅くなるため、O(1)のカウンタ読み書きに変更した。"""
+    書き込みが遅くなるため、O(1)のカウンタ読み書きに変更した。
+    カウンタ未作成(初回のみ)はResourceNotFoundErrorとして0からにするが、
+    それ以外の例外(一時的な通信障害等)まで0扱いにすると採番が巻き戻って
+    Seq重複を生むため、ここは握りつぶさず呼び出し元に伝播させる(2026-07-20実例で発覚)。"""
     try:
         current = table.get_entity(partition_key=BA_SEQ_PARTITION, row_key=BA_SEQ_ROW).get("Value", 0)
-    except Exception:
+    except ResourceNotFoundError:
         current = 0
     seq = current + 1
     table.upsert_entity({"PartitionKey": BA_SEQ_PARTITION, "RowKey": BA_SEQ_ROW, "Value": seq})

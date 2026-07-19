@@ -1,6 +1,7 @@
 import json
 
 import azure.functions as func
+import pytest
 
 import function_app as fa
 
@@ -281,6 +282,26 @@ def test_ba_post_new_increments_seq(google_auth_ok, tables):
         assert resp.status_code == 201
     seqs = sorted(e["Seq"] for e in tables["BaLog"].rows.values() if "Seq" in e)
     assert seqs == [1, 2, 3]
+
+
+def test_ba_seq_counter_transient_error_is_not_swallowed(google_auth_ok, tables, monkeypatch):
+    # 実例(2026-07-20): カウンタ読み取りの一時的な失敗を握りつぶして0扱いにした結果、
+    # 既存の最新seqと衝突する採番(重複)が発生した。ResourceNotFoundError(未初期化)
+    # 以外の例外は伝播し、リクエスト自体を失敗させるべきで、黙って0に巻き戻しては
+    # いけない。
+    table = fa._table_client("BaLog")
+    real_get_entity = table.get_entity
+
+    def flaky_get_entity(partition_key, row_key):
+        if partition_key == fa.BA_SEQ_PARTITION:
+            raise TimeoutError("simulated transient table storage error")
+        return real_get_entity(partition_key, row_key)
+
+    monkeypatch.setattr(table, "get_entity", flaky_get_entity)
+
+    req = make_request("POST", "ba", json_body={"credential": "token", "type": "new", "title": "t"})
+    with pytest.raises(TimeoutError):
+        fa.ba_log(req)
 
 
 def test_ba_seq_counter_entity_not_exposed_in_get(google_auth_ok, tables):

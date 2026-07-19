@@ -12,6 +12,7 @@ os.environ.setdefault("ALLOWED_EMAIL", "owner@example.com")
 
 import pytest
 import requests
+from azure.core.exceptions import ResourceNotFoundError
 import function_app as fa  # noqa: E402
 
 
@@ -25,7 +26,10 @@ class FakeTable:
         return list(self.rows.values())
 
     def get_entity(self, partition_key, row_key):
-        return self.rows[(partition_key, row_key)]
+        try:
+            return self.rows[(partition_key, row_key)]
+        except KeyError:
+            raise ResourceNotFoundError(f"{partition_key}/{row_key} not found")
 
     def upsert_entity(self, entity):
         self.rows[(entity["PartitionKey"], entity["RowKey"])] = dict(entity)
