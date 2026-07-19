@@ -1,5 +1,4 @@
 import os
-import re
 import sys
 from pathlib import Path
 
@@ -29,14 +28,6 @@ class FakeTable:
 
     def upsert_entity(self, entity):
         self.rows[(entity["PartitionKey"], entity["RowKey"])] = dict(entity)
-
-    def query_entities(self, filter_str):
-        # 本アプリで使われる "Type eq 'new'" 形式だけをサポートする単純パーサ。
-        m = re.match(r"(\w+) eq '([^']*)'", filter_str)
-        if not m:
-            return list(self.rows.values())
-        field, value = m.groups()
-        return [e for e in self.rows.values() if e.get(field) == value]
 
 
 @pytest.fixture
@@ -74,7 +65,7 @@ def google_auth_ok(monkeypatch):
 
 @pytest.fixture
 def google_auth_wrong_email(monkeypatch):
-    """有効なGoogleトークンだが、ALLOWED_EMAIL以外のアカウントのスタブ(403想定)。"""
+    """有効なGoogleトークンだが、ALLOWED_EMAIL以外のアカウントのスタブ(401想定)。"""
     def _get(url, params=None, timeout=None):
         return FakeGoogleResponse(200, {
             "aud": fa.GOOGLE_CLIENT_ID,

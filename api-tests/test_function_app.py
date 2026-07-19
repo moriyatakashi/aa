@@ -29,8 +29,9 @@ def test_authorize_rejects_invalid_google_token(google_auth_invalid):
 
 
 def test_authorize_rejects_other_email(google_auth_wrong_email):
+    # 有効なGoogleトークンでも本人以外は、無効トークンと区別できないよう401にする
     resp = fa._authorize({"credential": "token"})
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 def test_authorize_accepts_allowed_email(google_auth_ok):
@@ -46,6 +47,28 @@ def test_authorize_temp_passcode_wrong_value_falls_back_to_google(monkeypatch, g
     monkeypatch.setattr(fa, "TEMP_PASSCODE", "escape-hatch")
     resp = fa._authorize({"credential": "manual:wrong"})
     assert resp.status_code == 401
+
+
+# ---- checks (list) --------------------------------------------------------
+
+def test_checks_list_requires_auth_on_get(tables):
+    req = make_request("GET", "checks")
+    resp = fa.checks(req)
+    assert resp.status_code == 401
+
+
+def test_checks_list_returns_saved_entries(tables, google_auth_ok):
+    put_req = make_request(
+        "PUT", "checks/2026-07-19", route_params={"date": "2026-07-19"},
+        json_body={"credential": "token", "crossedMidnight": True},
+    )
+    fa.checks_item(put_req)
+
+    list_req = make_request("GET", "checks", headers={"X-Checks-Credential": "token"})
+    resp = fa.checks(list_req)
+    assert resp.status_code == 200
+    items = json.loads(resp.get_body())
+    assert items == [{"date": "2026-07-19", "crossedMidnight": True, "ateMeal": False, "reviewDate": "", "updatedAt": items[0]["updatedAt"]}]
 
 
 # ---- checks/{date} -------------------------------------------------------
@@ -77,6 +100,24 @@ def test_checks_item_put_then_get_round_trip(tables, google_auth_ok):
 
 # ---- visits ---------------------------------------------------------------
 
+def test_visits_list_requires_auth_on_get(tables):
+    req = make_request("GET", "visits")
+    resp = fa.visits(req)
+    assert resp.status_code == 401
+
+
+def test_visits_list_returns_saved_entries(tables, google_auth_ok):
+    post_req = make_request("POST", "visits", json_body={"credential": "token", "place": "大阪城"})
+    fa.visits(post_req)
+
+    list_req = make_request("GET", "visits", headers={"X-Visits-Credential": "token"})
+    resp = fa.visits(list_req)
+    assert resp.status_code == 200
+    items = json.loads(resp.get_body())
+    assert len(items) == 1
+    assert items[0]["place"] == "大阪城"
+
+
 def test_visits_post_requires_place(google_auth_ok, tables):
     req = make_request("POST", "visits", json_body={"credential": "token", "place": "  "})
     resp = fa.visits(req)
@@ -90,6 +131,28 @@ def test_visits_post_creates_entity(google_auth_ok, tables):
     body = json.loads(resp.get_body())
     assert body["place"] == "大阪城"
     assert body["lat"] == 34.68
+
+
+# ---- scores (list) ----------------------------------------------------------
+
+def test_scores_list_requires_auth_on_get(tables):
+    req = make_request("GET", "scores")
+    resp = fa.scores(req)
+    assert resp.status_code == 401
+
+
+def test_scores_list_returns_saved_entries(tables, google_auth_ok):
+    put_req = make_request(
+        "PUT", "scores/2026-07-19", route_params={"date": "2026-07-19"},
+        json_body={"credential": "token", "score": 80, "note": "good"},
+    )
+    fa.scores_item(put_req)
+
+    list_req = make_request("GET", "scores", headers={"X-Scores-Credential": "token"})
+    resp = fa.scores(list_req)
+    assert resp.status_code == 200
+    items = json.loads(resp.get_body())
+    assert items == [{"date": "2026-07-19", "score": 80, "note": "good", "createdAt": items[0]["createdAt"]}]
 
 
 # ---- scores/{date} ---------------------------------------------------------
@@ -184,8 +247,18 @@ def test_ba_post_new_increments_seq(google_auth_ok, tables):
         req = make_request("POST", "ba", json_body={"credential": "token", "type": "new", "title": "t"})
         resp = fa.ba_log(req)
         assert resp.status_code == 201
-    seqs = sorted(e["Seq"] for e in tables["BaLog"].rows.values())
+    seqs = sorted(e["Seq"] for e in tables["BaLog"].rows.values() if "Seq" in e)
     assert seqs == [1, 2, 3]
+
+
+def test_ba_seq_counter_entity_not_exposed_in_get(google_auth_ok, tables):
+    req = make_request("POST", "ba", json_body={"credential": "token", "type": "new", "title": "t"})
+    fa.ba_log(req)
+
+    resp = fa.ba_log(make_request("GET", "ba"))
+    items = json.loads(resp.get_body())
+    assert len(items) == 1
+    assert items[0]["type"] == "new"
 
 
 def test_ba_post_note_uses_ref_as_partition(google_auth_ok, tables):

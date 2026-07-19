@@ -56,8 +56,11 @@ def _authorize(body):
     payload = resp.json()
     if payload.get("aud") != GOOGLE_CLIENT_ID:
         return func.HttpResponse("invalid credential", status_code=401)
+    # 「トークンは有効だが本人ではない」ことを403で区別すると、有効なGoogle
+    # アカウントを持つ第三者が「自分は認証済みだが権限がない」ことを判別できて
+    # しまう。本人以外は常に401にして、無効トークンと見分けがつかないようにする。
     if payload.get("email_verified") != "true" or payload.get("email", "").lower() != ALLOWED_EMAIL.lower():
-        return func.HttpResponse("forbidden", status_code=403)
+        return func.HttpResponse("invalid credential", status_code=401)
     return None
 
 
@@ -252,9 +255,21 @@ def _ba_entry_dict(e):
     }
 
 
+BA_SEQ_PARTITION = "_meta"
+BA_SEQ_ROW = "ba_seq"
+
+
 def _next_ba_seq(table):
-    existing = [e.get("Seq") for e in table.query_entities("Type eq 'new'") if e.get("Seq") is not None]
-    return (max(existing) if existing else 0) + 1
+    """採番用の専用カウンタエンティティをインクリメントする。
+    以前は台帳全件をスキャンしてSeqの最大値を求めていたが、台帳が育つほど
+    書き込みが遅くなるため、O(1)のカウンタ読み書きに変更した。"""
+    try:
+        current = table.get_entity(partition_key=BA_SEQ_PARTITION, row_key=BA_SEQ_ROW).get("Value", 0)
+    except Exception:
+        current = 0
+    seq = current + 1
+    table.upsert_entity({"PartitionKey": BA_SEQ_PARTITION, "RowKey": BA_SEQ_ROW, "Value": seq})
+    return seq
 
 
 def _ba_claude_lane(claude_key):
@@ -279,7 +294,10 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
     if req.method == "GET":
         # 読み取りは無認証で公開(2026-07-15 takashi判断)。ba-16「GETは認証必須」の
         # 一部撤回であり、ba-35の「閲覧専用の軽い経路」に相当。POST側の認証は従来どおり。
-        items = [_ba_entry_dict(e) for e in table.list_entities()]
+        items = [
+            _ba_entry_dict(e) for e in table.list_entities()
+            if e["PartitionKey"] != BA_SEQ_PARTITION
+        ]
         items.sort(key=lambda x: x["createdAt"])
         return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
 
