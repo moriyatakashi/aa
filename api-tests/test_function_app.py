@@ -106,22 +106,30 @@ def test_checks_item_put_then_get_round_trip(tables, google_auth_ok):
 
 # ---- visits ---------------------------------------------------------------
 
-def test_visits_list_requires_auth_on_get(tables):
+def test_visits_get_is_public_no_auth(tables):
+    # ba-35残課題(2): 閲覧はログイン不要(2026-07-20)。書き込みは引き続き認証必須。
     req = make_request("GET", "visits")
     resp = fa.visits(req)
-    assert resp.status_code == 401
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == []
 
 
 def test_visits_list_returns_saved_entries(tables, google_auth_ok):
     post_req = make_request("POST", "visits", json_body={"credential": "token", "place": "大阪城"})
     fa.visits(post_req)
 
-    list_req = make_request("GET", "visits", headers={"X-Visits-Credential": "token"})
+    list_req = make_request("GET", "visits")
     resp = fa.visits(list_req)
     assert resp.status_code == 200
     items = json.loads(resp.get_body())
     assert len(items) == 1
     assert items[0]["place"] == "大阪城"
+
+
+def test_visits_post_requires_auth(tables):
+    req = make_request("POST", "visits", json_body={"place": "大阪城"})
+    resp = fa.visits(req)
+    assert resp.status_code == 401
 
 
 def test_visits_post_requires_place(google_auth_ok, tables):
@@ -141,10 +149,12 @@ def test_visits_post_creates_entity(google_auth_ok, tables):
 
 # ---- scores (list) ----------------------------------------------------------
 
-def test_scores_list_requires_auth_on_get(tables):
+def test_scores_get_is_public_no_auth(tables):
+    # ba-35残課題(2): 閲覧はログイン不要(2026-07-20)。書き込みは引き続き認証必須。
     req = make_request("GET", "scores")
     resp = fa.scores(req)
-    assert resp.status_code == 401
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == []
 
 
 def test_scores_list_returns_saved_entries(tables, google_auth_ok):
@@ -154,7 +164,7 @@ def test_scores_list_returns_saved_entries(tables, google_auth_ok):
     )
     fa.scores_item(put_req)
 
-    list_req = make_request("GET", "scores", headers={"X-Scores-Credential": "token"})
+    list_req = make_request("GET", "scores")
     resp = fa.scores(list_req)
     assert resp.status_code == 200
     items = json.loads(resp.get_body())
@@ -162,6 +172,21 @@ def test_scores_list_returns_saved_entries(tables, google_auth_ok):
 
 
 # ---- scores/{date} ---------------------------------------------------------
+
+def test_scores_item_get_is_public_no_auth(tables):
+    req = make_request("GET", "scores/2026-07-19", route_params={"date": "2026-07-19"})
+    resp = fa.scores_item(req)
+    assert resp.status_code == 200
+
+
+def test_scores_item_put_requires_auth(tables):
+    req = make_request(
+        "PUT", "scores/2026-07-19", route_params={"date": "2026-07-19"},
+        json_body={"score": 80},
+    )
+    resp = fa.scores_item(req)
+    assert resp.status_code == 401
+
 
 def test_scores_item_rejects_out_of_range_score(google_auth_ok, tables):
     req = make_request(

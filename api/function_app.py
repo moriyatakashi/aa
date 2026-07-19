@@ -203,9 +203,7 @@ def visits(req: func.HttpRequest) -> func.HttpResponse:
     table = _table_client(VISITS_TABLE)
 
     if req.method == "GET":
-        err = _authorize({"credential": req.headers.get("X-Visits-Credential", "")})
-        if err:
-            return err
+        # ba-35残課題(2): 閲覧はログイン不要にする(2026-07-20)。書き込み(POST)は引き続き認証必須。
         items = [_visit_dict(e) for e in table.list_entities()]
         return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
 
@@ -246,9 +244,7 @@ def _score_dict(e):
 @app.function_name(name="scores")
 @app.route(route="scores", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
 def scores(req: func.HttpRequest) -> func.HttpResponse:
-    err = _authorize({"credential": req.headers.get("X-Scores-Credential", "")})
-    if err:
-        return err
+    # ba-35残課題(2): 閲覧はログイン不要にする(2026-07-20)。書き込み(PUT)は引き続き認証必須。
     table = _table_client(SCORES_TABLE)
     items = [{"date": e["RowKey"], **_score_dict(e)} for e in table.list_entities()]
     return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
@@ -261,9 +257,7 @@ def scores_item(req: func.HttpRequest) -> func.HttpResponse:
     table = _table_client(SCORES_TABLE)
 
     if req.method == "GET":
-        err = _authorize({"credential": req.headers.get("X-Scores-Credential", "")})
-        if err:
-            return err
+        # ba-35残課題(2): 閲覧はログイン不要にする(2026-07-20)。書き込み(PUT)は引き続き認証必須。
         try:
             body = _score_dict(table.get_entity(partition_key="score", row_key=date))
         except Exception:

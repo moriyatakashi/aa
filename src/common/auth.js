@@ -26,6 +26,26 @@ function decodeJwtPayload(credential) {
   return JSON.parse(new TextDecoder("utf-8").decode(bytes));
 }
 
+// ba-35残課題(2、2026-07-20): 閲覧はログイン不要にするページ向けの表示モード。
+// ページ側が<script>window.AA_PUBLIC_VIEW = true;</script>を1行足すだけで有効化する
+// (未指定なら既定でfalse相当=従来通りのゲート必須動作、baは対象外のため無変更)。
+function renderLoginLink() {
+  if (document.getElementById("aa-login-link")) return;
+  const a = document.createElement("a");
+  a.id = "aa-login-link";
+  a.href = "#";
+  a.textContent = "ログイン";
+  a.style.cssText =
+    "position:fixed; top:8px; right:8px; font-size:0.72rem; color:#888; " +
+    "background:rgba(0,0,0,0.35); padding:3px 8px; border-radius:5px; z-index:1000; text-decoration:none;";
+  a.addEventListener("click", (e) => {
+    e.preventDefault();
+    document.getElementById("login-gate").style.display = "block";
+    a.remove();
+  });
+  document.body.appendChild(a);
+}
+
 function renderLogoutLink() {
   if (document.getElementById("aa-logout-link")) return;
   const a = document.createElement("a");
@@ -150,3 +170,20 @@ window.aaLogout = async () => {
     localStorage.removeItem(STORAGE_KEY);
   }
 })();
+
+// ba-35残課題(2): ログイン済み(restoreSessionで復元済み)でなければ、公開閲覧モードの
+// ページでは即#contentを表示し、フルゲートの代わりに小さな「ログイン」リンクを出す。
+// window.__credential/__loginStateはここでは設定しない(未ログインのまま=書き込みは
+// 各ページ側でcredential有無を見て個別にログインを促す、ba-35 Stage5参照)。
+if (window.AA_PUBLIC_VIEW && !(window.__loginState && window.__loginState.loggedIn)) {
+  document.getElementById("content").style.display = "block";
+  document.getElementById("login-gate").style.display = "none";
+  renderLoginLink();
+  suppressAutoPromptWhenGsiReady();
+  // app.js(type="module")はauth.js(通常script)より後に実行されるため、ここで即dispatchすると
+  // リスナー登録前にイベントが握りつぶされる。DOMContentLoadedまで待てば、moduleを含む
+  // 全scriptの評価が完了している(HTML仕様上、DOMContentLoadedはdeferred/module実行後に発火)。
+  window.addEventListener("DOMContentLoaded", () => {
+    window.dispatchEvent(new CustomEvent(LOGIN_EVENT));
+  });
+}
