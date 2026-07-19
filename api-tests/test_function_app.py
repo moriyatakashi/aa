@@ -213,7 +213,8 @@ def test_scores_item_accepts_valid_score(google_auth_ok, tables):
         json_body={"credential": "token", "score": 80, "note": "good"},
     )
     resp = fa.scores_item(req)
-    assert resp.status_code == 201
+    # ba-30(4): upsertなので既定の200(checksと統一、以前は常に201だった)
+    assert resp.status_code == 200
     assert json.loads(resp.get_body())["score"] == 80
 
 

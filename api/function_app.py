@@ -25,9 +25,16 @@ TEMP_PASSCODE = os.environ.get("TEMP_PASSCODE", "")
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
 
 
+_table_service = None
+
+
 def _table_client(table_name):
-    service = TableServiceClient.from_connection_string(CONN_STR)
-    return service.get_table_client(table_name)
+    # ba-30(3): 毎リクエストでTableServiceClientを新規生成していたのをやめ、
+    # ウォームインスタンス間で使い回す(モジュールレベルで1度だけ生成)。
+    global _table_service
+    if _table_service is None:
+        _table_service = TableServiceClient.from_connection_string(CONN_STR)
+    return _table_service.get_table_client(table_name)
 
 
 def _get_body(req):
@@ -281,7 +288,8 @@ def scores_item(req: func.HttpRequest) -> func.HttpResponse:
         "CreatedAt": datetime.now(timezone.utc).isoformat(),
     }
     table.upsert_entity(entity)
-    return func.HttpResponse(json.dumps(_score_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
+    # ba-30(4): upsert(更新もありうる)なのに常に201を返していたのをやめ、checksと揃えて既定の200にする。
+    return func.HttpResponse(json.dumps(_score_dict(entity), ensure_ascii=False), mimetype="application/json")
 
 
 # ba(n4の後継)。骨組みはn4と同じ追記オンリー台帳だが、Claude Codeレーンを
