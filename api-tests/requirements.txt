@@ -1,2 +1,2 @@
--r ../ap/requirements.txt
+-r ../api/requirements.txt
 pytest
