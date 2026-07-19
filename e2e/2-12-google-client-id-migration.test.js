@@ -40,15 +40,23 @@ function serveStatic() {
 }
 
 // 実際のGSIスクリプトの代わりに、自分自身の実行時点でdata-client_id属性を読み取り
-// window.__observedClientIdへ記録するスタブ。非同期実行を模すためsetTimeout(0)を挟む。
+// window.__observedClientIdへ記録するスタブ。
+//
+// 実機ではGSIは実際のネットワーク越しの取得後に実行されるため、同期scriptである
+// data-client_id書き戻しは必ず先に終わっている。だがこのテストではPlaywrightの
+// page.routeでレスポンスを即時返すため、setTimeout(0)程度の遅延だと、システム負荷が
+// 高い瞬間にCDP経由のroute解決がたまたま同期script実行より先に走ってしまうことがある
+// (2026-07-20、n1/n2でこの原因によるflakyな失敗を実際に観測)。windowのloadイベントは
+// DOMContentLoaded(deferred/module scriptを含む全scriptの評価完了後)よりさらに後に
+// 発火するため、同期scriptとの競合が原理的に起こり得ない、より確実な待ち方にする。
 const GSI_TIMING_STUB = `
-  setTimeout(() => {
+  window.addEventListener('load', () => {
     const el = document.getElementById('g_id_onload');
     window.__observedClientId = el ? el.getAttribute('data-client_id') : null;
     window.google = { accounts: { id: {
       initialize: () => {}, prompt: () => {}, renderButton: () => {}, disableAutoSelect: () => {}
     } } };
-  }, 0);
+  });
 `;
 
 for (const pageName of PAGES) {
