@@ -11,7 +11,12 @@
 | `2-6-n1-n2-google-one-tap.test.js` | `n1`, `n2` |
 
 ## 実行
+初回のみ依存パッケージをインストール。
+```
+npm ci
+npx playwright install --with-deps chromium
+```
 ```
 node --test
 ```
-Node.js組み込みのテストランナーがリポジトリ全体から`*.test.js`を探すため、パス指定は不要。CIでは`.github/workflows/test.yml`の`test`ジョブで実行される。
+Node.js組み込みのテストランナーがリポジトリ全体から`*.test.js`を探すため、パス指定は不要。各テストファイルが自前で静的サーバーを起動し、Google認証・API呼び出しは`page.route()`でモックするため、`api/`や`src/`を別途起動しておく必要はない。CIでは`.github/workflows/test.yml`の`test`ジョブで実行される。
