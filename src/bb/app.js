@@ -47,7 +47,9 @@ function render() {
 
   const secEl = document.getElementById("sections");
   secEl.innerHTML = SECTION_ORDER.map((cls) => {
-    const list = visible.filter((t) => t.cls === cls || (cls === null && !t.cls));
+    const list = visible
+      .filter((t) => t.cls === cls || (cls === null && !t.cls))
+      .sort((a, b) => (b.root.seq || 0) - (a.root.seq || 0));
     if (!list.length) return "";
     const label = cls
       ? `<span class="cls-badge cls-badge--${CLS_KEY[cls]}">${cls}</span> ${list.length}件${cls === "確定仕様" ? "(closeせず参照し続ける)" : ""}`
