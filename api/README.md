@@ -55,7 +55,7 @@ azurite --silent --location <任意の作業ディレクトリ>
 python -c "
 from azure.data.tables import TableServiceClient
 svc = TableServiceClient.from_connection_string('UseDevelopmentStorage=true')
-for name in ['Checks', 'Visits', 'Scores', 'BaLog', 'Sessions']:
+for name in ['Visits', 'Scores', 'BaLog', 'Sessions']:
     svc.create_table_if_not_exists(name)
 "
 ```
@@ -66,6 +66,6 @@ for name in ['Checks', 'Visits', 'Scores', 'BaLog', 'Sessions']:
 pip install -r api/requirements.txt
 cd api && func start
 ```
-`http://localhost:7071/api/checks` などにリクエストが通れば起動確認完了。
+`http://localhost:7071/api/scores` などにリクエストが通れば起動確認完了。
 
 `src/`の各アプリと繋いで確認したい場合は、[`common/config.js`](../src/common/config.js)の`AA_API_BASE`が本番URLに直書きされているため、一時的に`http://localhost:7071/api`へ書き換える必要がある。

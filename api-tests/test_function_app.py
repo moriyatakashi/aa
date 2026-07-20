@@ -56,55 +56,6 @@ def test_authorize_rejects_when_google_unreachable(google_auth_unreachable):
     assert resp.status_code == 401
 
 
-# ---- checks (list) --------------------------------------------------------
-
-def test_checks_list_requires_auth_on_get(tables):
-    req = make_request("GET", "checks")
-    resp = fa.checks(req)
-    assert resp.status_code == 401
-
-
-def test_checks_list_returns_saved_entries(tables, google_auth_ok):
-    put_req = make_request(
-        "PUT", "checks/2026-07-19", route_params={"date": "2026-07-19"},
-        json_body={"credential": "token", "crossedMidnight": True},
-    )
-    fa.checks_item(put_req)
-
-    list_req = make_request("GET", "checks", headers={"X-Checks-Credential": "token"})
-    resp = fa.checks(list_req)
-    assert resp.status_code == 200
-    items = json.loads(resp.get_body())
-    assert items == [{"date": "2026-07-19", "crossedMidnight": True, "ateMeal": False, "reviewDate": "", "updatedAt": items[0]["updatedAt"]}]
-
-
-# ---- checks/{date} -------------------------------------------------------
-
-def test_checks_item_requires_auth_on_get(tables):
-    req = make_request("GET", "checks/2026-07-19", route_params={"date": "2026-07-19"})
-    resp = fa.checks_item(req)
-    assert resp.status_code == 401
-
-
-def test_checks_item_put_then_get_round_trip(tables, google_auth_ok):
-    put_req = make_request(
-        "PUT", "checks/2026-07-19", route_params={"date": "2026-07-19"},
-        json_body={"credential": "token", "crossedMidnight": True, "ateMeal": False},
-    )
-    put_resp = fa.checks_item(put_req)
-    assert put_resp.status_code == 200
-    saved = json.loads(put_resp.get_body())
-    assert saved["crossedMidnight"] is True
-    assert saved["ateMeal"] is False
-
-    get_req = make_request(
-        "GET", "checks/2026-07-19", route_params={"date": "2026-07-19"},
-        headers={"X-Checks-Credential": "token"},
-    )
-    get_resp = fa.checks_item(get_req)
-    assert json.loads(get_resp.get_body())["crossedMidnight"] is True
-
-
 # ---- visits ---------------------------------------------------------------
 
 def test_visits_get_is_public_no_auth(tables):

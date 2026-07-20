@@ -132,63 +132,6 @@ def _authorize(body):
     return _verify_google_credential(credential)
 
 
-CHECKS_TABLE = "Checks"
-
-
-def _check_dict(e):
-    return {
-        "crossedMidnight": e.get("CrossedMidnight", False),
-        "ateMeal": e.get("AteMeal", False),
-        "reviewDate": e.get("ReviewDate", ""),
-        "updatedAt": e.get("UpdatedAt", ""),
-    }
-
-
-@app.function_name(name="checks")
-@app.route(route="checks", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
-def checks(req: func.HttpRequest) -> func.HttpResponse:
-    err = _authorize({"credential": req.headers.get("X-Checks-Credential", "")})
-    if err:
-        return err
-    table = _table_client(CHECKS_TABLE)
-    items = [{"date": e["RowKey"], **_check_dict(e)} for e in table.list_entities()]
-    return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
-
-
-@app.function_name(name="checks-item")
-@app.route(route="checks/{date}", methods=["GET", "PUT"], auth_level=func.AuthLevel.ANONYMOUS)
-def checks_item(req: func.HttpRequest) -> func.HttpResponse:
-    date = req.route_params.get("date")
-    table = _table_client(CHECKS_TABLE)
-
-    if req.method == "GET":
-        err = _authorize({"credential": req.headers.get("X-Checks-Credential", "")})
-        if err:
-            return err
-        try:
-            body = _check_dict(table.get_entity(partition_key="check", row_key=date))
-        except Exception:
-            body = None
-        return func.HttpResponse(json.dumps(body, ensure_ascii=False), mimetype="application/json")
-
-    body = _get_body(req)
-    err = _authorize(body)
-    if err:
-        return err
-
-    entity = {"PartitionKey": "check", "RowKey": date}
-    if "crossedMidnight" in body:
-        entity["CrossedMidnight"] = bool(body["crossedMidnight"])
-    if "ateMeal" in body:
-        entity["AteMeal"] = bool(body["ateMeal"])
-    if "reviewDate" in body:
-        entity["ReviewDate"] = body["reviewDate"] or ""
-    entity["UpdatedAt"] = datetime.now(timezone.utc).isoformat()
-    table.upsert_entity(entity)
-
-    return func.HttpResponse(json.dumps(_check_dict(table.get_entity(partition_key="check", row_key=date)), ensure_ascii=False), mimetype="application/json")
-
-
 VISITS_TABLE = "Visits"
 
 
