@@ -25,7 +25,7 @@ function makeProjector(features, W, H, padding = 20) {
       if (lng > maxLng) maxLng = lng;
       if (lat < minLat) minLat = lat;
       if (lat > maxLat) maxLat = lat;
-    })));
+    })))
   });
   const scaleX = (W - padding * 2) / (maxLng - minLng);
   const scaleY = (H - padding * 2) / (maxLat - minLat);
@@ -227,12 +227,12 @@ async function load() {
   ]);
 
   const allVisits = visitRes.ok ? await visitRes.json() : [];
-  // 訪問記録を日付→時刻の降順(新しい順)に並べ替える
+  // 訪問記録をcreatedAtのISO 8601タイムスタンプで降順(新しい順)に並べ替える
+  // これにより、同じ分に複数エントリがあっても最新を正確に特定できる
   allVisits.sort((a, b) => {
-    const da = a.date || "", db = b.date || "";
-    if (da !== db) return db.localeCompare(da);
-    const ta = a.time || "", tb = b.time || "";
-    return tb.localeCompare(ta);
+    const ta = new Date(a.createdAt || 0).getTime();
+    const tb = new Date(b.createdAt || 0).getTime();
+    return tb - ta;
   });
   const withLatLng = allVisits.filter(v => v.lat && v.lng);
 
