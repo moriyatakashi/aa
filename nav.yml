@@ -1,4 +1,4 @@
-updated: "2026-07-19 19:30"
+updated: "2026-07-21 09:00"
 categories:
   - label: 記録
     items:
@@ -22,6 +22,9 @@ categories:
       - code: k2
         desc: baレーダーチャート
         href: src/k2/
+      - code: bg
+        desc: YML定義エディタ
+        href: src/bg/
   - label: あそび
     items:
       - code: k1
