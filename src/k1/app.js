@@ -54,6 +54,28 @@ const KEYS={'z':0,'Z':0,'x':1,'X':1,'Shift':2,'Enter':3,
 document.addEventListener('keydown',e=>{if(cpu&&e.key in KEYS){cpu.joy1[KEYS[e.key]]=1;e.preventDefault();}});
 document.addEventListener('keyup',  e=>{if(cpu&&e.key in KEYS) cpu.joy1[KEYS[e.key]]=0;});
 
+// ─── GamePad対応 Phase1: 最小構成(ba-52) ──────────────────────────────
+// Standard Gamepadレイアウト前提。複数コントローラー接続時は先頭のみ使用。
+// button0(下段, Xbox A/PS×)→NES B、button1(右段, Xbox B/PS○)→NES A という
+// 一般的なWebエミュレータのマッピング慣習を採用(必要ならPhase3で変更可能)。
+// 既知の制約: keyboard/touchと同じjoy1配列に直接書き込むため、複数入力ソースを
+// 同時に使った場合の押しっぱなし判定はソース間で厳密には独立していない。
+const GAMEPAD_MAP={0:1,1:0,8:2,9:3,12:4,13:5,14:6,15:7};
+let gamepadPrev={};
+function pollGamepad(){
+  if(!cpu || !navigator.getGamepads) return;
+  const pad=navigator.getGamepads()[0];
+  if(!pad) return;
+  for(const btnIdx in GAMEPAD_MAP){
+    const b=pad.buttons[btnIdx];
+    const pressed=!!(b && b.pressed);
+    if(pressed!==gamepadPrev[btnIdx]){
+      cpu.joy1[GAMEPAD_MAP[btnIdx]]=pressed?1:0;
+      gamepadPrev[btnIdx]=pressed;
+    }
+  }
+}
+
 function blit(){
   const fb=ppu.fb,d=imgData.data;
   for(let i=0;i<256*240;i++){
@@ -65,6 +87,7 @@ function blit(){
 
 function loop(){
   if(!running) return;
+  pollGamepad();
   const target=Math.floor(ppu.totalDots/(341*262))+1;
   try{
     while(Math.floor(ppu.totalDots/(341*262))<target){
