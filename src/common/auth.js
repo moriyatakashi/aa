@@ -20,16 +20,39 @@ const STORAGE_KEY = "aa_credential";
 const GOOGLE_TOKEN_SESSION_MS = 60 * 60 * 1000; // フォールバック(生Googleトークン)のみに適用
 const LOGIN_EVENT = window.AA_AUTH_EVENT || "aa-login-success";
 
+function getElement(id) {
+  return typeof document !== "undefined" ? document.getElementById(id) : null;
+}
+
+function setDisplay(id, display) {
+  const el = getElement(id);
+  if (el) el.style.display = display;
+}
+
+function setText(id, text) {
+  const el = getElement(id);
+  if (el) el.textContent = text;
+}
+
 function decodeJwtPayload(credential) {
-  const base64 = credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-  return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+  if (typeof credential !== "string") throw new Error("Invalid credential");
+  const parts = credential.split(".");
+  if (parts.length < 2 || !parts[1]) throw new Error("Invalid credential");
+  const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  try {
+    const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+  } catch (e) {
+    throw new Error("Invalid credential");
+  }
 }
 
 // ba-35残課題(2、2026-07-20): 閲覧はログイン不要にするページ向けの表示モード。
 // ページ側が<script>window.AA_PUBLIC_VIEW = true;</script>を1行足すだけで有効化する
 // (未指定なら既定でfalse相当=従来通りのゲート必須動作、baは対象外のため無変更)。
 function renderLoginLink() {
+  if (!document || !document.body) return;
   if (document.getElementById("aa-login-link")) return;
   const a = document.createElement("a");
   a.id = "aa-login-link";
@@ -41,7 +64,8 @@ function renderLoginLink() {
     "background:rgba(0,0,0,0.35); padding:3px 8px; border-radius:5px; z-index:1000; text-decoration:none;";
   a.addEventListener("click", (e) => {
     e.preventDefault();
-    document.getElementById("login-gate").style.display = "block";
+    const gate = getElement("login-gate");
+    if (gate) gate.style.display = "block";
     a.remove();
   });
   document.body.appendChild(a);
@@ -52,11 +76,12 @@ function renderLoginLink() {
 window.aaShowLoginGate = () => {
   const link = document.getElementById("aa-login-link");
   if (link) link.remove();
-  const gate = document.getElementById("login-gate");
+  const gate = getElement("login-gate");
   if (gate) gate.style.display = "block";
 };
 
 function renderLogoutLink() {
+  if (!document || !document.body) return;
   if (document.getElementById("aa-logout-link")) return;
   const a = document.createElement("a");
   a.id = "aa-logout-link";
@@ -76,8 +101,8 @@ function renderLogoutLink() {
 function activateSession(credential, name) {
   window.__loginState = { loggedIn: true, name: name || "" };
   window.__credential = credential;
-  document.getElementById("login-gate").style.display = "none";
-  document.getElementById("content").style.display = "block";
+  setDisplay("login-gate", "none");
+  setDisplay("content", "block");
   renderLogoutLink();
   window.dispatchEvent(new CustomEvent(LOGIN_EVENT));
 }
@@ -131,7 +156,7 @@ window.handleCredentialResponse = async (response) => {
     }
   } catch (e) {
     window.__loginState = { loggedIn: false, error: String(e) };
-    document.getElementById("status").textContent = "ログインに失敗しました";
+    setText("status", "ログインに失敗しました");
   }
 };
 
@@ -170,11 +195,18 @@ window.aaLogout = async () => {
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
-    if (kind !== "session" && Date.now() - savedAt > GOOGLE_TOKEN_SESSION_MS) {
+    if (kind !== "session" && (!savedAt || Date.now() - savedAt > GOOGLE_TOKEN_SESSION_MS)) {
       localStorage.removeItem(STORAGE_KEY);
       return;
     }
-    const displayName = kind === "session" ? name || "" : name || decodeJwtPayload(credential).name || "";
+    let displayName = name || "";
+    if (kind !== "session") {
+      try {
+        displayName = name || decodeJwtPayload(credential).name || "";
+      } catch (e) {
+        displayName = name || "";
+      }
+    }
     activateSession(credential, displayName);
     suppressAutoPromptWhenGsiReady();
   } catch (e) {
@@ -187,14 +219,18 @@ window.aaLogout = async () => {
 // window.__credential/__loginStateはここでは設定しない(未ログインのまま=書き込みは
 // 各ページ側でcredential有無を見て個別にログインを促す、ba-35 Stage5参照)。
 if (window.AA_PUBLIC_VIEW && !(window.__loginState && window.__loginState.loggedIn)) {
-  document.getElementById("content").style.display = "block";
-  document.getElementById("login-gate").style.display = "none";
+  setDisplay("content", "block");
+  setDisplay("login-gate", "none");
   renderLoginLink();
   suppressAutoPromptWhenGsiReady();
   // app.js(type="module")はauth.js(通常script)より後に実行されるため、ここで即dispatchすると
   // リスナー登録前にイベントが握りつぶされる。DOMContentLoadedまで待てば、moduleを含む
   // 全scriptの評価が完了している(HTML仕様上、DOMContentLoadedはdeferred/module実行後に発火)。
-  window.addEventListener("DOMContentLoaded", () => {
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", () => {
+      window.dispatchEvent(new CustomEvent(LOGIN_EVENT));
+    });
+  } else {
     window.dispatchEvent(new CustomEvent(LOGIN_EVENT));
-  });
+  }
 }
