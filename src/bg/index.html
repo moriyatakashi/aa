@@ -26,14 +26,13 @@
     color: #666;
     margin: 1rem 0 2rem;
   }
-  .editor-panel {
+  .layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
-    margin-bottom: 2rem;
   }
   @media (max-width: 900px) {
-    .editor-panel {
+    .layout {
       grid-template-columns: 1fr;
     }
   }
@@ -50,35 +49,80 @@
     border-bottom: 1px solid #eee;
     padding-bottom: 0.5rem;
   }
-  textarea {
-    width: 100%;
-    height: 400px;
-    padding: 0.75rem;
+  
+  .category-block {
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-family: "Monaco", "Menlo", monospace;
-    font-size: 0.85rem;
-    resize: vertical;
-  }
-  #preview {
-    width: 100%;
-    min-height: 400px;
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
     background: #f9f9f9;
-    font-family: "Monaco", "Menlo", monospace;
-    font-size: 0.85rem;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow-y: auto;
   }
-  .button-group {
+  .category-header {
     display: flex;
-    gap: 0.75rem;
-    margin-top: 1rem;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
   }
-  button {
+  .category-header input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #bbb;
+    border-radius: 3px;
+  }
+  .category-header button {
+    padding: 0.5rem 0.75rem;
+    background: #c33;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .category-header button:hover {
+    background: #a22;
+  }
+  
+  .item-block {
+    border-left: 3px solid #0066cc;
+    padding-left: 1rem;
+    margin-left: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+    border-left: 3px solid #0066cc;
+  }
+  .item-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1.5fr;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+  }
+  .item-row label {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: 500;
+  }
+  .item-row input {
+    padding: 0.4rem;
+    border: 1px solid #bbb;
+    border-radius: 3px;
+    font-size: 0.85rem;
+  }
+  .item-remove {
+    padding: 0.4rem 0.6rem;
+    background: #e0e0e0;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.75rem;
+  }
+  .item-remove:hover {
+    background: #d0d0d0;
+  }
+  
+  .add-btn {
     padding: 0.5rem 1rem;
     background: #0066cc;
     color: white;
@@ -87,15 +131,30 @@
     cursor: pointer;
     font-size: 0.9rem;
   }
-  button:hover {
+  .add-btn:hover {
     background: #0052a3;
   }
-  button.secondary {
-    background: #666;
+  
+  .button-group {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
   }
-  button.secondary:hover {
-    background: #444;
+  
+  #preview {
+    width: 100%;
+    min-height: 500px;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f9f9f9;
+    font-family: "Monaco", "Menlo", monospace;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-y: auto;
   }
+  
   #status {
     margin-top: 1rem;
     padding: 0.5rem;
@@ -104,11 +163,13 @@
     font-size: 0.85rem;
     color: #666;
   }
-  .error {
-    color: #c33;
-  }
   .success {
-    color: #3a3;
+    background: #d4edda;
+    color: #155724;
+  }
+  .error {
+    background: #f8d7da;
+    color: #721c24;
   }
 </style>
 </head>
@@ -117,22 +178,23 @@
   <div class="container">
     <div class="eyebrow">ロレキ内部メモ</div>
     <h1>bg / YML定義エディタ</h1>
-    <p class="lede">YML フォーマットのデータを定義・保存。リアルタイムプレビュー付き。ローカルストレージに自動保存されます。</p>
+    <p class="lede">nav.yml のような YML を フォームで構築。カテゴリ・アイテムを追加して、リアルタイム YAML プレビュー。</p>
 
-    <div class="editor-panel">
+    <div class="layout">
       <div class="panel">
-        <h2>入力</h2>
-        <textarea id="editor" placeholder="YAML形式で入力してください..."></textarea>
+        <h2>フォーム</h2>
+        <div id="categoriesContainer"></div>
+        <button class="add-btn" id="addCategoryBtn">+ カテゴリを追加</button>
         <div class="button-group">
-          <button id="saveBtn">保存</button>
-          <button id="clearBtn" class="secondary">クリア</button>
+          <button class="add-btn" id="saveBtn">保存</button>
+          <button class="add-btn" style="background: #666;" id="clearBtn">クリア</button>
         </div>
         <div id="status"></div>
       </div>
 
       <div class="panel">
-        <h2>プレビュー / 検証</h2>
-        <div id="preview">（プレビューはここに表示されます）</div>
+        <h2>プレビュー</h2>
+        <div id="preview">（フォームに入力するとここに YAML が表示されます）</div>
       </div>
     </div>
   </div>
