@@ -4,7 +4,7 @@ import json
 import os
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import azure.functions as func
 import requests
@@ -242,6 +242,9 @@ def scores_item(req: func.HttpRequest) -> func.HttpResponse:
 BA_TABLE = "BaLog"
 BA_HUMAN_ALLOWED_TYPES = {"new", "note", "void", "status"}
 BA_DEVICE_VERIFIED_TYPES = {"verified_on_device"}
+# ba-53: スレッドクローズの難易度別得点(週次得点で使う)。
+BA_DIFFICULTY_POINTS = {"low": 2, "normal": 5, "high": 10}
+BA_DEFAULT_DIFFICULTY = "normal"
 
 
 def _ba_entry_dict(e):
@@ -331,6 +334,18 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
             status_code=400,
         )
 
+    # ba-53: 週次得点のクローズ得点計算に使うdifficulty(low/normal/high)。
+    # newスレッド作成時のみ受け付け、未指定ならBA_DEFAULT_DIFFICULTYを明示的に補う
+    # (difficultyなしの過去スレッドはweekly-scores側の計算時にも同じ既定値へフォールバックする)。
+    if entry_type == "new":
+        difficulty = body.get("difficulty") or BA_DEFAULT_DIFFICULTY
+        if difficulty not in BA_DIFFICULTY_POINTS:
+            return func.HttpResponse(
+                f"difficulty must be one of: {', '.join(sorted(BA_DIFFICULTY_POINTS))}",
+                status_code=400,
+            )
+        body = {**body, "difficulty": difficulty}
+
     # 疎通確認用: dry_run=trueなら鍵・種別の検証だけ行い、台帳には書き込まない(ba-5)。
     if body.get("dry_run"):
         return func.HttpResponse(
@@ -362,6 +377,188 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
         entity["Seq"] = _next_ba_seq(table)
     table.upsert_entity(entity)
     return func.HttpResponse(json.dumps(_ba_entry_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
+
+
+# ba-53: 週次得点(毎日スコア合計 + baクローズの難易度別得点)。takashi確定仕様(2026-07-21):
+# ・週は月曜始まり(月〜日、JST)。ISO 8601の週番号(date.isocalendar系)がそのままこの定義に合う。
+# ・難易度別配点: low=2/normal=5/high=10。difficulty未設定の過去スレッドはnormal扱い。
+# ・計算タイミングは「管理ページアクセス時のオンデマンド」を推奨(takashi)。このためWeeklyScores
+#   テーブルは"確定させたい週のスナップショット"を保存する用途とし、GET detailは未保存の週なら
+#   その場で計算した値をその都度返す(保存はrecalculateを呼んだ時のみ)。
+WEEKLY_SCORES_TABLE = "WeeklyScores"
+JST = timezone(timedelta(hours=9))
+
+
+def _week_bounds(iso_year, iso_week):
+    """ISO年/週(月曜始まり)から、その週の[月曜0時JST, 翌月曜0時JST)をUTCで返す。
+    3つ目の戻り値はその週の月曜日(JSTのdate)。"""
+    monday = date.fromisocalendar(iso_year, iso_week, 1)
+    start_jst = datetime(monday.year, monday.month, monday.day, tzinfo=JST)
+    end_jst = start_jst + timedelta(days=7)
+    return start_jst.astimezone(timezone.utc), end_jst.astimezone(timezone.utc), monday
+
+
+def _week_row_key(iso_week, monday):
+    return f"W{iso_week:02d}_{monday.isoformat()}"
+
+
+def _parse_week_key(week_key):
+    """"2026-W29"形式をパースして(year, week)を返す。不正な形式ならNone。"""
+    year_str, sep, week_str = (week_key or "").partition("-W")
+    if not sep:
+        return None
+    try:
+        return int(year_str), int(week_str)
+    except ValueError:
+        return None
+
+
+def _calc_weekly_score(iso_year, iso_week):
+    """指定週の週次得点を、Scores(毎日スコア)とBaLog(クローズ)から都度計算する。
+    永続化はせず、呼び出し元(GET detailまたはrecalculate)が必要に応じて保存する。"""
+    start_utc, end_utc, monday = _week_bounds(iso_year, iso_week)
+    week_dates = [(monday + timedelta(days=i)).isoformat() for i in range(7)]
+
+    scores_table = _table_client(SCORES_TABLE)
+    daily_score_sum = 0
+    for d in week_dates:
+        try:
+            entity = scores_table.get_entity(partition_key="score", row_key=d)
+        except ResourceNotFoundError:
+            continue
+        daily_score_sum += entity.get("Score", 0)
+
+    ba_table = _table_client(BA_TABLE)
+    breakdown = {"low": 0, "normal": 0, "high": 0}
+    close_count = 0
+    close_value = 0
+    for e in ba_table.list_entities():
+        if e.get("Type") != "status":
+            continue
+        data = json.loads(e.get("Data") or "{}")
+        if data.get("status") != "closed":
+            continue
+        try:
+            created_at = datetime.fromisoformat(e.get("CreatedAt", ""))
+        except ValueError:
+            continue
+        if not (start_utc <= created_at < end_utc):
+            continue
+
+        thread_id = e["PartitionKey"]
+        difficulty = BA_DEFAULT_DIFFICULTY
+        try:
+            root = ba_table.get_entity(partition_key=thread_id, row_key=thread_id)
+            root_data = json.loads(root.get("Data") or "{}")
+            difficulty = root_data.get("difficulty") or BA_DEFAULT_DIFFICULTY
+        except ResourceNotFoundError:
+            pass
+        if difficulty not in BA_DIFFICULTY_POINTS:
+            difficulty = BA_DEFAULT_DIFFICULTY
+
+        close_count += 1
+        breakdown[difficulty] += 1
+        close_value += BA_DIFFICULTY_POINTS[difficulty]
+
+    return {
+        "year": iso_year,
+        "week": iso_week,
+        "weekKey": f"{iso_year}-W{iso_week:02d}",
+        "weekStart": monday.isoformat(),
+        "weekEnd": (monday + timedelta(days=6)).isoformat(),
+        "dailyScoreSum": daily_score_sum,
+        "closeCount": close_count,
+        "closeValue": close_value,
+        "breakdownByDifficulty": breakdown,
+        "weekScore": daily_score_sum + close_value,
+        "calculatedAt": None,
+    }
+
+
+def _weekly_score_entity_dict(e):
+    return {
+        "year": int(e["PartitionKey"]),
+        "week": e.get("Week"),
+        "weekKey": f"{e['PartitionKey']}-W{e.get('Week', 0):02d}",
+        "weekStart": e.get("WeekStart", ""),
+        "weekEnd": e.get("WeekEnd", ""),
+        "dailyScoreSum": e.get("DailyScoreSum", 0),
+        "closeCount": e.get("CloseCount", 0),
+        "closeValue": e.get("CloseValue", 0),
+        "breakdownByDifficulty": json.loads(e.get("BreakdownByDifficulty") or "{}"),
+        "weekScore": e.get("WeekScore", 0),
+        "calculatedAt": e.get("CalculatedAt", ""),
+    }
+
+
+def _persist_weekly_score(iso_year, iso_week):
+    result = _calc_weekly_score(iso_year, iso_week)
+    _, _, monday = _week_bounds(iso_year, iso_week)
+    entity = {
+        "PartitionKey": str(iso_year),
+        "RowKey": _week_row_key(iso_week, monday),
+        "Week": iso_week,
+        "WeekStart": result["weekStart"],
+        "WeekEnd": result["weekEnd"],
+        "DailyScoreSum": result["dailyScoreSum"],
+        "CloseCount": result["closeCount"],
+        "CloseValue": result["closeValue"],
+        "BreakdownByDifficulty": json.dumps(result["breakdownByDifficulty"], ensure_ascii=False),
+        "WeekScore": result["weekScore"],
+        "CalculatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    _table_client(WEEKLY_SCORES_TABLE).upsert_entity(entity)
+    return entity
+
+
+@app.function_name(name="weekly-scores")
+@app.route(route="weekly-scores", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def weekly_scores(req: func.HttpRequest) -> func.HttpResponse:
+    # recalculateで確定保存された週だけを一覧する(閲覧は無認証、scores/ba踏襲)。
+    table = _table_client(WEEKLY_SCORES_TABLE)
+    items = [_weekly_score_entity_dict(e) for e in table.list_entities()]
+    items.sort(key=lambda x: x["weekKey"])
+    return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+
+@app.function_name(name="weekly-scores-item")
+@app.route(route="weekly-scores/{week_key}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def weekly_scores_item(req: func.HttpRequest) -> func.HttpResponse:
+    week_key = req.route_params.get("week_key")
+    parsed = _parse_week_key(week_key)
+    if not parsed:
+        return func.HttpResponse("week_key must look like 2026-W29", status_code=400)
+    iso_year, iso_week = parsed
+
+    table = _table_client(WEEKLY_SCORES_TABLE)
+    _, _, monday = _week_bounds(iso_year, iso_week)
+    try:
+        entity = table.get_entity(partition_key=str(iso_year), row_key=_week_row_key(iso_week, monday))
+        body = _weekly_score_entity_dict(entity)
+    except ResourceNotFoundError:
+        # まだrecalculateされていない週は、保存はせずその場計算した値を返す。
+        body = _calc_weekly_score(iso_year, iso_week)
+    return func.HttpResponse(json.dumps(body, ensure_ascii=False), mimetype="application/json")
+
+
+@app.function_name(name="weekly-scores-recalculate")
+@app.route(route="weekly-scores/recalculate", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def weekly_scores_recalculate(req: func.HttpRequest) -> func.HttpResponse:
+    # 書き込み(確定保存)は他の書き込み系(visits/scores)同様に認証必須。
+    body = _get_body(req)
+    err = _authorize(body)
+    if err:
+        return err
+
+    parsed = _parse_week_key(body.get("weekKey", ""))
+    if not parsed:
+        return func.HttpResponse("weekKey must look like 2026-W29", status_code=400)
+    iso_year, iso_week = parsed
+
+    entity = _persist_weekly_score(iso_year, iso_week)
+    return func.HttpResponse(
+        json.dumps(_weekly_score_entity_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json"
+    )
 
 
 # 永続認証移行(ba-XX)。POSTはGoogle IDトークンを無期限の署名済みセッション

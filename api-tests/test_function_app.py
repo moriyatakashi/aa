@@ -278,3 +278,132 @@ def test_ba_post_note_uses_ref_as_partition(google_auth_ok, tables):
     assert note_resp.status_code == 201
     note_entry = json.loads(note_resp.get_body())
     assert note_entry["threadId"] == thread_id
+
+
+# ---- ba difficulty (ba-53) --------------------------------------------------
+
+def test_ba_new_defaults_difficulty_to_normal(google_auth_ok, tables):
+    req = make_request("POST", "ba", json_body={"credential": "token", "type": "new", "title": "t"})
+    entry = json.loads(fa.ba_log(req).get_body())
+    assert entry["difficulty"] == "normal"
+
+
+def test_ba_new_accepts_valid_difficulty(google_auth_ok, tables):
+    req = make_request("POST", "ba", json_body={"credential": "token", "type": "new", "title": "t", "difficulty": "high"})
+    entry = json.loads(fa.ba_log(req).get_body())
+    assert entry["difficulty"] == "high"
+
+
+def test_ba_new_rejects_invalid_difficulty(google_auth_ok, tables):
+    req = make_request("POST", "ba", json_body={"credential": "token", "type": "new", "title": "t", "difficulty": "extreme"})
+    resp = fa.ba_log(req)
+    assert resp.status_code == 400
+
+
+def test_ba_note_ignores_difficulty_validation(google_auth_ok, tables):
+    # difficultyのバリデーションはtype=="new"のときだけ。note等では素通りする。
+    new_req = make_request("POST", "ba", json_body={"credential": "token", "type": "new", "title": "t"})
+    thread_id = json.loads(fa.ba_log(new_req).get_body())["id"]
+    note_req = make_request(
+        "POST", "ba",
+        json_body={"credential": "token", "type": "note", "ref": thread_id, "body": "b", "difficulty": "not-a-real-level"},
+    )
+    assert fa.ba_log(note_req).status_code == 201
+
+
+# ---- weekly-scores (ba-53) ---------------------------------------------------
+
+def _close_thread(tables_dict, difficulty, closed_at_iso):
+    """difficultyありのスレッドを作り、指定日時にcloseするテスト用ヘルパー。"""
+    ba_table = fa._table_client("BaLog")
+    thread_id = f"thread-{difficulty}-{closed_at_iso}"
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id, "By": "takashi", "Ref": "", "Type": "new",
+        "Data": json.dumps({"title": "t", "difficulty": difficulty}), "CreatedAt": closed_at_iso, "Seq": 1,
+    })
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id + "-close", "By": "takashi", "Ref": thread_id,
+        "Type": "status", "Data": json.dumps({"status": "closed"}), "CreatedAt": closed_at_iso,
+    })
+
+
+def test_weekly_scores_list_is_public_and_empty_initially(tables):
+    resp = fa.weekly_scores(make_request("GET", "weekly-scores"))
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == []
+
+
+def test_weekly_scores_item_rejects_malformed_week_key(tables):
+    resp = fa.weekly_scores_item(make_request("GET", "weekly-scores/bogus", route_params={"week_key": "bogus"}))
+    assert resp.status_code == 400
+
+
+def test_weekly_scores_item_computes_on_demand_when_not_saved(tables):
+    # 2026-W29はISOで2026-07-13(月)〜2026-07-19(日)。範囲内に80点の毎日スコアと
+    # normal難易度のクローズ1件を仕込む。
+    scores_table = tables.setdefault("Scores", fa._table_client("Scores"))
+    scores_table.upsert_entity({
+        "PartitionKey": "score", "RowKey": "2026-07-15", "Score": 80, "Note": "", "CreatedAt": "2026-07-15T00:00:00+00:00",
+    })
+    _close_thread(tables, "normal", "2026-07-15T03:00:00+00:00")
+
+    resp = fa.weekly_scores_item(
+        make_request("GET", "weekly-scores/2026-W29", route_params={"week_key": "2026-W29"})
+    )
+    assert resp.status_code == 200
+    body = json.loads(resp.get_body())
+    assert body["weekStart"] == "2026-07-13"
+    assert body["dailyScoreSum"] == 80
+    assert body["closeCount"] == 1
+    assert body["closeValue"] == 5
+    assert body["weekScore"] == 85
+    assert body["calculatedAt"] is None  # 未保存はその場計算のみ
+
+
+def test_weekly_scores_item_defaults_missing_difficulty_to_normal(tables):
+    # difficultyフィールド追加前の過去スレッド(difficultyキーなし)を想定。
+    ba_table = tables.setdefault("BaLog", fa._table_client("BaLog"))
+    thread_id = "legacy-thread"
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id, "By": "takashi", "Ref": "", "Type": "new",
+        "Data": json.dumps({"title": "t"}), "CreatedAt": "2026-07-15T00:00:00+00:00", "Seq": 1,
+    })
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id + "-close", "By": "takashi", "Ref": thread_id,
+        "Type": "status", "Data": json.dumps({"status": "closed"}), "CreatedAt": "2026-07-15T03:00:00+00:00",
+    })
+
+    resp = fa.weekly_scores_item(
+        make_request("GET", "weekly-scores/2026-W29", route_params={"week_key": "2026-W29"})
+    )
+    body = json.loads(resp.get_body())
+    assert body["breakdownByDifficulty"] == {"low": 0, "normal": 1, "high": 0}
+    assert body["closeValue"] == 5
+
+
+def test_weekly_scores_recalculate_requires_auth(tables):
+    resp = fa.weekly_scores_recalculate(make_request("POST", "weekly-scores/recalculate", json_body={"weekKey": "2026-W29"}))
+    assert resp.status_code == 401
+
+
+def test_weekly_scores_recalculate_persists_and_shows_in_list(google_auth_ok, tables):
+    _close_thread(tables, "high", "2026-07-15T03:00:00+00:00")
+
+    resp = fa.weekly_scores_recalculate(
+        make_request("POST", "weekly-scores/recalculate", json_body={"credential": "token", "weekKey": "2026-W29"})
+    )
+    assert resp.status_code == 201
+    body = json.loads(resp.get_body())
+    assert body["closeValue"] == 10
+    assert body["calculatedAt"] is not None
+
+    list_resp = fa.weekly_scores(make_request("GET", "weekly-scores"))
+    items = json.loads(list_resp.get_body())
+    assert len(items) == 1
+    assert items[0]["weekKey"] == "2026-W29"
+
+    # 保存済みの週はGET detailがキャッシュ(保存値)を返す(calculatedAtが埋まっている)。
+    item_resp = fa.weekly_scores_item(
+        make_request("GET", "weekly-scores/2026-W29", route_params={"week_key": "2026-W29"})
+    )
+    assert json.loads(item_resp.get_body())["calculatedAt"] is not None
