@@ -14,7 +14,7 @@
     background: #fafafa;
   }
   .container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
   }
   h1 {
@@ -28,7 +28,7 @@
   }
   .layout {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 300px 1fr;
     gap: 1.5rem;
   }
   @media (max-width: 900px) {
@@ -50,80 +50,109 @@
     padding-bottom: 0.5rem;
   }
   
-  .category-block {
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    background: #f9f9f9;
+  .category-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
   }
-  .category-header {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+  .category-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: #f0f0f0;
+    border-radius: 3px;
+    cursor: pointer;
+    border-left: 3px solid #ddd;
+    transition: all 0.2s;
   }
-  .category-header input {
-    flex: 1;
+  .category-item:hover {
+    background: #e0e0e0;
+  }
+  .category-item.active {
+    background: #0066cc;
+    color: white;
+    border-left-color: #0052a3;
+  }
+  
+  .details-panel {
+    display: none;
+  }
+  .details-panel.active {
+    display: block;
+  }
+  
+  .category-form {
+    margin-bottom: 1.5rem;
+  }
+  .category-form label {
+    display: block;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.3rem;
+    font-weight: 500;
+  }
+  .category-form input {
+    width: 100%;
     padding: 0.5rem;
     border: 1px solid #bbb;
     border-radius: 3px;
+    box-sizing: border-box;
   }
-  .category-header button {
-    padding: 0.5rem 0.75rem;
-    background: #c33;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 0.85rem;
+  
+  .items-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #ddd;
   }
-  .category-header button:hover {
-    background: #a22;
+  .items-section h3 {
+    margin-top: 0;
+    font-size: 0.95rem;
+    color: #555;
   }
   
   .item-block {
-    border-left: 3px solid #0066cc;
-    padding-left: 1rem;
-    margin-left: 0.5rem;
-    margin-bottom: 0.75rem;
-    padding: 0.75rem;
-    background: white;
-    border-radius: 3px;
+    background: #f9f9f9;
     border: 1px solid #ddd;
-    border-left: 3px solid #0066cc;
+    border-radius: 3px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
   }
-  .item-row {
-    display: grid;
-    grid-template-columns: 1fr 2fr 1.5fr;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    align-items: center;
-  }
-  .item-row label {
+  .item-block label {
+    display: block;
     font-size: 0.75rem;
     color: #666;
+    margin: 0.5rem 0 0.3rem 0;
     font-weight: 500;
   }
-  .item-row input {
+  .item-block input {
+    width: 100%;
     padding: 0.4rem;
     border: 1px solid #bbb;
     border-radius: 3px;
-    font-size: 0.85rem;
+    box-sizing: border-box;
+    font-size: 0.9rem;
   }
   .item-remove {
-    padding: 0.4rem 0.6rem;
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.4rem;
     background: #e0e0e0;
     border: none;
     border-radius: 3px;
     cursor: pointer;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
   }
   .item-remove:hover {
     background: #d0d0d0;
   }
   
-  .add-btn {
-    padding: 0.5rem 1rem;
+  .button-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+  button {
+    flex: 1;
+    padding: 0.5rem;
     background: #0066cc;
     color: white;
     border: none;
@@ -131,37 +160,21 @@
     cursor: pointer;
     font-size: 0.9rem;
   }
-  .add-btn:hover {
+  button:hover {
     background: #0052a3;
   }
-  
-  .button-group {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
+  button.secondary {
+    background: #666;
   }
-  
-  #preview {
-    width: 100%;
-    min-height: 500px;
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: #f9f9f9;
-    font-family: "Monaco", "Menlo", monospace;
-    font-size: 0.8rem;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow-y: auto;
+  button.secondary:hover {
+    background: #444;
   }
   
   #status {
-    margin-top: 1rem;
-    padding: 0.5rem;
-    background: #f0f0f0;
+    padding: 0.75rem;
     border-radius: 4px;
     font-size: 0.85rem;
-    color: #666;
+    margin-top: 1rem;
   }
   .success {
     background: #d4edda;
@@ -171,6 +184,10 @@
     background: #f8d7da;
     color: #721c24;
   }
+  .loading {
+    background: #d1ecf1;
+    color: #0c5460;
+  }
 </style>
 </head>
 <body>
@@ -178,23 +195,25 @@
   <div class="container">
     <div class="eyebrow">ロレキ内部メモ</div>
     <h1>bg / YML定義エディタ</h1>
-    <p class="lede">nav.yml のような YML を フォームで構築。カテゴリ・アイテムを追加して、リアルタイム YAML プレビュー。</p>
+    <p class="lede">nav.yml を編集。左からカテゴリを選んで、右側で詳細編集。</p>
 
     <div class="layout">
+      <!-- 左：カテゴリリスト -->
       <div class="panel">
-        <h2>フォーム</h2>
-        <div id="categoriesContainer"></div>
-        <button class="add-btn" id="addCategoryBtn">+ カテゴリを追加</button>
-        <div class="button-group">
-          <button class="add-btn" id="saveBtn">保存</button>
-          <button class="add-btn" style="background: #666;" id="clearBtn">クリア</button>
-        </div>
-        <div id="status"></div>
+        <h2>カテゴリ</h2>
+        <ul class="category-list" id="categoryList"></ul>
+        <button id="addCategoryBtn" style="width: 100%; margin-top: 1rem;">+ カテゴリを追加</button>
       </div>
 
+      <!-- 右：詳細編集 -->
       <div class="panel">
-        <h2>プレビュー</h2>
-        <div id="preview">（フォームに入力するとここに YAML が表示されます）</div>
+        <h2>詳細</h2>
+        <div id="detailsContainer"></div>
+        <div id="status"></div>
+        <div class="button-group">
+          <button id="saveBtn">保存（GitHub に push）</button>
+          <button id="reloadBtn" class="secondary">再読み込み</button>
+        </div>
       </div>
     </div>
   </div>
