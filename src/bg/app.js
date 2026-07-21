@@ -5,105 +5,40 @@ const saveBtn = document.getElementById('saveBtn');
 const reloadBtn = document.getElementById('reloadBtn');
 const addCategoryBtn = document.getElementById('addCategoryBtn');
 
-const GITHUB_API = 'https://api.github.com/repos/moriyatakashi/aa';
-
+// モックデータ
 let data = {
-  updated: '',
-  categories: []
+  updated: "2026-07-21 09:00",
+  categories: [
+    {
+      label: "記録",
+      items: [
+        { code: "n1", desc: "記録一覧", href: "src/n1/" },
+        { code: "n2", desc: "訪問地図", href: "src/n2/" },
+        { code: "be", desc: "スコア推移(折れ線グラフ)", href: "src/be/" }
+      ]
+    },
+    {
+      label: "内部メモ",
+      items: [
+        { code: "ba", desc: "気づきログ(n4後継)", href: "src/ba/" },
+        { code: "bb", desc: "ba現在形ビューワ", href: "src/bb/" },
+        { code: "k2", desc: "baレーダーチャート", href: "src/k2/" },
+        { code: "bg", desc: "YML定義エディタ", href: "src/bg/" }
+      ]
+    },
+    {
+      label: "あそび",
+      items: [
+        { code: "k1", desc: "NES Emulator", href: "src/k1/" },
+        { code: "bc", desc: "CASL II シミュレータ", href: "src/bc/" },
+        { code: "bd", desc: "ふっかつのじゅもん解析器", href: "src/bd/" },
+        { code: "bf", desc: "DQ2 ふっかつのじゅもん生成器", href: "src/bf/" }
+      ]
+    }
+  ]
 };
 
-let navSha = '';
-
-// GitHub から nav.yml を取得（読み取り専用、認証不要）
-async function loadNavYml() {
-  statusDiv.textContent = '読み込み中...';
-  statusDiv.className = 'loading';
-  
-  try {
-    // raw content を取得
-    const response = await fetch(
-      'https://raw.githubusercontent.com/moriyatakashi/aa/main/nav.yml'
-    );
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch nav.yml: ${response.status}`);
-    }
-    
-    const yaml = await response.text();
-    
-    // YAML パース
-    data = parseYaml(yaml);
-    
-    renderUI();
-    statusDiv.textContent = 'nav.yml を読み込みました';
-    statusDiv.className = 'success';
-    setTimeout(() => statusDiv.textContent = '', 2000);
-  } catch (err) {
-    statusDiv.textContent = `エラー: ${err.message}`;
-    statusDiv.className = 'error';
-  }
-}
-
-// 簡易 YAML パーサー
-function parseYaml(yaml) {
-  const lines = yaml.split('\n');
-  const result = { updated: '', categories: [] };
-  
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    
-    // updated の行
-    if (line.includes('updated:')) {
-      const match = line.match(/updated:\s*"([^"]*)"/);
-      if (match) result.updated = match[1];
-      i++;
-      continue;
-    }
-    
-    // categories の行
-    if (line.includes('categories:')) {
-      i++;
-      while (i < lines.length && lines[i].startsWith('  - label:')) {
-        const catMatch = lines[i].match(/label:\s*(.+)/);
-        const category = { label: catMatch ? catMatch[1].trim() : '', items: [] };
-        
-        i++;
-        while (i < lines.length && lines[i].startsWith('    items:')) {
-          i++;
-          while (i < lines.length && lines[i].startsWith('      - code:')) {
-            const item = {};
-            
-            const codeMatch = lines[i].match(/code:\s*(.+)/);
-            item.code = codeMatch ? codeMatch[1].trim() : '';
-            i++;
-            
-            if (i < lines.length && lines[i].includes('desc:')) {
-              const descMatch = lines[i].match(/desc:\s*(.+)/);
-              item.desc = descMatch ? descMatch[1].trim() : '';
-              i++;
-            }
-            
-            if (i < lines.length && lines[i].includes('href:')) {
-              const hrefMatch = lines[i].match(/href:\s*(.+)/);
-              item.href = hrefMatch ? hrefMatch[1].trim() : '';
-              i++;
-            }
-            
-            category.items.push(item);
-          }
-          break;
-        }
-        
-        result.categories.push(category);
-      }
-      break;
-    }
-    i++;
-  }
-  
-  return result;
-}
+let currentCategoryIdx = 0;
 
 // UI をレンダリング
 function renderUI() {
@@ -112,20 +47,20 @@ function renderUI() {
   data.categories.forEach((cat, idx) => {
     const li = document.createElement('li');
     li.className = 'category-item';
-    if (idx === 0) li.classList.add('active');
+    if (idx === currentCategoryIdx) li.classList.add('active');
     li.textContent = cat.label || '（名前なし）';
     li.onclick = () => selectCategory(idx);
     categoryList.appendChild(li);
   });
   
   // 右：最初のカテゴリを表示
-  if (data.categories.length > 0) {
-    selectCategory(0);
-  }
+  selectCategory(currentCategoryIdx);
 }
 
 // カテゴリ選択
 function selectCategory(idx) {
+  currentCategoryIdx = idx;
+  
   // 左の選択状態を更新
   document.querySelectorAll('.category-item').forEach((item, i) => {
     item.classList.toggle('active', i === idx);
@@ -143,10 +78,10 @@ function selectCategory(idx) {
     <div class="items-section">
       <h3>アイテム</h3>
       <div id="itemsContainer"></div>
-      <button onclick="addItem(${idx})" style="width: 100%; margin-top: 0.75rem;">+ アイテムを追加</button>
+      <button onclick="addItem(${idx})" style="width: 100%; margin-top: 0.75rem; padding: 0.5rem; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer;">+ アイテムを追加</button>
     </div>
     
-    <button onclick="removeCategory(${idx})" style="width: 100%; margin-top: 1rem; background: #c33;">
+    <button onclick="removeCategory(${idx})" style="width: 100%; margin-top: 1rem; background: #c33; color: white; padding: 0.5rem; border: none; border-radius: 4px; cursor: pointer;">
       このカテゴリを削除
     </button>
   `;
@@ -183,7 +118,9 @@ function selectCategory(idx) {
     const fields = ['code', 'desc', 'href'];
     
     input.addEventListener('input', (e) => {
-      data.categories[idx].items[itemIdx][fields[fieldIdx]] = e.target.value;
+      if (data.categories[idx].items[itemIdx]) {
+        data.categories[idx].items[itemIdx][fields[fieldIdx]] = e.target.value;
+      }
     });
   });
 }
@@ -196,14 +133,19 @@ function addItem(catIdx) {
 
 // アイテム削除
 function removeItem(catIdx, itemIdx) {
-  data.categories[catIdx].items.splice(itemIdx, 1);
-  selectCategory(catIdx);
+  if (confirm('このアイテムを削除しますか？')) {
+    data.categories[catIdx].items.splice(itemIdx, 1);
+    selectCategory(catIdx);
+  }
 }
 
 // カテゴリ削除
 function removeCategory(idx) {
   if (confirm('このカテゴリを削除しますか？')) {
     data.categories.splice(idx, 1);
+    if (currentCategoryIdx >= data.categories.length) {
+      currentCategoryIdx = data.categories.length - 1;
+    }
     renderUI();
   }
 }
@@ -249,9 +191,6 @@ function save() {
       <br/>
       <strong style="font-size: 0.85rem;">YAML プレビュー：</strong>
       <pre style="background: #f0f0f0; padding: 0.5rem; border-radius: 3px; font-size: 0.75rem; overflow-x: auto; max-height: 200px; margin-top: 0.5rem;">${escapeHtml(yaml)}</pre>
-      <div style="margin-top: 0.75rem; font-size: 0.8rem; color: #666;">
-        📝 このコンテンツをコピーして、GitHub に直接 push してください。
-      </div>
     `;
     statusDiv.className = 'success';
   } catch (err) {
@@ -273,8 +212,12 @@ function escapeHtml(text) {
 
 // イベント
 saveBtn.addEventListener('click', save);
-reloadBtn.addEventListener('click', loadNavYml);
+reloadBtn.addEventListener('click', () => {
+  statusDiv.textContent = 'モックデータを再読み込みしました';
+  statusDiv.className = 'success';
+  setTimeout(() => statusDiv.textContent = '', 2000);
+});
 addCategoryBtn.addEventListener('click', addCategory);
 
 // 初期化
-loadNavYml();
+renderUI();
