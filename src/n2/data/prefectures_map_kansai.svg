@@ -30,7 +30,7 @@
       <text class="pref-label" x="380" y="280">京都</text>
     </g>
     <g data-pref="兵庫">
-      <rect class="pref-rect unvisited" x="285" y="278" width="70" height="44" rx="6"/>
+      <rect class="pref-rect visited" x="285" y="278" width="70" height="44" rx="6"/>
       <text class="pref-label" x="320" y="300">兵庫</text>
     </g>
     <g data-pref="奈良">
