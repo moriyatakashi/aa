@@ -220,9 +220,10 @@ async function load() {
   listEl.innerHTML = "";
   emptyMsg.style.display = "none";
 
-  const [higashiGeo, osakaCityGeo, visitRes] = await Promise.all([
+  const [higashiGeo, osakaCityGeo, amagasakiGeo, visitRes] = await Promise.all([
     fetchGeo("higashiosaka.geojson"),
     fetchGeo("osaka_city.geojson"),
+    fetchGeo("amagasaki.geojson"),
     fetch(VISITS_API, { cache: "no-store", headers: { "X-Visits-Credential": window.__credential || "" } })
   ]);
 
@@ -245,10 +246,11 @@ async function load() {
   canvas.width = W;
   canvas.height = H;
 
-  const allFeatures = [...higashiGeo.features, ...osakaCityGeo.features];
+  const allFeatures = [...higashiGeo.features, ...osakaCityGeo.features, ...amagasakiGeo.features];
   const proj = makeProjector(allFeatures, W, H);
 
   ctx.clearRect(0, 0, W, H);
+  drawFeatures(amagasakiGeo.features, proj, "#f7e8dc", "#dcb08e");
   drawFeatures(osakaCityGeo.features, proj, "#e8f0e0", "#a8c890");
   drawFeatures(higashiGeo.features, proj, "#dce8f5", "#aac4e0");
   _W = W;
