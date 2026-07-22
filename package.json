@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",
-    "js-yaml": "^5.2.1"
+    "js-yaml": "^5.2.1",
+    "c8": "^7.12.0"
   }
 }
