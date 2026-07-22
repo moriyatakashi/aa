@@ -1,0 +1,13 @@
+{
+  "game_title": "訪問地マップ移動ゲーム - 近畿エリア",
+  "prefectures": {
+    "大阪": { "neighbors": ["京都", "兵庫", "奈良", "三重"], "x": 400, "y": 350, "visited": true },
+    "京都": { "neighbors": ["大阪", "兵庫", "奈良", "滋賀"], "x": 380, "y": 280, "visited": false },
+    "兵庫": { "neighbors": ["大阪", "京都", "奈良", "岡山"], "x": 320, "y": 300, "visited": false },
+    "奈良": { "neighbors": ["大阪", "京都", "兵庫", "三重", "和歌山"], "x": 420, "y": 320, "visited": false },
+    "三重": { "neighbors": ["大阪", "奈良", "滋賀"], "x": 480, "y": 350, "visited": false },
+    "滋賀": { "neighbors": ["京都", "三重"], "x": 420, "y": 260, "visited": false },
+    "和歌山": { "neighbors": ["奈良"], "x": 450, "y": 380, "visited": false },
+    "岡山": { "neighbors": ["兵庫"], "x": 280, "y": 340, "visited": false }
+  }
+}
