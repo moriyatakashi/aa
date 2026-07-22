@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="180 200 400 240" width="760" height="480">
+  <style>
+    .pref-rect { stroke: #333; stroke-width: 1.5; rx: 6; }
+    .visited { fill: #d9534f; }
+    .unvisited { fill: #4a7ebb; }
+    .pref-label { font-family: sans-serif; font-size: 14px; fill: #fff; text-anchor: middle; dominant-baseline: central; }
+    .adj-line { stroke: #888; stroke-width: 1; stroke-dasharray: 4 3; }
+  </style>
+  <g id="adjacency">
+    <line class="adj-line" x1="400" y1="350" x2="380" y2="280"/>
+    <line class="adj-line" x1="400" y1="350" x2="320" y2="300"/>
+    <line class="adj-line" x1="400" y1="350" x2="420" y2="320"/>
+    <line class="adj-line" x1="400" y1="350" x2="480" y2="350"/>
+    <line class="adj-line" x1="380" y1="280" x2="320" y2="300"/>
+    <line class="adj-line" x1="380" y1="280" x2="420" y2="320"/>
+    <line class="adj-line" x1="380" y1="280" x2="420" y2="260"/>
+    <line class="adj-line" x1="320" y1="300" x2="420" y2="320"/>
+    <line class="adj-line" x1="320" y1="300" x2="280" y2="340"/>
+    <line class="adj-line" x1="420" y1="320" x2="480" y2="350"/>
+    <line class="adj-line" x1="420" y1="320" x2="450" y2="380"/>
+    <line class="adj-line" x1="480" y1="350" x2="420" y2="260"/>
+  </g>
+  <g id="prefectures">
+    <g data-pref="大阪">
+      <rect class="pref-rect visited" x="365" y="328" width="70" height="44" rx="6"/>
+      <text class="pref-label" x="400" y="350">大阪</text>
+    </g>
+    <g data-pref="京都">
+      <rect class="pref-rect unvisited" x="345" y="258" width="70" height="44" rx="6"/>
+      <text class="pref-label" x="380" y="280">京都</text>
+    </g>
+    <g data-pref="兵庫">
+      <rect class="pref-rect unvisited" x="285" y="278" width="70" height="44" rx="6"/>
+      <text class="pref-label" x="320" y="300">兵庫</text>
+    </g>
+    <g data-pref="奈良">
+      <rect class="pref-rect unvisited" x="385" y="298" width="70" height="44" rx="6"/>
+      <text class="pref-label" x="420" y="320">奈良</text>
+    </g>
+    <g data-pref="三重">
+      <rect class="pref-rect unvisited" x="445" y="328" width="70" height="44" rx="6"/>
+      <text class="pref-label" x="480" y="350">三重</text>
+    </g>
+    <g data-pref="滋賀">
+      <rect class="pref-rect unvisited" x="385" y="238" width="70" height="44" rx="6"/>
+      <text class="pref-label" x="420" y="260">滋賀</text>
+    </g>
+    <g data-pref="和歌山">
+      <rect class="pref-rect unvisited" x="415" y="358" width="70" height="44" rx="6"/>
+      <text class="pref-label" x="450" y="380">和歌山</text>
+    </g>
+    <g data-pref="岡山">
+      <rect class="pref-rect unvisited" x="245" y="318" width="70" height="44" rx="6"/>
+      <text class="pref-label" x="280" y="340">岡山</text>
+    </g>
+  </g>
+</svg>
