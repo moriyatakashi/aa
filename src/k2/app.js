@@ -173,7 +173,7 @@ async function load() {
   const emptyEl = document.getElementById("radarEmpty");
 
   try {
-    const res = await fetch(BA_API, { cache: "no-store", headers: { "X-Ba-Credential": window.__credential || "" } });
+    const res = await fetch(BA_API, { cache: "no-store" });
     const items = res.ok ? await res.json() : [];
     currentThreads = groupThreads(items);
     render();
