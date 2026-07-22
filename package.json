@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-index.mjs"
+    "build": "node scripts/build-index.mjs",
+    "test": "node --test",
+    "test:ci": "node --test --test-threads=1"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",
