@@ -76,6 +76,19 @@ function pollGamepad(){
   }
 }
 
+// ─── GamePad対応 Phase2: 接続状態表示(ba-52) ──────────────────────────
+// キーボード/タッチは常時併存のため、未接続でも操作不能にはならない(fallback済み)。
+const gamepadStatusEl=document.getElementById('gamepadStatus');
+function updateGamepadStatus(){
+  if(!gamepadStatusEl) return;
+  const pads=navigator.getGamepads?navigator.getGamepads():[];
+  const pad=pads&&pads[0];
+  gamepadStatusEl.textContent=pad?`🎮 接続中: ${pad.id}`:'🎮 未接続（キーボード/タッチで操作可）';
+}
+window.addEventListener('gamepadconnected',updateGamepadStatus);
+window.addEventListener('gamepaddisconnected',updateGamepadStatus);
+updateGamepadStatus();
+
 function blit(){
   const fb=ppu.fb,d=imgData.data;
   for(let i=0;i<256*240;i++){
