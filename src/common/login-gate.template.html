@@ -1,0 +1,10 @@
+  <div id="login-gate">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div id="g_id_onload"
+      data-callback="handleCredentialResponse"
+      data-auto_prompt="false">
+    </div>
+    <script>document.getElementById('g_id_onload').setAttribute('data-client_id', window.AA_GOOGLE_CLIENT_ID);</script>
+    <div class="g_id_signin"></div>
+    <p id="status">{{STATUS_MESSAGE}}</p>
+  </div>
