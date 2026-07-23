@@ -2,16 +2,18 @@ import json
 
 import azure.functions as func
 import pytest
+import requests
 
 import function_app as fa
 
 
-def make_request(method, route, route_params=None, headers=None, json_body=None):
+def make_request(method, route, route_params=None, headers=None, json_body=None, params=None):
     body = json.dumps(json_body).encode() if json_body is not None else b""
     return func.HttpRequest(
         method=method,
         url=f"http://localhost/api/{route}",
         headers=headers or {},
+        params=params or {},
         route_params=route_params or {},
         body=body,
     )
@@ -407,3 +409,104 @@ def test_weekly_scores_recalculate_persists_and_shows_in_list(google_auth_ok, ta
         make_request("GET", "weekly-scores/2026-W29", route_params={"week_key": "2026-W29"})
     )
     assert json.loads(item_resp.get_body())["calculatedAt"] is not None
+
+
+# ---- last-updated (ba-69: last-updated.js用のGitHub APIプロキシ) -------
+
+class FakeGithubCommitsResponse:
+    def __init__(self, status_code, payload):
+        self.status_code = status_code
+        self._payload = payload
+
+    def json(self):
+        return self._payload
+
+
+@pytest.fixture(autouse=False)
+def _clear_last_updated_cache():
+    fa._last_updated_cache.clear()
+    yield
+    fa._last_updated_cache.clear()
+
+
+def test_last_updated_rejects_missing_path(_clear_last_updated_cache):
+    resp = fa.last_updated(make_request("GET", "last-updated"))
+    assert resp.status_code == 400
+
+
+def test_last_updated_rejects_suspicious_path(_clear_last_updated_cache):
+    resp = fa.last_updated(make_request("GET", "last-updated", params={"path": "../../etc/passwd"}))
+    assert resp.status_code == 400
+
+
+def test_last_updated_returns_commit_date(monkeypatch, _clear_last_updated_cache):
+    def _get(url, params=None, headers=None, timeout=None):
+        assert "src/k1" == params["path"]
+        return FakeGithubCommitsResponse(200, [{"commit": {"committer": {"date": "2026-07-23T11:22:57Z"}}}])
+    monkeypatch.setattr(fa.requests, "get", _get)
+
+    resp = fa.last_updated(make_request("GET", "last-updated", params={"path": "src/k1"}))
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == {"date": "2026-07-23T11:22:57Z"}
+
+
+def test_last_updated_sends_auth_header_when_token_configured(monkeypatch, _clear_last_updated_cache):
+    monkeypatch.setattr(fa, "GITHUB_TOKEN", "test-pat")
+    seen = {}
+
+    def _get(url, params=None, headers=None, timeout=None):
+        seen["headers"] = headers
+        return FakeGithubCommitsResponse(200, [{"commit": {"committer": {"date": "2026-07-23T11:22:57Z"}}}])
+    monkeypatch.setattr(fa.requests, "get", _get)
+
+    fa.last_updated(make_request("GET", "last-updated", params={"path": "src/k1"}))
+    assert seen["headers"]["Authorization"] == "Bearer test-pat"
+
+
+def test_last_updated_omits_auth_header_when_token_not_configured(monkeypatch, _clear_last_updated_cache):
+    monkeypatch.setattr(fa, "GITHUB_TOKEN", "")
+    seen = {}
+
+    def _get(url, params=None, headers=None, timeout=None):
+        seen["headers"] = headers
+        return FakeGithubCommitsResponse(200, [{"commit": {"committer": {"date": "2026-07-23T11:22:57Z"}}}])
+    monkeypatch.setattr(fa.requests, "get", _get)
+
+    fa.last_updated(make_request("GET", "last-updated", params={"path": "src/k1"}))
+    assert "Authorization" not in seen["headers"]
+
+
+def test_last_updated_returns_null_date_when_no_commits(monkeypatch, _clear_last_updated_cache):
+    monkeypatch.setattr(fa.requests, "get", lambda *a, **k: FakeGithubCommitsResponse(200, []))
+    resp = fa.last_updated(make_request("GET", "last-updated", params={"path": "src/unknown"}))
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == {"date": None}
+
+
+def test_last_updated_fails_open_on_github_error(monkeypatch, _clear_last_updated_cache):
+    monkeypatch.setattr(fa.requests, "get", lambda *a, **k: FakeGithubCommitsResponse(403, {"message": "rate limited"}))
+    resp = fa.last_updated(make_request("GET", "last-updated", params={"path": "src/k1"}))
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == {"date": None}
+
+
+def test_last_updated_fails_open_on_network_error(monkeypatch, _clear_last_updated_cache):
+    def _get(*a, **k):
+        raise requests.exceptions.ConnectionError("simulated network failure")
+    monkeypatch.setattr(fa.requests, "get", _get)
+    resp = fa.last_updated(make_request("GET", "last-updated", params={"path": "src/k1"}))
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == {"date": None}
+
+
+def test_last_updated_uses_cache_on_second_call(monkeypatch, _clear_last_updated_cache):
+    calls = {"n": 0}
+
+    def _get(url, params=None, headers=None, timeout=None):
+        calls["n"] += 1
+        return FakeGithubCommitsResponse(200, [{"commit": {"committer": {"date": "2026-07-23T11:22:57Z"}}}])
+    monkeypatch.setattr(fa.requests, "get", _get)
+
+    fa.last_updated(make_request("GET", "last-updated", params={"path": "src/k1"}))
+    fa.last_updated(make_request("GET", "last-updated", params={"path": "src/k1"}))
+    assert calls["n"] == 1

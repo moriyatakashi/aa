@@ -16,6 +16,18 @@ Azure Functionsバックエンド (`ab-board-api`)。`src/`配下の各アプリ
 
 `SESSION_SECRET`を削除・変更すると、発行済みの永続セッショントークンは全て一括で失効する(緊急時の全端末ログアウト手段としても使える)。
 
+### last-updated用GitHubトークンを設定する(ba-69、任意)
+`src/common/last-updated.js`(各ページの「更新: ...」表示)は`/api/last-updated`を経由してGitHub commits APIを叩く。`GITHUB_TOKEN`が未設定でも動作する(未認証のままGitHub APIを叩く、60req/時/IP)が、設定すると認証済み扱いになり5000req/時まで引き上げられる。
+
+GitHubトークンはコード上どこにも埋め込まれておらず、Azure Function Appのアプリケーション設定としてのみ保持する(クライアント側JSには一切渡らない)。**このトークンの発行・設定はTakashi本人が行う必要がある**(GitHubの新規トークン発行はWeb UI経由のみで、Claude Codeの実行環境からは代行できない)。
+
+1. GitHubの Settings → Developer settings → Fine-grained personal access tokens で新規トークンを発行する。
+   - Repository access: `moriyatakashi/aa` のみに限定
+   - Permissions: `Contents` → `Read-only` のみ(それ以外は付けない)
+   - 有効期限は任意(切れたら`GITHUB_TOKEN`未設定時の動作=未認証60req/時にフォールバックするだけで、last-updated機能自体は壊れない)
+2. Azure Portal(`ab-board-api` → 構成 → アプリケーション設定)で`GITHUB_TOKEN`を追加し、発行したトークンの値を設定する。または`az functionapp config appsettings set -g rg-ab -n ab-board-api --settings GITHUB_TOKEN=<値>`をTakashi本人の端末で実行する。
+3. `/api/last-updated?path=src/k1`にGETし、200と`{"date": "..."}`が返ることを確認する(トークン設定前後どちらでも同じレスポンス形式になるため、レート制限に達していない限り違いは見た目上分からない)。
+
 ## テスト
 [`api-tests/`](../api-tests/README.md) を参照。テストはTable Storage/Google認証をフェイクに差し替えるので、下記のローカル起動は不要。
 
