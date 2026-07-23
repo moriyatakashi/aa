@@ -1,4 +1,4 @@
-updated: "2026-07-23 20:30"
+updated: "2026-07-23 22:00"
 categories:
   - label: 記録
     items:
@@ -42,3 +42,6 @@ categories:
       - code: bh
         desc: NASM x86 エミュレータ
         href: src/bh/
+      - code: bi
+        desc: COBOL ミニインタプリタ
+        href: src/bi/
