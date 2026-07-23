@@ -7,6 +7,7 @@
 import "../common/config.js";
 const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
 const BA_API = `${API_BASE}/ba`;
+const WEEKLY_API = `${API_BASE}/weekly-scores`;
 
 const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];
 
@@ -121,6 +122,100 @@ function renderTable(theadRow, tbody, counts, labelHeader, valueHeader) {
   }).join("");
 }
 
+// --- 週次得点(ba-53のweekly-scores API)------------------------------------
+// レーダーは複数軸のバランス用なので、単一値の時系列である週次得点は棒グラフで描く。
+// 日次スコアとクローズ得点は性質が異なるため積み上げで内訳が見える形にする。
+const WEEK_COUNT = 8;
+const C_DAILY = "#6cf";
+const C_CLOSE = "#5aa06a";
+
+function isoWeeksBack(n) {
+  // 今週(JSTの月曜起点)からn週分さかのぼったISO年・週の一覧
+  const now = new Date();
+  const jst = new Date(now.getTime() + (now.getTimezoneOffset() + 540) * 60000);
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(jst.getTime() - i * 7 * 86400000);
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    const week = Math.ceil(((t - yearStart) / 86400000 + 1) / 7);
+    out.push({ year: t.getUTCFullYear(), week });
+  }
+  return out;
+}
+
+// 週の表示は月曜のM/d(5文字以内)
+function weekLabel(weekStart) {
+  const [, m, d] = weekStart.split("-");
+  return `${Number(m)}/${Number(d)}`;
+}
+
+async function fetchWeeklyScores() {
+  const weeks = isoWeeksBack(WEEK_COUNT);
+  const results = await Promise.all(weeks.map(async ({ year, week }) => {
+    try {
+      const key = `${year}-W${String(week).padStart(2, "0")}`;
+      const res = await fetch(`${WEEKLY_API}/${key}`, { cache: "no-store" });
+      return res.ok ? await res.json() : null;
+    } catch (e) {
+      return null;
+    }
+  }));
+  return results.filter((r) => r && r.weekStart);
+}
+
+function drawWeeklyBars(svg, weeks) {
+  const W = 320, H = 320;
+  const left = 34, right = 10, top = 16, bottom = 46;
+  const plotW = W - left - right, plotH = H - top - bottom;
+  const maxVal = Math.max(1, ...weeks.map((w) => w.weekScore));
+  const step = plotW / weeks.length;
+  const barW = Math.min(26, step * 0.6);
+  const parts = [];
+
+  // 目盛り(4本)
+  for (let i = 0; i <= 4; i++) {
+    const v = Math.round((maxVal * i) / 4);
+    const y = top + plotH - (plotH * i) / 4;
+    parts.push(`<line x1="${left}" y1="${y}" x2="${W - right}" y2="${y}" stroke="#888" stroke-opacity="0.25"/>`);
+    parts.push(`<text x="${left - 5}" y="${y + 3}" font-size="8" fill="currentColor" opacity="0.65" text-anchor="end">${v}</text>`);
+  }
+
+  weeks.forEach((w, i) => {
+    const cx = left + step * i + step / 2;
+    const x = cx - barW / 2;
+    const hDaily = (w.dailyScoreSum / maxVal) * plotH;
+    const hClose = (w.closeValue / maxVal) * plotH;
+    const yDaily = top + plotH - hDaily;
+    const yClose = yDaily - hClose;
+    parts.push(`<rect x="${x}" y="${yDaily}" width="${barW}" height="${hDaily}" fill="${C_DAILY}"/>`);
+    if (w.closeValue > 0) {
+      parts.push(`<rect x="${x}" y="${yClose}" width="${barW}" height="${hClose}" fill="${C_CLOSE}"/>`);
+    }
+    parts.push(`<text x="${cx}" y="${yClose - 4}" font-size="8" fill="currentColor" text-anchor="middle">${w.weekScore}</text>`);
+    parts.push(`<text x="${cx}" y="${H - bottom + 14}" font-size="9" fill="currentColor" opacity="0.75" text-anchor="middle">${weekLabel(w.weekStart)}</text>`);
+  });
+
+  // 凡例
+  parts.push(`<rect x="${left}" y="${H - 20}" width="9" height="9" fill="${C_DAILY}"/>`);
+  parts.push(`<text x="${left + 13}" y="${H - 12}" font-size="9" fill="currentColor">日次スコア</text>`);
+  parts.push(`<rect x="${left + 78}" y="${H - 20}" width="9" height="9" fill="${C_CLOSE}"/>`);
+  parts.push(`<text x="${left + 91}" y="${H - 12}" font-size="9" fill="currentColor">クローズ得点</text>`);
+
+  svg.innerHTML = parts.join("\n");
+}
+
+function renderWeeklyTable(theadRow, tbody, weeks) {
+  theadRow.innerHTML = "<th>週(月曜)</th><th>日次</th><th>クローズ</th><th>合計</th>";
+  tbody.innerHTML = weeks.slice().reverse().map((w) => (
+    `<tr><td>${weekLabel(w.weekStart)}</td><td>${w.dailyScoreSum}</td>` +
+    `<td>${w.closeValue}<span style="opacity:.6;font-size:.8em"> (${w.closeCount}件)</span></td>` +
+    `<td>${w.weekScore}</td></tr>`
+  )).join("");
+}
+
 const VIEWS = {
   poster: {
     compute: computePosterCounts,
@@ -135,6 +230,7 @@ const VIEWS = {
 };
 
 let currentThreads = [];
+let weeklyScores = [];
 let currentView = "poster";
 
 function render() {
@@ -143,13 +239,26 @@ function render() {
   const theadRow = document.getElementById("radarTableHead");
   const emptyEl = document.getElementById("radarEmpty");
 
-  if (!currentThreads.length) {
+  if (!currentThreads.length && currentView !== "weekly") {
     emptyEl.style.display = "";
     svg.innerHTML = "";
     tbody.innerHTML = "";
     return;
   }
   emptyEl.style.display = "none";
+
+  if (currentView === "weekly") {
+    if (!weeklyScores.length) {
+      emptyEl.textContent = "週次得点をまだ取得できていません";
+      emptyEl.style.display = "";
+      svg.innerHTML = "";
+      tbody.innerHTML = "";
+      return;
+    }
+    drawWeeklyBars(svg, weeklyScores);
+    renderWeeklyTable(theadRow, tbody, weeklyScores);
+    return;
+  }
 
   const view = VIEWS[currentView];
   const counts = view.compute(currentThreads);
@@ -177,6 +286,8 @@ async function load() {
     const items = res.ok ? await res.json() : [];
     currentThreads = groupThreads(items);
     render();
+    weeklyScores = await fetchWeeklyScores();
+    if (currentView === "weekly") render();
   } catch (e) {
     emptyEl.textContent = `読み込みエラー: ${e.message}`;
     emptyEl.style.display = "";
