@@ -137,24 +137,9 @@
 </div>
 
 <script type="module" src="app.js?v=202607232200"></script>
-<script>
-(async function () {
-  // ba-50のn2対応にならい、手動更新の固定表記をやめてsrc/biの最新コミット日時を動的取得する。
-  try {
-    const res = await fetch('https://api.github.com/repos/moriyatakashi/aa/commits?path=src/bi&per_page=1');
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data.length) return;
-    const utc = new Date(data[0].commit.committer.date);
-    const jst = new Date(utc.getTime() + 9 * 60 * 60 * 1000);
-    const pad = (n) => String(n).padStart(2, '0');
-    const text = `更新: ${jst.getUTCFullYear()}-${pad(jst.getUTCMonth() + 1)}-${pad(jst.getUTCDate())} ${pad(jst.getUTCHours())}:${pad(jst.getUTCMinutes())} JST`;
-    const el = document.getElementById('lastUpdated');
-    if (el) el.textContent = text;
-  } catch (e) {
-    // 取得失敗時は静的表記のまま維持(フェイルセーフ)
-  }
-})();
+<script type="module">
+  import { applyLastUpdated } from "../common/last-updated.js";
+  applyLastUpdated("src/bi");
 </script>
 </body>
 </html>

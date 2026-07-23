@@ -12,7 +12,7 @@
   <div class="eyebrow">ロレキ内部メモ</div>
   <h1>路歴（ba） / n4後継ログ</h1>
   <p class="lede">n4の骨組み(追記オンリー・赤黒帳票)を引き継ぎつつ、Claude CodeレーンをPC/スマホで別鍵にした台帳。実機で確認できたことは verified on device として記録する(この項目はPCレーンのみ書込可)。</p>
-  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-20 05:43 JST</p>
+  <p id="lastUpdated" style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-20 05:43 JST</p>
 
 <!-- LOGIN_GATE:START -->
   <div id="login-gate">
@@ -78,5 +78,9 @@
   <script>window.AA_AUTH_EVENT = "ba-login-success";</script>
   <script src="../common/auth.js?v=202607201000"></script>
   <script type="module" src="app.js?v=202607232103"></script>
+  <script type="module">
+    import { applyLastUpdated } from "../common/last-updated.js";
+    applyLastUpdated("src/ba", "lastUpdated", "最終更新");
+  </script>
 </body>
 </html>

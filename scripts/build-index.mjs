@@ -30,9 +30,7 @@ function renderSections(categories) {
 const nav = yaml.load(readFileSync(path.join(rootDir, "nav.yml"), "utf8"));
 const template = readFileSync(path.join(rootDir, "index.template.html"), "utf8");
 
-const html = template
-  .replace("<!--NAV_SECTIONS-->", renderSections(nav.categories))
-  .replace("<!--UPDATED-->", escapeHtml(nav.updated));
+const html = template.replace("<!--NAV_SECTIONS-->", renderSections(nav.categories));
 
 writeFileSync(path.join(rootDir, "index.html"), html);
 console.log("index.html generated from nav.yml");

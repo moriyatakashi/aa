@@ -131,7 +131,7 @@
   COMET II 仮想機械上で CASL II プログラムをアセンブル・実行します。
   (<a href="https://www.officedaytime.com/dcaslj/" target="_blank" rel="noopener">仕様参考: officedaytime.com</a>)
 </p>
-<p class="updated">更新: 2026-07-18 JST</p>
+<p class="updated" id="lastUpdated">更新: 2026-07-18 JST</p>
 
 <div class="layout">
   <div class="panel">
@@ -183,5 +183,9 @@
 </div>
 
 <script type="module" src="app.js?v=202607181300"></script>
+<script type="module">
+  import { applyLastUpdated } from "../common/last-updated.js";
+  applyLastUpdated("src/bc");
+</script>
 </body>
 </html>

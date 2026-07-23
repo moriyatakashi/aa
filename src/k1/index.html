@@ -9,7 +9,7 @@
 <body>
 <a class="back" href="../../">← 戻る</a>
 <h1>路歴（k1） / NES Emulator</h1>
-<p class="updated">更新: 2026-07-14 04:55 JST</p>
+<p class="updated" id="lastUpdated">更新: 2026-07-14 04:55 JST</p>
 <p class="status" id="status">ROM を選択してください</p>
 <p class="status" id="gamepadStatus">🎮 未接続（キーボード/タッチで操作可）</p>
 
@@ -67,5 +67,9 @@
 </div>
 
 <script type="module" src="app.js?v=202607231030"></script>
+<script type="module">
+  import { applyLastUpdated } from "../common/last-updated.js";
+  applyLastUpdated("src/k1");
+</script>
 </body>
 </html>

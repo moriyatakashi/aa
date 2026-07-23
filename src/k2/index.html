@@ -38,7 +38,7 @@
   <div class="eyebrow">ロレキ内部メモ</div>
   <h1>路歴（k2） / baレーダーチャート</h1>
   <p class="lede">ba(n4後継の追記ログ)を軸にしたレーダーチャート。投稿者別(参加スレッド数)、分類別(ba-32規約の4分類ごとのスレッド数)、週次得点(ba-53、直近8週の推移)を切り替えて見られる。</p>
-  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-16 07:48 JST</p>
+  <p id="lastUpdated" style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-16 07:48 JST</p>
 
 <!-- LOGIN_GATE:START -->
   <div id="login-gate">
@@ -74,5 +74,9 @@
   <script>window.AA_AUTH_EVENT = "k2-login-success"; window.AA_PUBLIC_VIEW = true;</script>
   <script src="../common/auth.js?v=202607201000"></script>
   <script type="module" src="app.js?v=202607232103"></script>
+  <script type="module">
+    import { applyLastUpdated } from "../common/last-updated.js";
+    applyLastUpdated("src/k2", "lastUpdated", "最終更新");
+  </script>
 </body>
 </html>

@@ -44,6 +44,10 @@
   <h1>路歴（aa）</h1>
   <p>日々の記録や気づきを、少しずつ積み重ねています。</p>
 <!--NAV_SECTIONS-->
-  <p>更新: <!--UPDATED--></p>
+  <p id="lastUpdated">更新: (取得中...)</p>
+  <script type="module">
+    import { applyLastUpdated } from "./src/common/last-updated.js";
+    applyLastUpdated("nav.yml");
+  </script>
 </body>
 </html>

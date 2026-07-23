@@ -195,6 +195,7 @@
     <div class="eyebrow">ロレキ内部メモ</div>
     <h1>bg / YML定義エディタ</h1>
     <p class="lede">nav.yml を編集。左からカテゴリを選んで、右側で詳細編集。</p>
+    <p id="lastUpdated" style="font-size:0.8rem;color:var(--ink-soft);">最終更新: (取得中...)</p>
 
     <div class="layout">
       <!-- 左：カテゴリリスト -->
@@ -218,5 +219,9 @@
   </div>
 
   <script src="app.js?v=202607210900"></script>
+  <script type="module">
+    import { applyLastUpdated } from "../common/last-updated.js";
+    applyLastUpdated("src/bg", "lastUpdated", "最終更新");
+  </script>
 </body>
 </html>

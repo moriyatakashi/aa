@@ -97,7 +97,7 @@
   FC版ドラゴンクエスト2のステータスから「ふっかつのじゅもん」を生成します。
   (<a href="https://musemyuzu.com/programming/fukkatsu-mechanism2/" target="_blank" rel="noopener">元Notebook: ミューズの情報教室</a>)
 </p>
-<p class="updated">更新: 2026-07-19 JST</p>
+<p class="updated" id="lastUpdated">更新: 2026-07-19 JST</p>
 
 <div class="panel">
   <h2>ローレシア王子(主人公)</h2>
@@ -186,5 +186,9 @@
 </div>
 
 <script type="module" src="app.js?v=202607191800"></script>
+<script type="module">
+  import { applyLastUpdated } from "../common/last-updated.js";
+  applyLastUpdated("src/bf");
+</script>
 </body>
 </html>

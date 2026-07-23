@@ -31,7 +31,7 @@
 <body>
   <p><a href="../../">← 戻る</a></p>
   <h1>路歴（n1） / 記録一覧</h1>
-  <p style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-16 07:48 JST</p>
+  <p id="lastUpdated" style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-16 07:48 JST</p>
 
 <!-- LOGIN_GATE:START -->
   <div id="login-gate">
@@ -66,5 +66,9 @@
   <script>window.AA_AUTH_EVENT = "n1-login-success"; window.AA_PUBLIC_VIEW = true;</script>
   <script src="../common/auth.js?v=202607201000"></script>
   <script type="module" src="app.js?v=202607232103"></script>
+  <script type="module">
+    import { applyLastUpdated } from "../common/last-updated.js";
+    applyLastUpdated("src/n1", "lastUpdated", "最終更新");
+  </script>
 </body>
 </html>
