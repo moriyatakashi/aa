@@ -33,6 +33,16 @@ export function findClassification(tags) {
   return tagArray.find((t) => CLASSIFICATIONS.includes(t)) || null;
 }
 
+// n1/n2共通: 今日の日付をYYYY-MM-DD形式で返す
+export function todayStr() {
+  return new Date().toLocaleDateString("sv-SE");
+}
+
+// ba/n1/n2共通: POST bodyに認証情報(auth.jsがwindow.__credentialへ格納)を付与する
+export function withCredential(body = {}) {
+  return { ...body, credential: window.__credential };
+}
+
 // tagsから自由タグ(予約語以外)を抽出
 export function filterFreeTags(tags) {
   const tagArray = Array.isArray(tags) ? tags : [];

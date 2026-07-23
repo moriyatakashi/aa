@@ -5,11 +5,10 @@
 // config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
 // 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
 import "../common/config.js";
+import { CLASSIFICATIONS, findClassification } from "../common/utils.js";
 const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
 const BA_API = `${API_BASE}/ba`;
 const WEEKLY_API = `${API_BASE}/weekly-scores`;
-
-const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];
 
 // ba/app.jsのgroupThreadsを踏襲(status判定・PartitionKeyグルーピングのロジックを合わせるため)。
 function groupThreads(items) {
@@ -57,8 +56,7 @@ function computeClassificationCounts(threads) {
   threads.forEach((thread) => {
     let latest = null; // entriesはcreatedAt昇順ソート済みなので、最後に見つかったものが最新
     thread.entries.forEach((e) => {
-      const tags = e.tags || [];
-      const found = tags.find((t) => CLASSIFICATIONS.includes(t));
+      const found = findClassification(e.tags);
       if (found) latest = found;
     });
     if (latest) counts.set(latest, counts.get(latest) + 1);

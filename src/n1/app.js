@@ -3,6 +3,7 @@
 // config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
 // 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
 import "../common/config.js";
+import { todayStr, withCredential } from "../common/utils.js";
 const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
 const SCORES_API = `${API_BASE}/scores`;
 const VISITS_API = `${API_BASE}/visits`;
@@ -14,14 +15,6 @@ function formatDate(s) {
   const [y, m, d] = s.split("-");
   const dow = DOW[new Date(s).getDay()];
   return { label: `${y}年${parseInt(m)}月${parseInt(d)}日`, dow };
-}
-
-function todayStr() {
-  return new Date().toLocaleDateString("sv-SE");
-}
-
-function withCredential(body = {}) {
-  return { ...body, credential: window.__credential };
 }
 
 // スコア入力(ab/src/main/n1のスコア機能を移植)

@@ -3,6 +3,7 @@
 // config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
 // 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
 import "../common/config.js";
+import { todayStr, withCredential } from "../common/utils.js";
 const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
 const VISITS_API = `${API_BASE}/visits`;
 
@@ -89,14 +90,6 @@ function drawPoints(visits, proj) {
   });
 
   return points;
-}
-
-function todayStr() {
-  return new Date().toLocaleDateString("sv-SE");
-}
-
-function withCredential(body = {}) {
-  return { ...body, credential: window.__credential };
 }
 
 // 訪問記録の入力(ab/src/main/n1の訪問記録機能を移植、メモ欄は対象外)
