@@ -1,4 +1,4 @@
-updated: "2026-07-21 09:00"
+updated: "2026-07-23 20:30"
 categories:
   - label: 記録
     items:
@@ -39,3 +39,6 @@ categories:
       - code: bf
         desc: DQ2 ふっかつのじゅもん生成器
         href: src/bf/
+      - code: bh
+        desc: NASM x86 エミュレータ
+        href: src/bh/

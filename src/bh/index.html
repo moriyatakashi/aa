@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bh / NASM x86 エミュレータ</title>
+<style>
+  :root {
+    --bg: #14170f;
+    --panel-bg: #1c2117;
+    --border: #3a4234;
+    --text: #eeeeee;
+    --text-dim: #9aa590;
+    --accent: #6cf;
+    --accent-text: #0c1220;
+    --mono: "SF Mono", "Consolas", "Menlo", monospace;
+    --error-bg: #3a1c1e;
+    --error-text: #ff9b9b;
+    --console-bg: #05070a;
+    --console-text: #9be89b;
+    --pr-highlight: #4a4420;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: sans-serif; max-width: 960px; margin: 0 auto; padding: 16px;
+    background: var(--bg); color: var(--text); font-size: 14px;
+  }
+  a.back { font-size: 0.72rem; color: var(--text-dim); text-decoration: none; }
+  a.back:hover { color: var(--text); }
+  h1 { font-size: 1.1rem; margin: 10px 0 2px; }
+  .lede { color: var(--text-dim); margin: 0 0 6px; font-size: 0.85rem; }
+  .updated { font-size: 0.68rem; color: var(--text-dim); margin: 0 0 14px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  .panel h2 {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    margin: 0 0 0.6rem;
+  }
+
+  textarea#source {
+    width: 100%; height: 320px;
+    font-family: var(--mono); font-size: 13px; line-height: 1.5;
+    padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); resize: vertical; tab-size: 4;
+  }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+  button {
+    font: inherit; padding: 0.4rem 0.8rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--panel-bg); color: var(--text);
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+
+  .errors { margin-top: 0.6rem; font-family: var(--mono); font-size: 12.5px; }
+  .errors .error-line {
+    background: var(--error-bg); color: var(--error-text);
+    padding: 0.25rem 0.5rem; border-radius: 4px; margin-bottom: 0.25rem; cursor: pointer;
+  }
+
+  .regs {
+    display: grid; grid-template-columns: repeat(2, auto 1fr);
+    gap: 0.3rem 0.6rem; font-family: var(--mono); align-items: center;
+  }
+  .regs label { color: var(--text-dim); text-align: right; }
+  .regs output {
+    padding: 0.15rem 0.4rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--bg); min-width: 6.5em; text-align: right;
+  }
+  .flags-line {
+    margin-top: 0.5rem; font-family: var(--mono); font-size: 0.85rem; color: var(--text-dim);
+  }
+
+  .memview {
+    display: grid; grid-template-columns: auto 1fr;
+    gap: 0.2rem 0.6rem; font-family: var(--mono); font-size: 12px; align-items: center;
+  }
+  .memview label { color: var(--text-dim); }
+  .memview output {
+    padding: 0.1rem 0.4rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--bg); text-align: left; white-space: pre;
+  }
+
+  .status-line { margin-top: 0.6rem; font-size: 0.85rem; color: var(--text-dim); }
+
+  .console-box {
+    background: var(--console-bg); color: var(--console-text);
+    font-family: var(--mono); font-size: 13px; padding: 0.6rem; border-radius: 6px;
+    height: 100px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+  }
+
+  .listing {
+    margin-top: 1rem; font-family: var(--mono); font-size: 12.5px;
+    max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px;
+  }
+  .listing-line { display: flex; gap: 0.5rem; padding: 1px 0.5rem; white-space: pre; }
+  .listing-line.pr { background: var(--pr-highlight); }
+  .listing-line .addr { color: var(--text-dim); width: 3.5em; flex-shrink: 0; text-align: right; }
+</style>
+</head>
+<body>
+<a class="back" href="../../">← 戻る</a>
+<h1>路歴（bh） / NASM x86 エミュレータ</h1>
+<p class="lede">
+  NASM構文のごく一部を解釈するミニアセンブラ + 簡易x86仮想機械。ブラウザ内で完結(本物のnasmは未使用)。
+  対応命令: MOV/ADD/SUB/CMP/JMP/JE/JNE/JL/JLE/JG/JGE/INT 0x80(sys_write, sys_exitのみ)。
+</p>
+<p class="updated">v1(初版)</p>
+
+<div class="layout">
+  <div class="panel">
+    <h2>ソース(NASM風)</h2>
+    <textarea id="source" spellcheck="false"></textarea>
+    <div class="toolbar">
+      <button id="btn-assemble" class="primary" type="button">アセンブル</button>
+      <button id="btn-run" type="button" disabled>実行</button>
+      <button id="btn-step" type="button" disabled>ステップ</button>
+      <button id="btn-reset" type="button" disabled>リセット</button>
+    </div>
+    <div class="toolbar">
+      <button id="btn-sample-hello" type="button">サンプル: Hello World</button>
+      <button id="btn-sample-loop" type="button">サンプル: ループ</button>
+    </div>
+    <div class="status-line" id="status">ソースを編集して「アセンブル」を押してください。</div>
+    <div class="errors" id="errors"></div>
+  </div>
+
+  <div class="panel">
+    <h2>レジスタ</h2>
+    <div class="regs" id="regs"></div>
+    <div class="flags-line" id="flags">ZF=- SF=- CF=- OF=-</div>
+
+    <h2 style="margin-top: 1rem">コンソール出力(int 0x80 sys_write)</h2>
+    <div class="console-box" id="console"></div>
+
+    <h2 style="margin-top: 1rem">データメモリ(.dataセクション)</h2>
+    <div class="memview" id="memview"></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>プログラムリスト(実行中の命令をハイライト)</h2>
+  <div class="listing" id="listing"></div>
+</div>
+
+<script type="module" src="app.js?v=202607232000"></script>
+</body>
+</html>
