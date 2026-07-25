@@ -48,12 +48,12 @@ npm i -g azurite
     "TABLE_CONNECTION_STRING": "UseDevelopmentStorage=true",
     "GOOGLE_CLIENT_ID": "local-dev-dummy-client-id",
     "ALLOWED_EMAIL": "dev@example.com",
-    "TEMP_PASSCODE": "localdev",
+    "RBA_MANUAL_PASSCODE": "localdev",
     "SESSION_SECRET": "local-dev-dummy-session-secret"
   }
 }
 ```
-`TEMP_PASSCODE` を設定しておくと、実際のGoogleログインなしで `credential: "manual:<パスコード>"` を使って動作確認できる([function_app.py](function_app.py)の`_authorize`参照)。
+`RBA_MANUAL_PASSCODE` を設定しておくと、実際のGoogleログインなしで `credential: "manual:<パスコード>"` を使って動作確認できる([function_app.py](function_app.py)の`_authorize`参照)。
 
 `SESSION_SECRET` は永続セッション機能(`POST/DELETE /api/session`)の署名鍵。**未設定の場合はこの機能自体が無効化され(`/api/session`は503)、既存のGoogle IDトークン直接検証フローだけが動く**(安全側デフォルト)。設定する場合はランダムな長い文字列にする(例: `python -c "import secrets; print(secrets.token_urlsafe(32))"`)。値を変更・削除すると、発行済みの永続セッショントークンは全て一括で失効する。
 

@@ -17,10 +17,10 @@ app = func.FunctionApp()
 CONN_STR = os.environ["TABLE_CONNECTION_STRING"]
 GOOGLE_CLIENT_ID = os.environ["GOOGLE_CLIENT_ID"]
 ALLOWED_EMAIL = os.environ["ALLOWED_EMAIL"]
-# 一時的な緊急パスコード（Googleログインが使えない時の避難用）。
+# 手動パスコード認証（Googleログインが使えない時の代替経路）。
 # Azure Function Appの環境変数に設定した場合のみ有効になる。未設定なら
 # この経路は使われない（デフォルトでは何も変わらない、安全側）。
-TEMP_PASSCODE = os.environ.get("TEMP_PASSCODE", "")
+RBA_MANUAL_PASSCODE = os.environ.get("RBA_MANUAL_PASSCODE", "")
 # 永続セッション機能（ba-XX 永続認証移行）の署名鍵。未設定ならこの機能自体を
 # 無効化する（session()は503を返し、_authorizeはsession:トークンを一切受け付けない）。
 # 既存のGoogle IDトークン直検証フローには影響しない（デフォルトでは何も変わらない、安全側）。
@@ -119,15 +119,15 @@ def _authorize_session(credential):
 def _authorize(body):
     """ab個人データの書き込みをALLOWED_EMAIL本人のGoogleログインのみに制限する。
     問題なければNone、問題があればそのまま返すHttpResponseを返す。
-    TEMP_PASSCODEが設定されている場合のみ、"manual:<パスコード>"形式の
-    credentialでも通す（Googleログインが壊れた時の一時避難用）。
+    RBA_MANUAL_PASSCODEが設定されている場合のみ、"manual:<パスコード>"形式の
+    credentialでも通す（Googleログインが壊れた時の代替経路）。
     SESSION_SECRETが設定されている場合のみ、"session:<id>.<署名>"形式の
     永続セッショントークン（POST /api/sessionで発行）でも通す。"""
     credential = (body or {}).get("credential", "")
     if not credential:
         return func.HttpResponse("credential is required", status_code=401)
 
-    if TEMP_PASSCODE and credential == f"manual:{TEMP_PASSCODE}":
+    if RBA_MANUAL_PASSCODE and credential == f"manual:{RBA_MANUAL_PASSCODE}":
         return None
 
     if SESSION_SECRET and credential.startswith("session:"):

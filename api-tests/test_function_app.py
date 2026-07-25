@@ -41,13 +41,13 @@ def test_authorize_accepts_allowed_email(google_auth_ok):
     assert fa._authorize({"credential": "token"}) is None
 
 
-def test_authorize_accepts_temp_passcode(monkeypatch):
-    monkeypatch.setattr(fa, "TEMP_PASSCODE", "escape-hatch")
+def test_authorize_accepts_manual_passcode(monkeypatch):
+    monkeypatch.setattr(fa, "RBA_MANUAL_PASSCODE", "escape-hatch")
     assert fa._authorize({"credential": "manual:escape-hatch"}) is None
 
 
-def test_authorize_temp_passcode_wrong_value_falls_back_to_google(monkeypatch, google_auth_invalid):
-    monkeypatch.setattr(fa, "TEMP_PASSCODE", "escape-hatch")
+def test_authorize_manual_passcode_wrong_value_falls_back_to_google(monkeypatch, google_auth_invalid):
+    monkeypatch.setattr(fa, "RBA_MANUAL_PASSCODE", "escape-hatch")
     resp = fa._authorize({"credential": "manual:wrong"})
     assert resp.status_code == 401
 
