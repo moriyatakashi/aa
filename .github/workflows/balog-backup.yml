@@ -1,0 +1,53 @@
+name: Backup BaLog to Google Drive
+
+on:
+  schedule:
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+env:
+  STORAGE_ACCOUNT: abfuncstore2026
+  RESOURCE_GROUP: rg-ab
+  GDRIVE_FOLDER_ID: 1-hfBlg9rQTLqnTQVDVKHheSm-9u0l63u
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install azure-data-tables requests
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve table connection string
+        run: |
+          CONN_STR=$(az storage account show-connection-string \
+            --name "$STORAGE_ACCOUNT" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query connectionString -o tsv)
+          echo "::add-mask::$CONN_STR"
+          echo "TABLE_CONNECTION_STRING=$CONN_STR" >> "$GITHUB_ENV"
+
+      - name: Run backup
+        env:
+          GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.GDRIVE_OAUTH_CLIENT_ID }}
+          GDRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.GDRIVE_OAUTH_CLIENT_SECRET }}
+          GDRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.GDRIVE_OAUTH_REFRESH_TOKEN }}
+        run: python scripts/backup-balog-to-drive.py
