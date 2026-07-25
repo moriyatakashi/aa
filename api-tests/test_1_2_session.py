@@ -2,7 +2,7 @@ import json
 
 import function_app as fa
 
-from test_function_app import make_request
+from test_1_1_function_app import make_request
 
 
 def enable_session_secret(monkeypatch, secret="test-session-secret"):
