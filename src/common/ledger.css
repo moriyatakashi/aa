@@ -89,7 +89,7 @@ details[open] .chevron { transform: rotate(90deg); }
 .pill { font-size: 0.66rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
 .pill-open { color: var(--open); border: 1px solid var(--open); }
 .pill-closed { color: var(--closed); border: 1px solid var(--closed); }
-.thread-title { font-size: 0.9rem; font-weight: 600; line-height: 1.4; flex: 1; }
+.thread-title { font-size: 0.9rem; font-weight: 600; line-height: 1.4; flex: 1; word-break: break-all; }
 
 .meta-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-left: 20px; }
 .tag {
@@ -124,7 +124,7 @@ details[open] .chevron { transform: rotate(90deg); }
 .entry--verified .entry-type { color: var(--closed); font-weight: 700; }
 .entry-head { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.64rem; color: var(--ink-soft); display: flex; gap: 8px; flex-wrap: wrap; }
 .entry-type { font-weight: 700; }
-.entry-body { font-size: 0.83rem; margin-top: 3px; line-height: 1.5; }
+.entry-body { font-size: 0.83rem; margin-top: 3px; line-height: 1.5; word-break: break-all; }
 
 .lane-form { margin-top: 8px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 6px; background: var(--paper-band); }
 .lane-form-row { display: flex; gap: 6px; }
@@ -151,7 +151,7 @@ details[open] .chevron { transform: rotate(90deg); }
   font-size: 0.66rem; color: var(--ink-soft); border: 1px dashed var(--ink-soft);
   border-radius: 10px; padding: 2px 8px; white-space: nowrap;
 }
-.entry-title { font-size: 0.85rem; font-weight: 700; margin-top: 3px; line-height: 1.5; }
+.entry-title { font-size: 0.85rem; font-weight: 700; margin-top: 3px; line-height: 1.5; word-break: break-all; }
 
 /* ba: 分類バッジ・分類フィルタ(ba-32の4分類、ba-33で表示対応。2026-07-14)
    朱=案件(手を動かす)、金茶=確定仕様(恒久)、若葉=気づき、鈍青=保留論点 */
