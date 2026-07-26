@@ -155,6 +155,10 @@ details[open] .chevron { transform: rotate(90deg); }
   font-size: 0.75rem; padding: 6px 10px; border: 1px solid var(--accent); border-radius: 5px;
   background: transparent; color: var(--accent); cursor: pointer; white-space: nowrap;
 }
+.lane-form-row select {
+  font-size: 0.8rem; padding: 6px 8px; border: 1px solid var(--line);
+  border-radius: 5px; background: var(--paper); color: var(--ink); font-family: inherit;
+}
 .lane-form-hint { font-size: 0.62rem; color: var(--ink-soft); margin-top: 6px; }
 
 /* ba: 両視点そろって無効のスレッドは既定で隠し、トグルONのときだけ薄色+取り消し線で表示する */

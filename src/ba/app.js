@@ -113,7 +113,14 @@ function threadCardHtml(thread) {
             <button type="button" class="btn-toggle-status">${isOpen ? "クローズ" : "再オープン"}</button>
             <button type="button" class="btn-toggle-react">${takashiReact ? "反応を取り消す" : "反応する"}</button>
           </div>
-          <div class="lane-form-hint">使える種別: note / void / status / react のみ(id・時刻・by は自動)</div>
+          <div class="lane-form-row" style="margin-top:6px;">
+            <select class="reclass-select">
+              <option value="" selected disabled>分類を変更…</option>
+              ${CLASSIFICATIONS.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")}
+            </select>
+            <button type="button" class="btn-reclassify">変更</button>
+          </div>
+          <div class="lane-form-hint">使える種別: note / void / status / react / 分類変更のみ(id・時刻・by は自動)</div>
         </div>
       </div>
     </details>`;
@@ -170,6 +177,20 @@ function attachThreadHandlers(container, thread) {
       load();
     } catch (e) {
       alert("反応の切り替えに失敗しました: " + e.message);
+    }
+  });
+
+  // ba-130: 分類はnew投稿時にしか選べなかった問題への対応。noteにtagsを載せて追記し、
+  // thread-logic.jsのfindClassification(new/noteのtagsを時系列で見て最新優先)に乗せる。
+  const reclassSelect = card.querySelector(".reclass-select");
+  card.querySelector(".btn-reclassify").addEventListener("click", async () => {
+    const value = reclassSelect.value;
+    if (!value) return;
+    try {
+      await postEntry({ ref: thread.threadId, type: "note", tags: [value] });
+      load();
+    } catch (e) {
+      alert("分類の変更に失敗しました: " + e.message);
     }
   });
 
