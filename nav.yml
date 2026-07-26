@@ -13,7 +13,7 @@ categories:
   - label: 内部メモ
     items:
       - code: ba
-        desc: 気づきログ(n4後継)
+        desc: 気づきログ
         href: src/ba/
       - code: bb
         desc: ba現在形ビューワ
