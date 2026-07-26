@@ -14,6 +14,7 @@
 | `2-9-bf-password-generator.test.js` | `bf` |
 | `2-10-bf-ui-smoke.test.js` | `bf` |
 | `2-14-ba-approval-queue.test.js` | `ba`(承認キュー) |
+| `2-15-ba-react.test.js` | `ba`(反応チップ) |
 
 ## 実行
 初回のみ依存パッケージをインストール。
