@@ -482,6 +482,65 @@ def test_ba_note_ignores_difficulty_validation(google_auth_ok, tables):
     assert fa.ba_log(note_req).status_code == 201
 
 
+# ---- scoring-rules (ba-159: イカサマ対策/基準ずらし記録) ---------------------
+
+def test_scoring_rules_get_seeds_current_points_when_empty(tables):
+    resp = fa.scoring_rules(make_request("GET", "scoring-rules"))
+    assert resp.status_code == 200
+    items = json.loads(resp.get_body())
+    assert len(items) == 1
+    assert items[0]["effectiveFrom"] == "2026-01-01"
+    assert items[0]["difficultyPoints"] == {"low": 2, "normal": 5, "high": 10}
+
+
+def test_scoring_rules_post_requires_auth(tables):
+    resp = fa.scoring_rules(make_request("POST", "scoring-rules", json_body={"difficultyPoints": {"low": 1, "normal": 2, "high": 3}}))
+    assert resp.status_code == 401
+
+
+def test_scoring_rules_post_rejects_wrong_keys(google_auth_ok, tables):
+    resp = fa.scoring_rules(make_request(
+        "POST", "scoring-rules",
+        json_body={"credential": "token", "difficultyPoints": {"low": 1, "normal": 2}},
+    ))
+    assert resp.status_code == 400
+
+
+def test_scoring_rules_post_rejects_non_integer_values(google_auth_ok, tables):
+    resp = fa.scoring_rules(make_request(
+        "POST", "scoring-rules",
+        json_body={"credential": "token", "difficultyPoints": {"low": 1, "normal": 2, "high": "たくさん"}},
+    ))
+    assert resp.status_code == 400
+
+
+def test_scoring_rules_post_rejects_malformed_effective_from(google_auth_ok, tables):
+    resp = fa.scoring_rules(make_request(
+        "POST", "scoring-rules",
+        json_body={"credential": "token", "difficultyPoints": {"low": 1, "normal": 2, "high": 3}, "effectiveFrom": "bogus"},
+    ))
+    assert resp.status_code == 400
+
+
+def test_scoring_rules_post_adds_new_version(google_auth_ok, tables):
+    resp = fa.scoring_rules(make_request(
+        "POST", "scoring-rules",
+        json_body={
+            "credential": "token",
+            "difficultyPoints": {"low": 4, "normal": 8, "high": 16},
+            "effectiveFrom": "2026-08-01",
+            "note": "テストで倍増",
+        },
+    ))
+    assert resp.status_code == 201
+
+    list_resp = fa.scoring_rules(make_request("GET", "scoring-rules"))
+    items = json.loads(list_resp.get_body())
+    assert [i["effectiveFrom"] for i in items] == ["2026-01-01", "2026-08-01"]
+    assert items[1]["difficultyPoints"] == {"low": 4, "normal": 8, "high": 16}
+    assert items[1]["note"] == "テストで倍増"
+
+
 # ---- weekly-scores (ba-53) ---------------------------------------------------
 
 def _close_thread(tables_dict, difficulty, closed_at_iso):
@@ -529,6 +588,33 @@ def test_weekly_scores_item_computes_on_demand_when_not_saved(tables):
     assert body["closeValue"] == 5
     assert body["weekScore"] == 85
     assert body["calculatedAt"] is None  # 未保存はその場計算のみ
+
+
+def test_weekly_scores_item_uses_rule_active_at_the_time_not_current(google_auth_ok, tables):
+    # ba-159の核心: 2026-W29(2026-07-13〜19)でclose、その"後"に配点を変更しても、
+    # recalculateしていないこの週のオンデマンド計算は当時のルール(normal=5)のまま
+    # であるべき(2026-07-26発見の退行を再現→修正確認する回帰テスト)。
+    _close_thread(tables, "normal", "2026-07-15T03:00:00+00:00")
+
+    rule_resp = fa.scoring_rules(make_request(
+        "POST", "scoring-rules",
+        json_body={
+            "credential": "token",
+            "difficultyPoints": {"low": 1, "normal": 999, "high": 1},
+            "effectiveFrom": "2026-08-01",
+        },
+    ))
+    assert rule_resp.status_code == 201
+
+    resp = fa.weekly_scores_item(
+        make_request("GET", "weekly-scores/2026-W29", route_params={"week_key": "2026-W29"})
+    )
+    body = json.loads(resp.get_body())
+    assert body["closeValue"] == 5, "新ルール(2026-08-01発効)は過去の週に遡って適用されてはいけない"
+    assert body["weekScore"] == 5
+    # 「当時の基準だとこう」= 今の最新ルールで見た場合の値は、新ルールを反映する
+    assert body["closeValueAsOfLatest"] == 999
+    assert body["weekScoreAsOfLatest"] == 999
 
 
 def test_weekly_scores_item_defaults_missing_difficulty_to_normal(tables):

@@ -67,6 +67,17 @@
       <div class="score-saved" id="pointSaved"></div>
     </div>
 
+    <div class="section">
+      <div class="section-title">クローズ配点ルールを変更(ba-159, 頻度低め)</div>
+      <input class="note-input" id="rulePointsLow" type="number" placeholder="low(現在の既定=2)">
+      <input class="note-input" id="rulePointsNormal" type="number" placeholder="normal(現在の既定=5)">
+      <input class="note-input" id="rulePointsHigh" type="number" placeholder="high(現在の既定=10)">
+      <input class="note-input" id="ruleEffectiveFrom" type="date" placeholder="発効日(未入力なら今日)">
+      <input class="note-input" id="ruleNote" type="text" placeholder="変更理由(任意)">
+      <button class="btn-save-score" id="btnSaveRule">新しいルールを追加</button>
+      <div class="score-saved" id="ruleSaved"></div>
+    </div>
+
     <p id="loadStatus">読み込み中...</p>
     <div id="list"></div>
     <p class="empty" id="emptyMsg" style="display:none;">記録はまだありません</p>
@@ -74,7 +85,7 @@
 
   <script>window.AA_AUTH_EVENT = "n1-login-success"; window.AA_PUBLIC_VIEW = true;</script>
   <script src="../common/auth.js?v=202607201000"></script>
-  <script type="module" src="app.js?v=202607261250"></script>
+  <script type="module" src="app.js?v=202607261305"></script>
   <script type="module">
     import { applyLastUpdated } from "../common/last-updated.js";
     applyLastUpdated("src/n1", "lastUpdated", "最終更新");

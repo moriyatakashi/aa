@@ -523,6 +523,102 @@ def _parse_week_key(week_key):
         return None
 
 
+# ba-159: イカサマ対策(基準ずらし記録)。difficulty配点(BA_DIFFICULTY_POINTS)は元々
+# コード上の固定定数だったため、将来配点を変えると、まだrecalculateしていない過去の週の
+# オンデマンド計算結果が当時のルールでなく新ルールで静かに変わってしまう欠陥があった
+# (2026-07-26、ba-165実装中に発見)。ScoringRulesテーブルで配点を版管理し、週の月曜日
+# 時点で有効だった配点を都度引くことでこれを直す。ラベル集合(low/normal/high)自体は
+# 変えない前提とし、BA_DIFFICULTY_POINTSは「ラベルの妥当性チェック」と「初回シード値」に
+# 用途を絞る。
+SCORING_RULES_TABLE = "ScoringRules"
+SCORING_RULES_PARTITION = "rule"
+SCORING_RULES_SEED_EFFECTIVE_FROM = "2026-01-01"
+
+
+def _seed_scoring_rules_if_empty(table):
+    """初回のみ、現行配点(BA_DIFFICULTY_POINTS)を過去日付でシードする。既存の
+    recalculate済みWeeklyScoresの挙動が、新設のScoringRulesテーブルの有無で
+    変わらないようにするための一度きりの移行措置。"""
+    if list(table.list_entities()):
+        return
+    table.upsert_entity({
+        "PartitionKey": SCORING_RULES_PARTITION,
+        "RowKey": SCORING_RULES_SEED_EFFECTIVE_FROM,
+        "DifficultyPoints": json.dumps(BA_DIFFICULTY_POINTS, ensure_ascii=False),
+        "Note": "初期配点(seed)",
+        "CreatedAt": datetime.now(timezone.utc).isoformat(),
+    })
+
+
+def _scoring_rule_at(table, on_or_before_date_str):
+    """table内で、EffectiveFrom(RowKey)がon_or_before_date_str以前の行のうち
+    最新のものの配点を返す。無ければBA_DIFFICULTY_POINTS(現行値)にフォールバック。"""
+    candidates = [e for e in table.list_entities() if e["RowKey"] <= on_or_before_date_str]
+    if not candidates:
+        return dict(BA_DIFFICULTY_POINTS)
+    latest = max(candidates, key=lambda e: e["RowKey"])
+    try:
+        return json.loads(latest.get("DifficultyPoints") or "{}")
+    except ValueError:
+        return dict(BA_DIFFICULTY_POINTS)
+
+
+def _latest_scoring_rule(table):
+    return _scoring_rule_at(table, "9999-12-31")
+
+
+def _scoring_rule_dict(e):
+    return {
+        "effectiveFrom": e["RowKey"],
+        "difficultyPoints": json.loads(e.get("DifficultyPoints") or "{}"),
+        "note": e.get("Note", ""),
+        "createdAt": e.get("CreatedAt", ""),
+    }
+
+
+@app.function_name(name="scoring-rules")
+@app.route(route="scoring-rules", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def scoring_rules(req: func.HttpRequest) -> func.HttpResponse:
+    table = _table_client(SCORING_RULES_TABLE)
+    _seed_scoring_rules_if_empty(table)
+
+    if req.method == "GET":
+        items = [_scoring_rule_dict(e) for e in table.list_entities()]
+        items.sort(key=lambda x: x["effectiveFrom"])
+        return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+    body = _get_body(req)
+    err = _authorize(body)
+    if err:
+        return err
+
+    difficulty_points = body.get("difficultyPoints")
+    if not isinstance(difficulty_points, dict) or set(difficulty_points.keys()) != set(BA_DIFFICULTY_POINTS.keys()):
+        return func.HttpResponse(
+            f"difficultyPoints must have exactly these keys: {', '.join(sorted(BA_DIFFICULTY_POINTS))}",
+            status_code=400,
+        )
+    for v in difficulty_points.values():
+        if not isinstance(v, int) or isinstance(v, bool):
+            return func.HttpResponse("difficultyPoints values must be integers", status_code=400)
+
+    effective_from = body.get("effectiveFrom") or datetime.now(JST).date().isoformat()
+    try:
+        date.fromisoformat(effective_from)
+    except ValueError:
+        return func.HttpResponse("effectiveFrom must look like YYYY-MM-DD", status_code=400)
+
+    entity = {
+        "PartitionKey": SCORING_RULES_PARTITION,
+        "RowKey": effective_from,
+        "DifficultyPoints": json.dumps(difficulty_points, ensure_ascii=False),
+        "Note": body.get("note", ""),
+        "CreatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    table.upsert_entity(entity)
+    return func.HttpResponse(json.dumps(_scoring_rule_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
+
+
 def _calc_weekly_score(iso_year, iso_week):
     """指定週の週次得点を、Scores(毎日スコア)とBaLog(クローズ)から都度計算する。
     永続化はせず、呼び出し元(GET detailまたはrecalculate)が必要に応じて保存する。"""
@@ -538,10 +634,18 @@ def _calc_weekly_score(iso_year, iso_week):
             continue
         daily_score_sum += entity.get("Score", 0)
 
+    # ba-159: その週の月曜日時点で有効だった配点(当時のルール)と、現在最新の配点
+    # (「当時の基準だとこう」の比較用)の両方を使う。
+    scoring_rules_table = _table_client(SCORING_RULES_TABLE)
+    _seed_scoring_rules_if_empty(scoring_rules_table)
+    active_rule = _scoring_rule_at(scoring_rules_table, monday.isoformat())
+    latest_rule = _latest_scoring_rule(scoring_rules_table)
+
     ba_table = _table_client(BA_TABLE)
     breakdown = {"low": 0, "normal": 0, "high": 0}
     close_count = 0
     close_value = 0
+    close_value_as_of_latest = 0
     for e in ba_table.list_entities():
         if e.get("Type") != "status":
             continue
@@ -568,7 +672,8 @@ def _calc_weekly_score(iso_year, iso_week):
 
         close_count += 1
         breakdown[difficulty] += 1
-        close_value += BA_DIFFICULTY_POINTS[difficulty]
+        close_value += active_rule.get(difficulty, BA_DIFFICULTY_POINTS[difficulty])
+        close_value_as_of_latest += latest_rule.get(difficulty, BA_DIFFICULTY_POINTS[difficulty])
 
     # ba-165: 加点軸の拡張。PointEvents(自己申告のpoints)を週範囲で合算するだけ。
     # 軸ごとの意味(streakか予測的中か等)はサーバーでは判定しない(自己申告のため)。
@@ -591,26 +696,41 @@ def _calc_weekly_score(iso_year, iso_week):
         "dailyScoreSum": daily_score_sum,
         "closeCount": close_count,
         "closeValue": close_value,
+        "closeValueAsOfLatest": close_value_as_of_latest,
         "breakdownByDifficulty": breakdown,
         "pointEventSum": point_event_sum,
         "weekScore": daily_score_sum + close_value + point_event_sum,
+        "weekScoreAsOfLatest": daily_score_sum + close_value_as_of_latest + point_event_sum,
         "calculatedAt": None,
     }
 
 
 def _weekly_score_entity_dict(e):
+    # ba-159: 保存済み(recalculate済み)週も、「今の配点だったら」を都度計算して見せる。
+    # 保存値(当時のルールで確定した値)自体は書き換えない。
+    breakdown = json.loads(e.get("BreakdownByDifficulty") or "{}")
+    scoring_rules_table = _table_client(SCORING_RULES_TABLE)
+    _seed_scoring_rules_if_empty(scoring_rules_table)
+    latest_rule = _latest_scoring_rule(scoring_rules_table)
+    close_value_as_of_latest = sum(
+        breakdown.get(k, 0) * latest_rule.get(k, BA_DIFFICULTY_POINTS[k]) for k in BA_DIFFICULTY_POINTS
+    )
+    daily_score_sum = e.get("DailyScoreSum", 0)
+    point_event_sum = e.get("PointEventSum", 0)
     return {
         "year": int(e["PartitionKey"]),
         "week": e.get("Week"),
         "weekKey": f"{e['PartitionKey']}-W{e.get('Week', 0):02d}",
         "weekStart": e.get("WeekStart", ""),
         "weekEnd": e.get("WeekEnd", ""),
-        "dailyScoreSum": e.get("DailyScoreSum", 0),
+        "dailyScoreSum": daily_score_sum,
         "closeCount": e.get("CloseCount", 0),
         "closeValue": e.get("CloseValue", 0),
-        "breakdownByDifficulty": json.loads(e.get("BreakdownByDifficulty") or "{}"),
-        "pointEventSum": e.get("PointEventSum", 0),
+        "closeValueAsOfLatest": close_value_as_of_latest,
+        "breakdownByDifficulty": breakdown,
+        "pointEventSum": point_event_sum,
         "weekScore": e.get("WeekScore", 0),
+        "weekScoreAsOfLatest": daily_score_sum + close_value_as_of_latest + point_event_sum,
         "calculatedAt": e.get("CalculatedAt", ""),
     }
 

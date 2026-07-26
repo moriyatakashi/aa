@@ -213,14 +213,23 @@ function drawWeeklyBars(svg, weeks) {
   svg.innerHTML = parts.join("\n");
 }
 
+// ba-159: 「今のルールなら」列。当時の値(weekScore)と今のルールで見た値
+// (weekScoreAsOfLatest)が違う週だけ薄く強調して、基準ずらしの影響が一目で分かるようにする。
 function renderWeeklyTable(theadRow, tbody, weeks) {
-  theadRow.innerHTML = "<th>週(月曜)</th><th>日次</th><th>クローズ</th><th>加点(ba-165)</th><th>合計</th>";
-  tbody.innerHTML = weeks.slice().reverse().map((w) => (
-    `<tr><td>${weekLabel(w.weekStart)}</td><td>${w.dailyScoreSum}</td>` +
-    `<td>${w.closeValue}<span style="opacity:.6;font-size:.8em"> (${w.closeCount}件)</span></td>` +
-    `<td>${w.pointEventSum}</td>` +
-    `<td>${w.weekScore}</td></tr>`
-  )).join("");
+  theadRow.innerHTML = "<th>週(月曜)</th><th>日次</th><th>クローズ</th><th>加点(ba-165)</th><th>合計</th><th>今のルールなら</th>";
+  tbody.innerHTML = weeks.slice().reverse().map((w) => {
+    const changed = w.weekScoreAsOfLatest !== w.weekScore;
+    const asOfCell = changed
+      ? `<span style="opacity:.75">${w.weekScoreAsOfLatest}</span>`
+      : `<span style="opacity:.4">—</span>`;
+    return (
+      `<tr><td>${weekLabel(w.weekStart)}</td><td>${w.dailyScoreSum}</td>` +
+      `<td>${w.closeValue}<span style="opacity:.6;font-size:.8em"> (${w.closeCount}件)</span></td>` +
+      `<td>${w.pointEventSum}</td>` +
+      `<td>${w.weekScore}</td>` +
+      `<td>${asOfCell}</td></tr>`
+    );
+  }).join("");
 }
 
 const VIEWS = {
