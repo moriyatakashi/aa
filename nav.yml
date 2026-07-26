@@ -21,9 +21,6 @@ categories:
       - code: k2
         desc: baレーダーチャート
         href: src/k2/
-      - code: bg
-        desc: YML定義エディタ
-        href: src/bg/
   - label: あそび
     items:
       - code: k1
