@@ -31,11 +31,17 @@ function entryRowHtml(e) {
   // 元のタイトルと訂正の経緯がスレッドを開けば読めるようにするため。
   const titleLine = e.title && (e.type === "new" || e.type === "correction")
     ? `<div class="entry-title">${e.type === "correction" ? "タイトル → " : ""}${esc(e.title)}</div>` : "";
+  // ba-77: 承認キュー。proposeFor:"takashi"付きのエントリだけバッジ(+承認待ちならボタン)を出す。
+  const approvalHtml = e.pendingApproval
+    ? `<span class="approval-badge approval-badge--pending">takashi代筆・承認待ち</span><button type="button" class="btn-approve" data-approve-id="${esc(e.id)}">承認</button>`
+    : e.approved
+      ? `<span class="approval-badge approval-badge--approved">takashi代筆・承認済み</span>`
+      : "";
   return `
     <div class="entry${voidClass || typeClass}">
       <div class="entry-rail"></div>
       <div>
-        <div class="entry-head"><span class="entry-type">${entryTypeLabel(e)}</span><span>${fmtTs(e.createdAt)}</span><span>${esc(e.by)}</span></div>
+        <div class="entry-head"><span class="entry-type">${entryTypeLabel(e)}</span><span>${fmtTs(e.createdAt)}</span><span>${esc(e.by)}</span>${approvalHtml}</div>
         ${titleLine}
         <div class="entry-body">${esc(e.body || e.reason || "")}</div>
       </div>
@@ -143,6 +149,18 @@ function attachThreadHandlers(container, thread) {
     } catch (e) {
       alert("ステータス変更に失敗しました: " + e.message);
     }
+  });
+
+  // ba-77: 承認キュー。1スレッドに承認待ちが複数あり得るため全ボタンに付ける。
+  card.querySelectorAll(".btn-approve").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        await postEntry({ ref: thread.threadId, type: "approval", approvesId: btn.dataset.approveId });
+        load();
+      } catch (e) {
+        alert("承認に失敗しました: " + e.message);
+      }
+    });
   });
 }
 

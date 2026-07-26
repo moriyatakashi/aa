@@ -217,6 +217,30 @@ def test_ba_post_claude_mobile_cannot_write_verified_on_device(monkeypatch, tabl
     assert resp.status_code == 400
 
 
+def test_ba_post_claude_lane_cannot_write_approval(monkeypatch, tables):
+    # ba-77: 承認キュー。claudeレーンが自分の提案を自分で承認できてしまうと意味が無いため禁止する。
+    monkeypatch.setenv("BA_CLAUDE_KEY_PC", "pc-secret")
+    req = make_request(
+        "POST", "ba",
+        json_body={"claude_key": "pc-secret", "type": "approval", "ref": "x", "approvesId": "y"},
+    )
+    resp = fa.ba_log(req)
+    assert resp.status_code == 400
+
+
+def test_ba_post_human_lane_can_write_approval(google_auth_ok, tables):
+    # ba-77: takashi本人(実ログイン)だけがapprovalを書ける。
+    req = make_request(
+        "POST", "ba",
+        json_body={"credential": "token", "type": "approval", "ref": "x", "approvesId": "y"},
+    )
+    resp = fa.ba_log(req)
+    assert resp.status_code == 201
+    body = json.loads(resp.get_body())
+    assert body["by"] == "takashi"
+    assert body["approvesId"] == "y"
+
+
 def test_ba_post_dry_run_does_not_persist(google_auth_ok, tables):
     req = make_request(
         "POST", "ba",

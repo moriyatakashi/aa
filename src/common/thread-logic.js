@@ -2,6 +2,20 @@
 
 import { CLASSIFICATIONS, findClassification } from "./utils.js";
 
+// ba-77: 承認キュー。proposeFor:"takashi"付きのエントリは、同じスレッド内に
+// approvesIdが一致するtype:"approval"があれば承認済み、無ければ承認待ち。
+// エントリ配列を直接書き換える(呼び出し側でsort済みの同じ配列をroot/childrenが参照するため)。
+function applyApprovalFlags(entries) {
+  const approvedIds = new Set(
+    entries.filter((e) => e.type === "approval").map((e) => e.approvesId)
+  );
+  entries.forEach((e) => {
+    if (e.proposeFor !== "takashi") return;
+    e.approved = approvedIds.has(e.id);
+    e.pendingApproval = !e.approved;
+  });
+}
+
 // スレッド化: PartitionKey(threadId)でグルーピングし、id===threadIdの行を起点(new)とみなす
 export function groupThreads(items) {
   const byThread = new Map();
@@ -13,6 +27,7 @@ export function groupThreads(items) {
   const threads = [];
   byThread.forEach((entries, threadId) => {
     entries.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    applyApprovalFlags(entries);
     const root = entries.find((e) => e.id === threadId) || entries[0];
     const children = entries.filter((e) => e.id !== threadId);
 
@@ -65,6 +80,7 @@ export function projectThreads(items) {
   const threads = [];
   byThread.forEach((entries, threadId) => {
     entries.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    applyApprovalFlags(entries);
     const root = entries.find((e) => e.id === threadId) || entries[0];
 
     const voidView = {};
@@ -100,5 +116,6 @@ export function entryTypeLabel(e) {
   if (e.type === "status") return `status → ${e.status || ""}`;
   if (e.type === "priority") return `priority`;
   if (e.type === "verified_on_device") return `verified on device`;
+  if (e.type === "approval") return `approval`;
   return e.type;
 }

@@ -122,9 +122,18 @@ details[open] .chevron { transform: rotate(90deg); }
 /* ba-1: verified_on_device(実機確認)。他の種別と見分けやすいよう closed と同系色 + 太字にする */
 .entry--verified .entry-rail { background: var(--closed); }
 .entry--verified .entry-type { color: var(--closed); font-weight: 700; }
-.entry-head { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.64rem; color: var(--ink-soft); display: flex; gap: 8px; flex-wrap: wrap; }
+.entry-head { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.64rem; color: var(--ink-soft); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .entry-type { font-weight: 700; }
 .entry-body { font-size: 0.83rem; margin-top: 3px; line-height: 1.5; word-break: break-all; }
+
+/* ba-77: 承認キュー(claudeがtakashi代筆で提案し、takashi本人の実ログインだけが承認できる) */
+.approval-badge { font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.approval-badge--pending { color: var(--open); border: 1px solid var(--open); }
+.approval-badge--approved { color: var(--closed); border: 1px solid var(--closed); }
+.btn-approve {
+  font-size: 0.66rem; padding: 2px 9px; border: 1px solid var(--accent); border-radius: 10px;
+  background: transparent; color: var(--accent); cursor: pointer; white-space: nowrap;
+}
 
 .lane-form { margin-top: 8px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 6px; background: var(--paper-band); }
 .lane-form-row { display: flex; gap: 6px; }

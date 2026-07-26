@@ -244,8 +244,11 @@ def scores_item(req: func.HttpRequest) -> func.HttpResponse:
 # スマホ/PCで別鍵にし、"実機/実ブラウザで確認できた"ことを主張する種別
 # (verified_on_device)だけはPCレーンのみ書き込み可にする。
 BA_TABLE = "BaLog"
-BA_HUMAN_ALLOWED_TYPES = {"new", "note", "void", "status"}
+BA_HUMAN_ALLOWED_TYPES = {"new", "note", "void", "status", "approval"}
 BA_DEVICE_VERIFIED_TYPES = {"verified_on_device"}
+# ba-77: 承認キュー。claudeレーンがproposeFor:"takashi"付きで投函した提案を、
+# takashi本人(人間レーン、実ログイン)だけが承認できるようにする。新しい秘密は増やさない。
+BA_TAKASHI_ONLY_TYPES = {"approval"}
 # ba-53: スレッドクローズの難易度別得点(週次得点で使う)。
 BA_DIFFICULTY_POINTS = {"low": 2, "normal": 5, "high": 10}
 BA_DEFAULT_DIFFICULTY = "normal"
@@ -335,6 +338,11 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
     if entry_type in BA_DEVICE_VERIFIED_TYPES and by != "claude-pc":
         return func.HttpResponse(
             f"only claude-pc can write: {', '.join(sorted(BA_DEVICE_VERIFIED_TYPES))}",
+            status_code=400,
+        )
+    if entry_type in BA_TAKASHI_ONLY_TYPES and by != "takashi":
+        return func.HttpResponse(
+            f"only takashi can write: {', '.join(sorted(BA_TAKASHI_ONLY_TYPES))}",
             status_code=400,
         )
 
