@@ -378,6 +378,28 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
     if entry_type == "new":
         ref = ""  # newは常に新規スレッドの起点にする
 
+    # rootless close 防止(ba-72/ba-101): statusは必ず既存スレッドのroot
+    # (PartitionKey=RowKey=ref)を指していなければならない。スタレ/破損refのstatusを
+    # 通すと孤立エントリ(rootless)ができ、_calc_weekly_scoreのクローズ集計が静かにズレる。
+    # 発生源で拒否する。
+    if entry_type == "status":
+        root_exists = False
+        if ref:
+            try:
+                table.get_entity(partition_key=ref, row_key=ref)
+                root_exists = True
+            except ResourceNotFoundError:
+                root_exists = False
+        if not root_exists:
+            return func.HttpResponse(
+                json.dumps(
+                    {"error": "statusのref先スレッドが存在しません(rootless close防止)", "ref": ref},
+                    ensure_ascii=False,
+                ),
+                status_code=400,
+                mimetype="application/json",
+            )
+
     now = datetime.now(timezone.utc)
     entry_id = now.strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:8]
     partition = ref if ref else entry_id
