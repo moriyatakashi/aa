@@ -23,10 +23,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Check cache-buster versions
+        # ba-87: 共有CSS/JSの中身が変わったのに参照側の?v=が据え置きのままだと、
+        # 既にキャッシュ済みの端末に古い版が残り続ける(直後に気づかない事故になりやすい)。
+        # デプロイ前にここで検知して止める。
+        run: node scripts/check-cache-busters.mjs "${{ github.event.before || 'HEAD~1' }}" "${{ github.sha }}"
       - name: Install dependencies
         run: npm ci
       - name: Build index.html from nav.yml
