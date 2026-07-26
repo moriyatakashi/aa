@@ -108,6 +108,15 @@ details[open] .chevron { transform: rotate(90deg); }
 .perspective-chip--active { color: var(--accent); border: 1px solid var(--accent); }
 .perspective-chip--void { color: var(--red); border: 1px solid var(--red); }
 
+/* react: 参考程度の反応(判断根拠にしない)。3レーンそれぞれの有無だけを淡く表示する。 */
+.react-row { display: flex; gap: 6px; align-items: center; padding-left: 20px; margin-top: 2px; }
+.react-label { font-size: 0.62rem; color: var(--ink-soft); cursor: help; }
+.react-chip {
+  font-size: 0.66rem; padding: 2px 8px; border-radius: 10px;
+  border: 1px solid var(--line); color: var(--ink-soft); opacity: 0.6;
+}
+.react-chip--on { border-color: var(--accent); color: var(--accent); opacity: 1; }
+
 .thread-timeline { border-top: 1px solid var(--line); padding: 4px 14px 12px; }
 .entry { display: grid; grid-template-columns: 16px 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .entry:last-child { border-bottom: none; }

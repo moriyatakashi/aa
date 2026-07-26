@@ -4,7 +4,7 @@
 // config.jsを自分でimportする(ba-9追補)。HTML側の<script>読込に依存しないため、
 // 旧index.htmlがキャッシュされた端末でも壊れない(2026-07-16の表示不具合の恒久対策)。
 import "../common/config.js";
-import { esc, fmtTs, CLASSIFICATIONS, CLS_KEY, parseTags, filterFreeTags, withCredential } from "../common/utils.js";
+import { esc, fmtTs, CLASSIFICATIONS, CLS_KEY, BY_LABEL, parseTags, filterFreeTags, withCredential } from "../common/utils.js";
 import { groupThreads, entryTypeLabel } from "../common/thread-logic.js";
 
 const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
@@ -48,6 +48,16 @@ function entryRowHtml(e) {
     </div>`;
 }
 
+// react: 3レーンそれぞれの軽い反応(参考程度、正式な承認・決定条件ではない)。
+const REACT_LANES = ["claude-pc", "claude-mobile", "takashi"];
+function reactRowHtml(reactByLane) {
+  const chips = REACT_LANES.map((lane) => {
+    const val = reactByLane[lane];
+    return `<span class="react-chip${val ? " react-chip--on" : ""}">${esc(BY_LABEL[lane] || lane)}${val ? "✓" : ""}</span>`;
+  }).join("");
+  return `<div class="react-row"><span class="react-label" title="参考程度の反応であり、正式な承認・決定条件ではない">反応:</span>${chips}</div>`;
+}
+
 function perspectiveRowHtml(voidView) {
   const c = voidView.claude;
   const t = voidView.takashi;
@@ -72,6 +82,7 @@ function threadCardHtml(thread) {
     : "";
   const isOpen = status === "open";
   const takashiVoid = thread.voidView.takashi;
+  const takashiReact = thread.reactByLane.takashi;
 
   return `
     <details class="thread-card${thread.hiddenVoid ? " thread-card--void" : ""}" data-thread-id="${threadId}" ${isOpen ? "open" : ""}>
@@ -86,6 +97,7 @@ function threadCardHtml(thread) {
         </div>
         <div class="meta-row">${tagsHtml}${ghHtml}</div>
         ${perspectiveRowHtml(thread.voidView)}
+        ${reactRowHtml(thread.reactByLane)}
       </summary>
       <div class="thread-timeline">
         ${entryRowHtml(root)}
@@ -99,8 +111,9 @@ function threadCardHtml(thread) {
           <div class="lane-form-row" style="margin-top:6px;">
             <button type="button" class="btn-toggle-void">${takashiVoid ? "有効に戻す(T)" : "無効にする(T)"}</button>
             <button type="button" class="btn-toggle-status">${isOpen ? "クローズ" : "再オープン"}</button>
+            <button type="button" class="btn-toggle-react">${takashiReact ? "反応を取り消す" : "反応する"}</button>
           </div>
-          <div class="lane-form-hint">使える種別: note / void / status のみ(id・時刻・by は自動)</div>
+          <div class="lane-form-hint">使える種別: note / void / status / react のみ(id・時刻・by は自動)</div>
         </div>
       </div>
     </details>`;
@@ -148,6 +161,15 @@ function attachThreadHandlers(container, thread) {
       load();
     } catch (e) {
       alert("ステータス変更に失敗しました: " + e.message);
+    }
+  });
+
+  card.querySelector(".btn-toggle-react").addEventListener("click", async () => {
+    try {
+      await postEntry({ ref: thread.threadId, type: "react", value: !thread.reactByLane.takashi });
+      load();
+    } catch (e) {
+      alert("反応の切り替えに失敗しました: " + e.message);
     }
   });
 

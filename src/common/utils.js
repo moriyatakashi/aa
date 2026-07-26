@@ -29,6 +29,9 @@ export const CLS_KEY = {
   "旧仕様": "kyuushiyou"
 };
 
+// by(claude-pc/claude-mobile/takashi)の表示名。react等、誰の反応かを画面に出す時に使う。
+export const BY_LABEL = { "claude-pc": "利尻", "claude-mobile": "すまさん", "takashi": "takashi" };
+
 // tagsから予約語を抽出
 export function findClassification(tags) {
   const tagArray = Array.isArray(tags) ? tags : [];

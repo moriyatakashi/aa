@@ -35,12 +35,17 @@ export function groupThreads(items) {
     // あるが視点としては1つに合算する(時系列で最新のvoid値が勝つ)。
     const voidView = {};
     const priorityByLane = {};
+    // react: 3レーン(takashi/claude-pc/claude-mobile)がそれぞれ独立に持つ軽い反応
+    // (voidと違い集約せず、priorityByLaneと同じくレーンごとに個別表示するため)。
+    // 判断根拠にはしない(意思決定はapproval)。
+    const reactByLane = {};
     let status = "open";
     let displayTitle = root.title;
     let titleCorrected = false;
     entries.forEach((e) => {
       if (e.type === "void" && e.by) voidView[e.by.startsWith("claude") ? "claude" : "takashi"] = !!e.value;
       if (e.type === "priority" && e.by) priorityByLane[e.by] = e.value;
+      if (e.type === "react" && e.by) reactByLane[e.by] = !!e.value;
       if (e.type === "status" && e.status) status = e.status;
       // タイトル訂正(有事用): titleを持つcorrectionが見出し表示だけを上書きする(最新優先)
       if (e.type === "correction" && e.title) { displayTitle = e.title; titleCorrected = true; }
@@ -62,7 +67,7 @@ export function groupThreads(items) {
     // 両視点そろって無効のときも既定で隠す
     const hiddenVoid = isRootless || (voidView.claude === true && voidView.takashi === true);
 
-    threads.push({ threadId, root, children, entries, voidView, priorityByLane, status, displayTitle, titleCorrected, hiddenVoid, cls, clsVia });
+    threads.push({ threadId, root, children, entries, voidView, priorityByLane, reactByLane, status, displayTitle, titleCorrected, hiddenVoid, cls, clsVia });
   });
 
   threads.sort((a, b) => b.root.createdAt.localeCompare(a.root.createdAt));

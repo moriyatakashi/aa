@@ -255,6 +255,30 @@ def test_ba_post_human_lane_can_write_correction(google_auth_ok, tables):
     assert body["title"] == "新しいタイトル"
 
 
+def test_ba_post_human_lane_can_write_react(google_auth_ok, tables):
+    # react: 3レーンそれぞれが自分の反応を残せる、判断根拠にしない軽い種別。
+    req = make_request(
+        "POST", "ba",
+        json_body={"credential": "token", "type": "react", "ref": "x", "value": True},
+    )
+    resp = fa.ba_log(req)
+    assert resp.status_code == 201
+    body = json.loads(resp.get_body())
+    assert body["by"] == "takashi"
+    assert body["value"] is True
+
+
+def test_ba_post_claude_pc_lane_can_write_react(monkeypatch, tables):
+    monkeypatch.setenv("BA_CLAUDE_KEY_PC", "pc-secret")
+    req = make_request(
+        "POST", "ba",
+        json_body={"claude_key": "pc-secret", "type": "react", "ref": "x", "value": True},
+    )
+    resp = fa.ba_log(req)
+    assert resp.status_code == 201
+    assert json.loads(resp.get_body())["by"] == "claude-pc"
+
+
 def test_ba_post_dry_run_does_not_persist(google_auth_ok, tables):
     req = make_request(
         "POST", "ba",
