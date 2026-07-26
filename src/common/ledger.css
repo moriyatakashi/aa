@@ -77,7 +77,8 @@ h1 { font-size: 1.3rem; margin: 6px 0 2px; }
 .thread-card { border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
 .thread-card > summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
 .thread-card > summary::-webkit-details-marker { display: none; }
-.thread-top-row { display: flex; align-items: baseline; gap: 10px; }
+/* ba-99: バッジ列とタイトルが1行目を取り合わないよう、タイトルは常に次行から全幅で始める */
+.thread-top-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .chevron { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--ink-soft); transition: transform 0.15s; flex-shrink: 0; }
 details[open] .chevron { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) { .chevron { transition: none; } }
@@ -89,7 +90,7 @@ details[open] .chevron { transform: rotate(90deg); }
 .pill { font-size: 0.66rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
 .pill-open { color: var(--open); border: 1px solid var(--open); }
 .pill-closed { color: var(--closed); border: 1px solid var(--closed); }
-.thread-title { font-size: 0.9rem; font-weight: 600; line-height: 1.4; flex: 1; word-break: break-all; }
+.thread-title { font-size: 0.9rem; font-weight: 600; line-height: 1.4; flex: 1; flex-basis: 100%; word-break: break-all; }
 
 .meta-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-left: 20px; }
 .tag {
