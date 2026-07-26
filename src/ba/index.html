@@ -67,6 +67,10 @@
       <button class="new-entry-submit" type="button" id="btnAddThread">追加する</button>
     </div>
 
+    <div class="ba-search" style="margin:12px 0;">
+      <input class="field-input" id="baSearch" type="search" placeholder="検索(タグ・タイトル・本文 例: あすけん / ba-50)">
+    </div>
+
     <div class="cls-filter" id="clsFilter"></div>
     <div class="list-controls">
       <button type="button" class="btn-toggle-voided" id="btnToggleClosed">closedも表示</button>
@@ -77,7 +81,7 @@
 
   <script>window.AA_AUTH_EVENT = "ba-login-success";</script>
   <script src="../common/auth.js?v=202607201000"></script>
-  <script type="module" src="app.js?v=202607262133"></script>
+  <script type="module" src="app.js?v=202607270731"></script>
   <script type="module">
     import { applyLastUpdated } from "../common/last-updated.js";
     applyLastUpdated("src/ba", "lastUpdated", "最終更新");

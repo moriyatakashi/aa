@@ -213,15 +213,40 @@ let showVoided = false;
 let showClosed = false;
 // ba-33: 分類フィルタ(単一選択)。"all"は分類なしスレッドも含めて表示。
 let filterCls = "all";
+// タグ・タイトル・本文を横断する絞り込みキーワード(空なら絞り込みなし)。
+let searchQuery = "";
 let cachedThreads = [];
+
+// スレッド内の全テキスト(タイトル・タグ・root/子の本文)にキーワードが含まれるか。
+// 大文字小文字は無視。空白区切りの複数語はAND(すべて含む)で判定する。
+function threadMatchesQuery(thread, q) {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return true;
+  const parts = [];
+  if (thread.displayTitle) parts.push(thread.displayTitle);
+  const root = thread.root || {};
+  if (root.title) parts.push(root.title);
+  for (const e of thread.entries || []) {
+    if (e.title) parts.push(e.title);
+    if (e.body) parts.push(e.body);
+    if (e.reason) parts.push(e.reason);
+    if (Array.isArray(e.tags)) parts.push(e.tags.join(" "));
+  }
+  if (root.seq) parts.push("ba-" + root.seq);
+  const hay = parts.join("\n").toLowerCase();
+  return needle.split(/\s+/).every((w) => hay.includes(w));
+}
 
 function render() {
   const listEl = document.getElementById("threadList");
   const hiddenCount = cachedThreads.filter((t) => t.hiddenVoid).length;
   const closedCount = cachedThreads.filter((t) => t.status !== "open").length;
+  const searching = searchQuery.trim() !== "";
   let visible = showVoided ? cachedThreads : cachedThreads.filter((t) => !t.hiddenVoid);
-  if (!showClosed) visible = visible.filter((t) => t.status === "open");
+  // 検索中はclosedも対象にする(過去の案件を番号やキーワードで辿れるように)。
+  if (!showClosed && !searching) visible = visible.filter((t) => t.status === "open");
   if (filterCls !== "all") visible = visible.filter((t) => t.cls === filterCls);
+  if (searching) visible = visible.filter((t) => threadMatchesQuery(t, searchQuery));
 
   renderSummary(cachedThreads);
   renderClsFilter();
@@ -233,7 +258,10 @@ function render() {
   const closedEl = document.getElementById("btnToggleClosed");
   closedEl.textContent = showClosed ? `closedを隠す(${closedCount})` : `closedも表示(${closedCount})`;
 
-  listEl.innerHTML = visible.map(threadCardHtml).join("") || `<p class="empty">表示できるスレッドがありません(分類フィルタと「closedも表示」を確認)</p>`;
+  const emptyMsg = searching
+    ? `<p class="empty">「${esc(searchQuery.trim())}」に一致するスレッドはありません</p>`
+    : `<p class="empty">表示できるスレッドがありません(分類フィルタと「closedも表示」を確認)</p>`;
+  listEl.innerHTML = visible.map(threadCardHtml).join("") || emptyMsg;
   visible.forEach((t) => attachThreadHandlers(listEl, t));
 }
 
@@ -314,6 +342,13 @@ function onLoginSuccess() {
     filterCls = btn.dataset.cls;
     render();
   });
+  const searchEl = document.getElementById("baSearch");
+  if (searchEl) {
+    searchEl.addEventListener("input", (ev) => {
+      searchQuery = ev.target.value;
+      render();
+    });
+  }
   load();
 }
 
