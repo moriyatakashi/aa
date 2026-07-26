@@ -126,6 +126,7 @@ function renderTable(theadRow, tbody, counts, labelHeader, valueHeader) {
 const WEEK_COUNT = 8;
 const C_DAILY = "#6cf";
 const C_CLOSE = "#5aa06a";
+const C_POINT = "#c98a3a";
 
 function isoWeeksBack(n) {
   // 今週(JSTの月曜起点)からn週分さかのぼったISO年・週の一覧
@@ -186,13 +187,18 @@ function drawWeeklyBars(svg, weeks) {
     const x = cx - barW / 2;
     const hDaily = (w.dailyScoreSum / maxVal) * plotH;
     const hClose = (w.closeValue / maxVal) * plotH;
+    const hPoint = (w.pointEventSum / maxVal) * plotH;
     const yDaily = top + plotH - hDaily;
     const yClose = yDaily - hClose;
+    const yPoint = yClose - hPoint;
     parts.push(`<rect x="${x}" y="${yDaily}" width="${barW}" height="${hDaily}" fill="${C_DAILY}"/>`);
     if (w.closeValue > 0) {
       parts.push(`<rect x="${x}" y="${yClose}" width="${barW}" height="${hClose}" fill="${C_CLOSE}"/>`);
     }
-    parts.push(`<text x="${cx}" y="${yClose - 4}" font-size="8" fill="currentColor" text-anchor="middle">${w.weekScore}</text>`);
+    if (w.pointEventSum > 0) {
+      parts.push(`<rect x="${x}" y="${yPoint}" width="${barW}" height="${hPoint}" fill="${C_POINT}"/>`);
+    }
+    parts.push(`<text x="${cx}" y="${yPoint - 4}" font-size="8" fill="currentColor" text-anchor="middle">${w.weekScore}</text>`);
     parts.push(`<text x="${cx}" y="${H - bottom + 14}" font-size="9" fill="currentColor" opacity="0.75" text-anchor="middle">${weekLabel(w.weekStart)}</text>`);
   });
 
@@ -201,15 +207,18 @@ function drawWeeklyBars(svg, weeks) {
   parts.push(`<text x="${left + 13}" y="${H - 12}" font-size="9" fill="currentColor">日次スコア</text>`);
   parts.push(`<rect x="${left + 78}" y="${H - 20}" width="9" height="9" fill="${C_CLOSE}"/>`);
   parts.push(`<text x="${left + 91}" y="${H - 12}" font-size="9" fill="currentColor">クローズ得点</text>`);
+  parts.push(`<rect x="${left + 168}" y="${H - 20}" width="9" height="9" fill="${C_POINT}"/>`);
+  parts.push(`<text x="${left + 181}" y="${H - 12}" font-size="9" fill="currentColor">加点イベント</text>`);
 
   svg.innerHTML = parts.join("\n");
 }
 
 function renderWeeklyTable(theadRow, tbody, weeks) {
-  theadRow.innerHTML = "<th>週(月曜)</th><th>日次</th><th>クローズ</th><th>合計</th>";
+  theadRow.innerHTML = "<th>週(月曜)</th><th>日次</th><th>クローズ</th><th>加点(ba-165)</th><th>合計</th>";
   tbody.innerHTML = weeks.slice().reverse().map((w) => (
     `<tr><td>${weekLabel(w.weekStart)}</td><td>${w.dailyScoreSum}</td>` +
     `<td>${w.closeValue}<span style="opacity:.6;font-size:.8em"> (${w.closeCount}件)</span></td>` +
+    `<td>${w.pointEventSum}</td>` +
     `<td>${w.weekScore}</td></tr>`
   )).join("");
 }

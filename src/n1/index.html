@@ -58,6 +58,15 @@
       <div class="score-saved" id="scoreSaved"></div>
     </div>
 
+    <div class="section">
+      <div class="section-title">加点イベントを記録(ba-165)</div>
+      <input class="note-input" id="pointAxis" type="text" placeholder="軸(例: 部屋片付け, 運動streak, 新規市)">
+      <input class="note-input" id="pointValue" type="number" placeholder="点数(整数)">
+      <input class="note-input" id="pointNote" type="text" placeholder="一言メモ(任意)">
+      <button class="btn-save-score" id="btnSavePoint">記録</button>
+      <div class="score-saved" id="pointSaved"></div>
+    </div>
+
     <p id="loadStatus">読み込み中...</p>
     <div id="list"></div>
     <p class="empty" id="emptyMsg" style="display:none;">記録はまだありません</p>
@@ -65,7 +74,7 @@
 
   <script>window.AA_AUTH_EVENT = "n1-login-success"; window.AA_PUBLIC_VIEW = true;</script>
   <script src="../common/auth.js?v=202607201000"></script>
-  <script type="module" src="app.js?v=202607232103"></script>
+  <script type="module" src="app.js?v=202607261250"></script>
   <script type="module">
     import { applyLastUpdated } from "../common/last-updated.js";
     applyLastUpdated("src/n1", "lastUpdated", "最終更新");

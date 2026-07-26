@@ -7,6 +7,7 @@ import { todayStr, withCredential } from "../common/utils.js";
 const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
 const SCORES_API = `${API_BASE}/scores`;
 const VISITS_API = `${API_BASE}/visits`;
+const POINTS_API = `${API_BASE}/points`;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DOW = ["日","月","火","水","木","金","土"];
@@ -83,6 +84,43 @@ function initScoreInput() {
   });
 
   loadTodayScore();
+}
+
+// ba-165: 加点軸の拡張。難易度と同じくTakashiの自己申告なので、軸(自由文字列)+点数を
+// そのままPointEventsへ記録するだけ。軸の意味(streakか予測的中か等)は判定しない。
+function initPointInput() {
+  const elAxis = document.getElementById("pointAxis");
+  const elValue = document.getElementById("pointValue");
+  const elNote = document.getElementById("pointNote");
+  const elBtn = document.getElementById("btnSavePoint");
+  const elSaved = document.getElementById("pointSaved");
+
+  elBtn.addEventListener("click", async () => {
+    if (!window.__credential) {
+      elSaved.textContent = "記録にはログインが必要です";
+      if (window.aaShowLoginGate) window.aaShowLoginGate();
+      return;
+    }
+    const axis = elAxis.value.trim();
+    const points = Number(elValue.value);
+    if (!axis) { elSaved.textContent = "軸を入力してください"; return; }
+    if (!Number.isInteger(points)) { elSaved.textContent = "点数は整数で入力してください"; return; }
+    try {
+      const res = await fetch(POINTS_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(withCredential({ axis, points, note: elNote.value.trim() })),
+      });
+      if (!res.ok) { elSaved.textContent = "エラー: 記録に失敗しました"; return; }
+      elAxis.value = "";
+      elValue.value = "";
+      elNote.value = "";
+      elSaved.textContent = "✓ 記録しました";
+      setTimeout(() => elSaved.textContent = "", 2000);
+    } catch (e) {
+      elSaved.textContent = "エラー: " + e.message;
+    }
+  });
 }
 
 async function load() {
@@ -165,6 +203,7 @@ async function load() {
 // まだ未ログインならこれまで通りn1-login-successイベントを待つ(通常のログインボタン操作に対応)。
 function onLoginSuccess() {
   initScoreInput();
+  initPointInput();
   load();
 }
 

@@ -189,6 +189,57 @@ def visits(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse(json.dumps(_visit_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
 
 
+POINT_EVENTS_TABLE = "PointEvents"
+
+
+def _point_event_dict(e):
+    return {
+        "id": e["RowKey"],
+        "axis": e.get("Axis", ""),
+        "points": e.get("Points", 0),
+        "note": e.get("Note", ""),
+        "createdAt": e.get("CreatedAt", ""),
+    }
+
+
+@app.function_name(name="points")
+@app.route(route="points", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def points(req: func.HttpRequest) -> func.HttpResponse:
+    # ba-165: 加点軸の拡張。難易度付与と同じくTakashiの自己申告(2026-07-26確定)なので、
+    # サーバー側は「軸→点数」の対応表を持たず、axis(自由文字列)とpoints(申告値)を
+    # そのまま記録するだけにする。visits/scoresと同じ書式(閲覧公開・書き込みは認証必須)。
+    table = _table_client(POINT_EVENTS_TABLE)
+
+    if req.method == "GET":
+        items = [_point_event_dict(e) for e in table.list_entities()]
+        return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+    body = _get_body(req)
+    err = _authorize(body)
+    if err:
+        return err
+
+    axis = (body.get("axis") or "").strip()
+    if not axis:
+        return func.HttpResponse("axis is required", status_code=400)
+
+    points_value = body.get("points")
+    if not isinstance(points_value, int) or isinstance(points_value, bool):
+        return func.HttpResponse("points must be an integer", status_code=400)
+
+    entity = {
+        "PartitionKey": "point",
+        "RowKey": str(uuid.uuid4()),
+        "Axis": axis,
+        "Points": points_value,
+        "Note": body.get("note", ""),
+        "CreatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    table.upsert_entity(entity)
+
+    return func.HttpResponse(json.dumps(_point_event_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
+
+
 SCORES_TABLE = "Scores"
 
 
@@ -519,6 +570,18 @@ def _calc_weekly_score(iso_year, iso_week):
         breakdown[difficulty] += 1
         close_value += BA_DIFFICULTY_POINTS[difficulty]
 
+    # ba-165: 加点軸の拡張。PointEvents(自己申告のpoints)を週範囲で合算するだけ。
+    # 軸ごとの意味(streakか予測的中か等)はサーバーでは判定しない(自己申告のため)。
+    point_events_table = _table_client(POINT_EVENTS_TABLE)
+    point_event_sum = 0
+    for e in point_events_table.list_entities():
+        try:
+            created_at = datetime.fromisoformat(e.get("CreatedAt", ""))
+        except ValueError:
+            continue
+        if start_utc <= created_at < end_utc:
+            point_event_sum += e.get("Points", 0)
+
     return {
         "year": iso_year,
         "week": iso_week,
@@ -529,7 +592,8 @@ def _calc_weekly_score(iso_year, iso_week):
         "closeCount": close_count,
         "closeValue": close_value,
         "breakdownByDifficulty": breakdown,
-        "weekScore": daily_score_sum + close_value,
+        "pointEventSum": point_event_sum,
+        "weekScore": daily_score_sum + close_value + point_event_sum,
         "calculatedAt": None,
     }
 
@@ -545,6 +609,7 @@ def _weekly_score_entity_dict(e):
         "closeCount": e.get("CloseCount", 0),
         "closeValue": e.get("CloseValue", 0),
         "breakdownByDifficulty": json.loads(e.get("BreakdownByDifficulty") or "{}"),
+        "pointEventSum": e.get("PointEventSum", 0),
         "weekScore": e.get("WeekScore", 0),
         "calculatedAt": e.get("CalculatedAt", ""),
     }
@@ -563,6 +628,7 @@ def _persist_weekly_score(iso_year, iso_week):
         "CloseCount": result["closeCount"],
         "CloseValue": result["closeValue"],
         "BreakdownByDifficulty": json.dumps(result["breakdownByDifficulty"], ensure_ascii=False),
+        "PointEventSum": result["pointEventSum"],
         "WeekScore": result["weekScore"],
         "CalculatedAt": datetime.now(timezone.utc).isoformat(),
     }

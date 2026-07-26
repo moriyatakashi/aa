@@ -101,6 +101,56 @@ def test_visits_post_creates_entity(google_auth_ok, tables):
     assert body["lat"] == 34.68
 
 
+# ---- points (ba-165: 加点軸の拡張) ------------------------------------------
+
+def test_points_get_is_public_no_auth(tables):
+    req = make_request("GET", "points")
+    resp = fa.points(req)
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == []
+
+
+def test_points_list_returns_saved_entries(tables, google_auth_ok):
+    post_req = make_request("POST", "points", json_body={"credential": "token", "axis": "部屋片付け", "points": 5})
+    fa.points(post_req)
+
+    list_req = make_request("GET", "points")
+    resp = fa.points(list_req)
+    assert resp.status_code == 200
+    items = json.loads(resp.get_body())
+    assert len(items) == 1
+    assert items[0]["axis"] == "部屋片付け"
+    assert items[0]["points"] == 5
+
+
+def test_points_post_requires_auth(tables):
+    req = make_request("POST", "points", json_body={"axis": "部屋片付け", "points": 5})
+    resp = fa.points(req)
+    assert resp.status_code == 401
+
+
+def test_points_post_requires_axis(google_auth_ok, tables):
+    req = make_request("POST", "points", json_body={"credential": "token", "axis": "  ", "points": 5})
+    resp = fa.points(req)
+    assert resp.status_code == 400
+
+
+def test_points_post_rejects_non_integer_points(google_auth_ok, tables):
+    req = make_request("POST", "points", json_body={"credential": "token", "axis": "運動", "points": "たくさん"})
+    resp = fa.points(req)
+    assert resp.status_code == 400
+
+
+def test_points_post_creates_entity(google_auth_ok, tables):
+    req = make_request("POST", "points", json_body={"credential": "token", "axis": "新規市", "points": 3, "note": "神戸"})
+    resp = fa.points(req)
+    assert resp.status_code == 201
+    body = json.loads(resp.get_body())
+    assert body["axis"] == "新規市"
+    assert body["points"] == 3
+    assert body["note"] == "神戸"
+
+
 # ---- scores (list) ----------------------------------------------------------
 
 def test_scores_get_is_public_no_auth(tables):
@@ -500,6 +550,28 @@ def test_weekly_scores_item_defaults_missing_difficulty_to_normal(tables):
     body = json.loads(resp.get_body())
     assert body["breakdownByDifficulty"] == {"low": 0, "normal": 1, "high": 0}
     assert body["closeValue"] == 5
+
+
+def _add_point_event(tables_dict, axis, points_value, created_at_iso):
+    """ba-165: PointEventsに1件足すテスト用ヘルパー。"""
+    point_table = tables_dict.setdefault("PointEvents", fa._table_client("PointEvents"))
+    point_table.upsert_entity({
+        "PartitionKey": "point", "RowKey": f"pe-{axis}-{created_at_iso}",
+        "Axis": axis, "Points": points_value, "Note": "", "CreatedAt": created_at_iso,
+    })
+
+
+def test_weekly_scores_item_includes_point_event_sum(tables):
+    # 2026-W29範囲内(2026-07-13〜19)にPointEventsを2件仕込み、weekScoreに乗ることを確認する。
+    _add_point_event(tables, "部屋片付け", 5, "2026-07-14T00:00:00+00:00")
+    _add_point_event(tables, "新規市", 3, "2026-07-16T00:00:00+00:00")
+
+    resp = fa.weekly_scores_item(
+        make_request("GET", "weekly-scores/2026-W29", route_params={"week_key": "2026-W29"})
+    )
+    body = json.loads(resp.get_body())
+    assert body["pointEventSum"] == 8
+    assert body["weekScore"] == 8  # dailyScoreSum/closeValueは0のみ、pointEventSum分だけ乗る
 
 
 def test_weekly_scores_recalculate_requires_auth(tables):
