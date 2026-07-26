@@ -241,6 +241,20 @@ def test_ba_post_human_lane_can_write_approval(google_auth_ok, tables):
     assert body["approvesId"] == "y"
 
 
+def test_ba_post_human_lane_can_write_correction(google_auth_ok, tables):
+    # correction: タイトルは追記オンリーで固定されがちなので、既存のcorrection型
+    # (thread-logic.jsのdisplayTitle解決で「最新が勝つ」)を人間レーンにも開放した。
+    req = make_request(
+        "POST", "ba",
+        json_body={"credential": "token", "type": "correction", "ref": "x", "title": "新しいタイトル"},
+    )
+    resp = fa.ba_log(req)
+    assert resp.status_code == 201
+    body = json.loads(resp.get_body())
+    assert body["by"] == "takashi"
+    assert body["title"] == "新しいタイトル"
+
+
 def test_ba_post_dry_run_does_not_persist(google_auth_ok, tables):
     req = make_request(
         "POST", "ba",

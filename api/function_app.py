@@ -244,11 +244,17 @@ def scores_item(req: func.HttpRequest) -> func.HttpResponse:
 # スマホ/PCで別鍵にし、"実機/実ブラウザで確認できた"ことを主張する種別
 # (verified_on_device)だけはPCレーンのみ書き込み可にする。
 BA_TABLE = "BaLog"
-BA_HUMAN_ALLOWED_TYPES = {"new", "note", "void", "status", "approval"}
+BA_HUMAN_ALLOWED_TYPES = {"new", "note", "void", "status", "approval", "correction"}
 BA_DEVICE_VERIFIED_TYPES = {"verified_on_device"}
 # ba-77: 承認キュー。claudeレーンがproposeFor:"takashi"付きで投函した提案を、
 # takashi本人(人間レーン、実ログイン)だけが承認できるようにする。新しい秘密は増やさない。
 BA_TAKASHI_ONLY_TYPES = {"approval"}
+# correction: タイトルは追記オンリーゆえ最初の書き方に固定されがちなので、
+# titleを持つcorrectionをstatusのopen/closedと同じ「refで参照し最新が勝つ」形で
+# 見出しの付け直しに使う(thread-logic.jsのdisplayTitle解決を参照)。
+# 元のnewエントリのtitleは書き換えず残る(付け直しの履歴も追記として残る)。
+# 以前はclaude-pc/mobileレーンだけが書けた(人間レーンのアローリストに無かった)が、
+# takashi本人も付け直せるようにここに追加した。
 # ba-53: スレッドクローズの難易度別得点(週次得点で使う)。
 BA_DIFFICULTY_POINTS = {"low": 2, "normal": 5, "high": 10}
 BA_DEFAULT_DIFFICULTY = "normal"
