@@ -1,0 +1,25 @@
+name: entropy-scan
+# 鍵様(高エントロピー)文字列の検出。rbook の `run scan` と同じ本体(scripts/ba_entropy_scan.py)を回す。
+# 新規検出があれば exit=1 でジョブが落ちる(=通知)。
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 19 * * *'   # 毎日 04:00 JST (19:00 UTC)
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # 全履歴を取る(--repo が git log --all を使うため)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: repo scan (tree + full history)
+        run: python scripts/ba_entropy_scan.py --repo .
+      - name: ba scan (盤面)
+        run: python scripts/ba_entropy_scan.py
