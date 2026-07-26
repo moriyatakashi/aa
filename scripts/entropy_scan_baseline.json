@@ -1,0 +1,11 @@
+{
+  "known": [
+    {
+      "fingerprint": "d018a4e3b5544685",
+      "first_seen": [
+        "20260721T223452-dd926c00"
+      ],
+      "note": "ack via --ack-current"
+    }
+  ]
+}
