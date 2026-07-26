@@ -7,6 +7,9 @@ categories:
       - code: n2
         desc: 訪問地図
         href: src/n2/
+      - code: n3
+        desc: 予定
+        href: src/n3/
       - code: be
         desc: スコア推移(折れ線グラフ)
         href: src/be/

@@ -18,5 +18,6 @@
 | `k2` | `ba`のスレッドを投稿者別/分類別に集計するレーダーチャート |
 | `n1` | 日々のスコア記録・一覧(Googleログイン必須) |
 | `n2` | 大阪市・東大阪の地図(GeoJSON) |
+| `n3` | 予定(宣言→達成で加点、ba-165機構3)とGoogleカレンダーの直近予定表示(Googleログイン必須) |
 
 各アプリのAPI呼び出し先は[`api/`](../api/README.md)（`common/config.js`の`AA_API_BASE`）。E2Eテストは[`e2e/`](../e2e/README.md)を参照。

@@ -787,3 +787,170 @@ def test_last_updated_uses_cache_on_second_call(monkeypatch, _clear_last_updated
     fa.last_updated(make_request("GET", "last-updated", params={"path": "src/k1"}))
     fa.last_updated(make_request("GET", "last-updated", params={"path": "src/k1"}))
     assert calls["n"] == 1
+
+
+# ---- calendar-events (ba-160) ------------------------------------------------
+
+class FakeGcalResponse:
+    def __init__(self, status_code, payload):
+        self.status_code = status_code
+        self._payload = payload
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.exceptions.HTTPError(f"status={self.status_code}")
+
+    def json(self):
+        return self._payload
+
+
+def test_calendar_events_requires_auth(tables):
+    resp = fa.calendar_events(make_request("GET", "calendar-events"))
+    assert resp.status_code == 401
+
+
+def test_calendar_events_returns_503_when_not_configured(monkeypatch, tables):
+    monkeypatch.setattr(fa, "_authorize_get", lambda req: None)
+    monkeypatch.setattr(fa, "GCAL_OAUTH_CLIENT_ID", "")
+    resp = fa.calendar_events(make_request("GET", "calendar-events"))
+    assert resp.status_code == 503
+
+
+def test_calendar_events_returns_simplified_items(monkeypatch, tables):
+    monkeypatch.setattr(fa, "_authorize_get", lambda req: None)
+    monkeypatch.setattr(fa, "GCAL_OAUTH_CLIENT_ID", "cid")
+    monkeypatch.setattr(fa, "GCAL_OAUTH_CLIENT_SECRET", "csecret")
+    monkeypatch.setattr(fa, "GCAL_OAUTH_REFRESH_TOKEN", "rtoken")
+
+    def _post(url, data=None, timeout=None):
+        return FakeGcalResponse(200, {"access_token": "atoken"})
+
+    def _get(url, headers=None, params=None, timeout=None):
+        return FakeGcalResponse(200, {"items": [
+            {
+                "id": "e1", "summary": "会議",
+                "start": {"dateTime": "2026-08-01T10:00:00+09:00"},
+                "end": {"dateTime": "2026-08-01T11:00:00+09:00"},
+                "location": "会議室A",
+            },
+        ]})
+
+    monkeypatch.setattr(fa.requests, "post", _post)
+    monkeypatch.setattr(fa.requests, "get", _get)
+
+    resp = fa.calendar_events(make_request("GET", "calendar-events"))
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == [{
+        "id": "e1", "summary": "会議",
+        "start": "2026-08-01T10:00:00+09:00", "end": "2026-08-01T11:00:00+09:00",
+        "location": "会議室A",
+    }]
+
+
+def test_calendar_events_returns_502_on_upstream_failure(monkeypatch, tables):
+    monkeypatch.setattr(fa, "_authorize_get", lambda req: None)
+    monkeypatch.setattr(fa, "GCAL_OAUTH_CLIENT_ID", "cid")
+    monkeypatch.setattr(fa, "GCAL_OAUTH_CLIENT_SECRET", "csecret")
+    monkeypatch.setattr(fa, "GCAL_OAUTH_REFRESH_TOKEN", "rtoken")
+    monkeypatch.setattr(fa.requests, "post", lambda *a, **k: FakeGcalResponse(200, {"access_token": "atoken"}))
+    monkeypatch.setattr(fa.requests, "get", lambda *a, **k: FakeGcalResponse(500, {}))
+
+    resp = fa.calendar_events(make_request("GET", "calendar-events"))
+    assert resp.status_code == 502
+
+
+# ---- declarations (ba-160: 宣言→達成で加点) -----------------------------------
+
+def test_declarations_get_is_public_no_auth(tables):
+    resp = fa.declarations(make_request("GET", "declarations"))
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == []
+
+
+def test_declarations_post_requires_auth(tables):
+    resp = fa.declarations(make_request(
+        "POST", "declarations", json_body={"text": "部屋を片付ける", "targetWeek": "2026-W32"}
+    ))
+    assert resp.status_code == 401
+
+
+def test_declarations_post_requires_text(google_auth_ok, tables):
+    resp = fa.declarations(make_request(
+        "POST", "declarations", json_body={"credential": "token", "text": "  ", "targetWeek": "2026-W32"}
+    ))
+    assert resp.status_code == 400
+
+
+def test_declarations_post_rejects_malformed_target_week(google_auth_ok, tables):
+    resp = fa.declarations(make_request(
+        "POST", "declarations", json_body={"credential": "token", "text": "部屋を片付ける", "targetWeek": "bogus"}
+    ))
+    assert resp.status_code == 400
+
+
+def test_declarations_post_creates_entity(google_auth_ok, tables):
+    resp = fa.declarations(make_request(
+        "POST", "declarations",
+        json_body={"credential": "token", "text": "部屋を片付ける", "targetWeek": "2026-W32"},
+    ))
+    assert resp.status_code == 201
+    body = json.loads(resp.get_body())
+    assert body["text"] == "部屋を片付ける"
+    assert body["targetWeek"] == "2026-W32"
+    assert body["achieved"] is False
+
+
+def test_declarations_achieve_requires_auth(google_auth_ok, tables):
+    create_resp = fa.declarations(make_request(
+        "POST", "declarations", json_body={"credential": "token", "text": "t", "targetWeek": "2026-W32"}
+    ))
+    decl_id = json.loads(create_resp.get_body())["id"]
+    resp = fa.declarations_achieve(make_request(
+        "POST", f"declarations/{decl_id}/achieve", route_params={"decl_id": decl_id}, json_body={}
+    ))
+    assert resp.status_code == 401
+
+
+def test_declarations_achieve_awards_points_by_weeks_ahead(google_auth_ok, tables):
+    # 2026-W29(2026-07-13作成) -> 対象2026-W31 = 2週先 -> ba-165決定の倍々式で10点。
+    decl_table = tables.setdefault("Declarations", fa._table_client("Declarations"))
+    decl_table.upsert_entity({
+        "PartitionKey": "declaration", "RowKey": "decl-1", "Text": "難しい案件をやる",
+        "TargetWeek": "2026-W31", "CreatedAt": "2026-07-13T03:00:00+00:00",
+        "Achieved": False, "AchievedAt": "",
+    })
+
+    resp = fa.declarations_achieve(make_request(
+        "POST", "declarations/decl-1/achieve", route_params={"decl_id": "decl-1"}, json_body={"credential": "token"}
+    ))
+    assert resp.status_code == 200
+    body = json.loads(resp.get_body())
+    assert body["achieved"] is True
+    assert body["awardedPoints"] == 10
+
+    points_items = json.loads(fa.points(make_request("GET", "points")).get_body())
+    assert len(points_items) == 1
+    assert points_items[0]["axis"] == "宣言達成"
+    assert points_items[0]["points"] == 10
+
+
+def test_declarations_achieve_is_idempotent(google_auth_ok, tables):
+    decl_table = tables.setdefault("Declarations", fa._table_client("Declarations"))
+    decl_table.upsert_entity({
+        "PartitionKey": "declaration", "RowKey": "decl-2", "Text": "t",
+        "TargetWeek": "2026-W30", "CreatedAt": "2026-07-13T03:00:00+00:00",
+        "Achieved": False, "AchievedAt": "",
+    })
+    req_kwargs = dict(route_params={"decl_id": "decl-2"}, json_body={"credential": "token"})
+    fa.declarations_achieve(make_request("POST", "declarations/decl-2/achieve", **req_kwargs))
+    fa.declarations_achieve(make_request("POST", "declarations/decl-2/achieve", **req_kwargs))
+
+    points_items = json.loads(fa.points(make_request("GET", "points")).get_body())
+    assert len(points_items) == 1  # 2回叩いても加点は1回だけ
+
+
+def test_declarations_achieve_not_found(google_auth_ok, tables):
+    resp = fa.declarations_achieve(make_request(
+        "POST", "declarations/nope/achieve", route_params={"decl_id": "nope"}, json_body={"credential": "token"}
+    ))
+    assert resp.status_code == 404

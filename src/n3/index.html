@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<script src="../common/config.js?v=202607160712"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>n3 / 予定</title>
+<link rel="stylesheet" href="../common/base.css?v=202607141905">
+<style>
+  .field-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 10px; background: var(--input-bg); color: var(--ink); }
+  .btn-primary { width: 100%; padding: 10px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-size: 0.95rem; }
+  .form-status { font-size: 0.78rem; color: var(--ink-soft); margin-top: 6px; text-align: center; min-height: 1.2em; }
+  .decl-row { display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; }
+  .decl-row button { padding: 6px 12px; border: 1px solid var(--accent); border-radius: 5px; background: transparent; color: var(--accent); cursor: pointer; white-space: nowrap; }
+  .decl-row--done { opacity: 0.6; }
+  .cal-row { border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; }
+  .cal-summary { font-weight: 600; font-size: 0.88rem; }
+  .cal-meta { font-size: 0.72rem; color: var(--ink-soft); margin-top: 2px; }
+  .empty { color: var(--ink-soft); text-align: center; padding: 16px 0; }
+  .section-title { font-weight: 700; margin: 18px 0 8px; }
+</style>
+</head>
+<body>
+  <p><a href="../../">← 戻る</a></p>
+  <h1>路歴（n3） / 予定</h1>
+  <p id="lastUpdated" style="font-size:0.8rem;color:var(--ink-soft);">最終更新: -</p>
+
+<!-- LOGIN_GATE:START -->
+  <div id="login-gate">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div id="g_id_onload"
+      data-callback="handleCredentialResponse"
+      data-auto_prompt="false">
+    </div>
+    <script>document.getElementById('g_id_onload').setAttribute('data-client_id', window.AA_GOOGLE_CLIENT_ID);</script>
+    <div class="g_id_signin"></div>
+    <p id="status">未ログイン(ログインすると予定が表示されます)</p>
+  </div>
+<!-- LOGIN_GATE:END -->
+
+  <div id="content" style="display:none;">
+    <div class="section">
+      <div class="section-title">宣言を追加(ba-160/ba-165: 先の週ほど高得点)</div>
+      <input class="field-input" id="declText" type="text" placeholder="例: 部屋を片付ける">
+      <select class="field-input" id="targetWeek"></select>
+      <button class="btn-primary" id="btnAddDecl">追加</button>
+      <div class="form-status" id="declStatus"></div>
+    </div>
+
+    <div class="section-title">未達成の宣言</div>
+    <div id="openDeclList"></div>
+    <p class="empty" id="openDeclEmpty" style="display:none;">未達成の宣言はありません</p>
+
+    <div class="section-title">達成済み</div>
+    <div id="doneDeclList"></div>
+
+    <div class="section-title">Googleカレンダーの直近の予定</div>
+    <p class="form-status" id="calendarStatus"></p>
+    <div id="calendarList"></div>
+  </div>
+
+  <script>window.AA_AUTH_EVENT = "n3-login-success"; window.AA_PUBLIC_VIEW = true;</script>
+  <script src="../common/auth.js?v=202607201000"></script>
+  <script type="module" src="app.js?v=202607261345"></script>
+  <script type="module">
+    import { applyLastUpdated } from "../common/last-updated.js";
+    applyLastUpdated("src/n3", "lastUpdated", "最終更新");
+  </script>
+</body>
+</html>

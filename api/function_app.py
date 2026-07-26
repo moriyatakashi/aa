@@ -136,6 +136,13 @@ def _authorize(body):
     return _verify_google_credential(credential)
 
 
+def _authorize_get(req):
+    """GETリクエスト用の_authorize。ba-160のcalendar-events/declarations achieveのように
+    「閲覧にも認証が要る」エンドポイント向けに、クエリ文字列のcredentialを見る
+    (GETはボディを送るのが一般的でないため)。"""
+    return _authorize({"credential": req.params.get("credential", "")})
+
+
 VISITS_TABLE = "Visits"
 
 
@@ -202,6 +209,21 @@ def _point_event_dict(e):
     }
 
 
+def _create_point_event(axis, points_value, note=""):
+    """PointEventsへの追記だけを行う内部ヘルパー。POST /api/pointsの本体と、
+    ba-160のdeclarations achieve(宣言達成時の自動加点)の両方から呼ばれる。"""
+    entity = {
+        "PartitionKey": "point",
+        "RowKey": str(uuid.uuid4()),
+        "Axis": axis,
+        "Points": points_value,
+        "Note": note,
+        "CreatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    _table_client(POINT_EVENTS_TABLE).upsert_entity(entity)
+    return entity
+
+
 @app.function_name(name="points")
 @app.route(route="points", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
 def points(req: func.HttpRequest) -> func.HttpResponse:
@@ -227,17 +249,165 @@ def points(req: func.HttpRequest) -> func.HttpResponse:
     if not isinstance(points_value, int) or isinstance(points_value, bool):
         return func.HttpResponse("points must be an integer", status_code=400)
 
+    entity = _create_point_event(axis, points_value, body.get("note", ""))
+    return func.HttpResponse(json.dumps(_point_event_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
+
+
+# ba-160: Googleカレンダー連携(予定ページ)。このAzure Functions自体のOAuth連携が要る
+# (Claude Code側のMCPツールはこのセッション専用でサイトからは呼べないため)。
+# aapj-501407のDesktopクライアント(scripts/backup-balog-to-drive.pyと共用)で、
+# calendar.readonlyスコープのrefresh tokenを別途取得して使う
+# (scripts/get_gcal_refresh_token.py、2026-07-26セットアップ)。
+GCAL_OAUTH_CLIENT_ID = os.environ.get("GCAL_OAUTH_CLIENT_ID", "")
+GCAL_OAUTH_CLIENT_SECRET = os.environ.get("GCAL_OAUTH_CLIENT_SECRET", "")
+GCAL_OAUTH_REFRESH_TOKEN = os.environ.get("GCAL_OAUTH_REFRESH_TOKEN", "")
+
+
+def _gcal_access_token():
+    resp = requests.post("https://oauth2.googleapis.com/token", data={
+        "client_id": GCAL_OAUTH_CLIENT_ID,
+        "client_secret": GCAL_OAUTH_CLIENT_SECRET,
+        "refresh_token": GCAL_OAUTH_REFRESH_TOKEN,
+        "grant_type": "refresh_token",
+    }, timeout=5)
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+
+@app.function_name(name="calendar-events")
+@app.route(route="calendar-events", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def calendar_events(req: func.HttpRequest) -> func.HttpResponse:
+    # カレンダーの中身は他者の氏名・場所等を含みうる個人情報のため、visits/scoresと違い
+    # 閲覧も認証必須にする(このサイトの「GETは公開」の既定から意図的に外す)。
+    err = _authorize_get(req)
+    if err:
+        return err
+
+    if not (GCAL_OAUTH_CLIENT_ID and GCAL_OAUTH_CLIENT_SECRET and GCAL_OAUTH_REFRESH_TOKEN):
+        return func.HttpResponse("calendar integration not configured", status_code=503)
+
+    try:
+        access_token = _gcal_access_token()
+        resp = requests.get(
+            "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={
+                "timeMin": datetime.now(timezone.utc).isoformat(),
+                "maxResults": 20,
+                "singleEvents": "true",
+                "orderBy": "startTime",
+            },
+            timeout=5,
+        )
+        resp.raise_for_status()
+    except Exception as e:
+        return func.HttpResponse(f"calendar fetch failed: {e}", status_code=502)
+
+    items = []
+    for e in resp.json().get("items", []):
+        start = (e.get("start") or {}).get("dateTime") or (e.get("start") or {}).get("date")
+        end = (e.get("end") or {}).get("dateTime") or (e.get("end") or {}).get("date")
+        items.append({
+            "id": e.get("id"),
+            "summary": e.get("summary", ""),
+            "start": start,
+            "end": end,
+            "location": e.get("location", ""),
+        })
+    return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+
+# ba-160: 宣言(Declarations)。ba-165機構3(翌週以降の宣言→達成で加点、先の週ほど
+# 高得点)の宣言側。達成にした瞬間、確定済みの倍々式(1週先=5/2週先=10/3週先=20/
+# 4週先=40)でPointEventsへ自動追記する(手動計算の手間を無くす)。
+DECLARATIONS_TABLE = "Declarations"
+
+
+def _declaration_dict(e):
+    return {
+        "id": e["RowKey"],
+        "text": e.get("Text", ""),
+        "targetWeek": e.get("TargetWeek", ""),
+        "createdAt": e.get("CreatedAt", ""),
+        "achieved": e.get("Achieved", False),
+        "achievedAt": e.get("AchievedAt", ""),
+    }
+
+
+@app.function_name(name="declarations")
+@app.route(route="declarations", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def declarations(req: func.HttpRequest) -> func.HttpResponse:
+    table = _table_client(DECLARATIONS_TABLE)
+
+    if req.method == "GET":
+        items = [_declaration_dict(e) for e in table.list_entities()]
+        return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+    body = _get_body(req)
+    err = _authorize(body)
+    if err:
+        return err
+
+    text = (body.get("text") or "").strip()
+    if not text:
+        return func.HttpResponse("text is required", status_code=400)
+
+    target_week = body.get("targetWeek") or ""
+    if not _parse_week_key(target_week):
+        return func.HttpResponse("targetWeek must look like 2026-W32", status_code=400)
+
     entity = {
-        "PartitionKey": "point",
+        "PartitionKey": "declaration",
         "RowKey": str(uuid.uuid4()),
-        "Axis": axis,
-        "Points": points_value,
-        "Note": body.get("note", ""),
+        "Text": text,
+        "TargetWeek": target_week,
         "CreatedAt": datetime.now(timezone.utc).isoformat(),
+        "Achieved": False,
+        "AchievedAt": "",
     }
     table.upsert_entity(entity)
+    return func.HttpResponse(json.dumps(_declaration_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
 
-    return func.HttpResponse(json.dumps(_point_event_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
+
+@app.function_name(name="declarations-achieve")
+@app.route(route="declarations/{decl_id}/achieve", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def declarations_achieve(req: func.HttpRequest) -> func.HttpResponse:
+    decl_id = req.route_params.get("decl_id")
+    body = _get_body(req)
+    err = _authorize(body)
+    if err:
+        return err
+
+    table = _table_client(DECLARATIONS_TABLE)
+    try:
+        entity = table.get_entity(partition_key="declaration", row_key=decl_id)
+    except ResourceNotFoundError:
+        return func.HttpResponse("declaration not found", status_code=404)
+
+    if entity.get("Achieved"):
+        return func.HttpResponse(json.dumps(_declaration_dict(entity), ensure_ascii=False), mimetype="application/json")
+
+    parsed = _parse_week_key(entity.get("TargetWeek", ""))
+    target_year, target_week = parsed
+    _, _, target_monday = _week_bounds(target_year, target_week)
+
+    created_at = datetime.fromisoformat(entity["CreatedAt"])
+    declared_year, declared_week, _ = created_at.astimezone(JST).isocalendar()
+    _, _, declared_monday = _week_bounds(declared_year, declared_week)
+
+    weeks_ahead = max(1, (target_monday - declared_monday).days // 7)
+    # ba-165決定(2026-07-26): 1週先=5/2週先=10/3週先=20/4週先=40(倍々式)。上限は運用で調整。
+    awarded_points = 5 * (2 ** (weeks_ahead - 1))
+
+    entity["Achieved"] = True
+    entity["AchievedAt"] = datetime.now(timezone.utc).isoformat()
+    table.upsert_entity(entity)
+
+    _create_point_event("宣言達成", awarded_points, f"{entity.get('Text', '')}({weeks_ahead}週先)")
+
+    result = _declaration_dict(entity)
+    result["awardedPoints"] = awarded_points
+    return func.HttpResponse(json.dumps(result, ensure_ascii=False), status_code=200, mimetype="application/json")
 
 
 SCORES_TABLE = "Scores"
