@@ -61,35 +61,58 @@ function drawFeatures(features, proj, fillColor, strokeColor) {
   });
 }
 
+// ba-135: ピンが多すぎて重なる問題への対応。県境データ等は使わず、画面座標(投影後のx/y)
+// が近い点同士を素朴にまとめるだけ。visitsは既に新しい順で渡ってくるため、処理順の性質上
+// 各クラスタのvisits[0]は常にそのクラスタ内で最新の訪問になる(先に来た点がクラスタの起点になり、
+// 後から来る=より古い点はその起点に併合されることはあってもその逆はないため)。
+function clusterPoints(rawPoints, thresholdPx = 14) {
+  const clusters = [];
+  rawPoints.forEach((p) => {
+    const existing = clusters.find((c) => Math.hypot(c.x - p.x, c.y - p.y) < thresholdPx);
+    if (existing) {
+      existing.visits.push(p.v);
+      existing.isLatest = existing.isLatest || p.isLatest;
+    } else {
+      clusters.push({ x: p.x, y: p.y, visits: [p.v], isLatest: p.isLatest });
+    }
+  });
+  return clusters;
+}
+
+function clusterRadius(count) {
+  return Math.min(6 + Math.sqrt(count - 1) * 3, 14);
+}
+
+function drawCluster(c, color) {
+  const r = clusterRadius(c.visits.length);
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.fill();
+  ctx.stroke();
+  if (c.visits.length > 1) {
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(c.visits.length), c.x, c.y);
+  }
+}
+
 function drawPoints(visits, proj) {
-  const points = [];
-  // 通常ピンを先に描画し、最後の訪問地(赤)は最後に描画して常に最前面に出す
-  // (同じ場所への複数訪問がある場合、後から描画されるピンに埋もれるのを防ぐ)
-  visits.forEach((v, i) => {
+  const rawPoints = visits.map((v, i) => {
     const [x, y] = proj(v.lng, v.lat);
-    points.push({ x, y, v, isLatest: i === 0 });
+    return { x, y, v, isLatest: i === 0 };
   });
+  const clusters = clusterPoints(rawPoints);
 
-  points.filter(p => !p.isLatest).forEach(p => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-    ctx.fillStyle = "#b5651d";
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 2;
-    ctx.fill();
-    ctx.stroke();
-  });
-  points.filter(p => p.isLatest).forEach(p => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-    ctx.fillStyle = "#e63946";
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 2;
-    ctx.fill();
-    ctx.stroke();
-  });
+  // 通常クラスタを先に描画し、最新の訪問を含むクラスタ(赤)は最後に描画して常に最前面に出す
+  clusters.filter((c) => !c.isLatest).forEach((c) => drawCluster(c, "#b5651d"));
+  clusters.filter((c) => c.isLatest).forEach((c) => drawCluster(c, "#e63946"));
 
-  return points;
+  return clusters;
 }
 
 // 訪問記録の入力(ab/src/main/n1の訪問記録機能を移植、メモ欄は対象外)
@@ -191,12 +214,16 @@ canvas.addEventListener("click", e => {
   const my = (e.clientY - rect.top) * (canvas.height / rect.height);
   let hit = null;
   for (const pt of _points) {
-    if (Math.hypot(mx - pt.x, my - pt.y) < 12) { hit = pt; break; }
+    if (Math.hypot(mx - pt.x, my - pt.y) < clusterRadius(pt.visits.length) + 6) { hit = pt; break; }
   }
   if (hit) {
-    const v = hit.v;
-    document.getElementById("popupPlace").textContent = v.place || "—";
-    document.getElementById("popupMeta").textContent = `${v.date || ""} ${v.time || ""}${v.memo ? "\n" + v.memo : ""}`;
+    // ba-135: クラスタは複数訪問の集まりなのでどれを指したか特定できない。クラスタ内最新の
+    // 訪問(visits[0])を代表として表示し、他にもあれば件数を添える。
+    const latest = hit.visits[0];
+    const others = hit.visits.length - 1;
+    document.getElementById("popupPlace").textContent = latest.place || "—";
+    document.getElementById("popupMeta").textContent =
+      `${latest.date || ""} ${latest.time || ""}${others > 0 ? ` (ほか${others}件)` : ""}${latest.memo ? "\n" + latest.memo : ""}`;
     const px = Math.min(hit.x + 10, _W - 200);
     const py = Math.max(hit.y - 60, 10);
     popup.style.left = px + "px";
@@ -256,17 +283,17 @@ async function load() {
 
   allVisits.forEach(v => {
     const hasPin = !!(v.lat && v.lng);
-    let ptIdx = -1;
-    if (hasPin) ptIdx = withLatLng.findIndex(w => w.id === v.id);
+    // ba-135: ピンはクラスタ化されているため、この訪問を含むクラスタを探す(位置決めのみに使う)。
+    const cluster = hasPin ? _points.find(c => c.visits.some(cv => cv.id === v.id)) : null;
 
     addVisitRow(listEl, v, hasPin, hasPin ? () => {
       document.querySelectorAll(".visit-row").forEach(r => r.classList.remove("active"));
-      const pt = _points[ptIdx];
-      if (pt) {
+      if (cluster) {
+        // ポップアップにはクリックしたこの訪問自体の情報を表示する(クラスタの代表ではない)。
         document.getElementById("popupPlace").textContent = v.place || "—";
         document.getElementById("popupMeta").textContent = `${v.date || ""} ${v.time || ""}`;
-        popup.style.left = Math.min(pt.x + 10, W - 200) + "px";
-        popup.style.top = Math.max(pt.y - 60, 10) + "px";
+        popup.style.left = Math.min(cluster.x + 10, W - 200) + "px";
+        popup.style.top = Math.max(cluster.y - 60, 10) + "px";
         popup.classList.add("show");
       }
     } : null);
