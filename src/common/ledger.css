@@ -163,17 +163,19 @@ details[open] .chevron { transform: rotate(90deg); }
 }
 .entry-title { font-size: 0.85rem; font-weight: 700; margin-top: 3px; line-height: 1.5; word-break: break-all; }
 
-/* ba: 分類バッジ・分類フィルタ(ba-32の4分類、ba-33で表示対応。2026-07-14)
-   朱=案件(手を動かす)、金茶=確定仕様(恒久)、若葉=気づき、鈍青=保留論点 */
+/* ba: 分類バッジ・分類フィルタ(ba-32の分類、ba-33で表示対応。2026-07-14。旧仕様は2026-07-26追加)
+   朱=案件(手を動かす)、金茶=確定仕様(恒久)、若葉=気づき、鈍青=保留論点、鈍色=旧仕様(色褪せた金茶) */
 :root {
   --cls-anken: #c2452f;
   --cls-shiyou: #b98a2e;
   --cls-kizuki: #6e9448;
   --cls-horyu: #5a7d99;
+  --cls-kyuushiyou: #756f62;
   --cls-anken-ink: #e8a294;
   --cls-shiyou-ink: #ddba6e;
   --cls-kizuki-ink: #a8c887;
   --cls-horyu-ink: #9dbdd6;
+  --cls-kyuushiyou-ink: #b6ae9d;
 }
 .cls-badge {
   font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
@@ -184,6 +186,7 @@ details[open] .chevron { transform: rotate(90deg); }
 .cls-badge--shiyou { color: var(--cls-shiyou-ink); border-color: var(--cls-shiyou); }
 .cls-badge--kizuki { color: var(--cls-kizuki-ink); border-color: var(--cls-kizuki); }
 .cls-badge--horyu { color: var(--cls-horyu-ink); border-color: var(--cls-horyu); }
+.cls-badge--kyuushiyou { color: var(--cls-kyuushiyou-ink); border-color: var(--cls-kyuushiyou); }
 .cls-via { font-weight: 400; opacity: 0.55; font-size: 0.6rem; margin-left: 3px; }
 
 .cls-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
@@ -197,6 +200,7 @@ details[open] .chevron { transform: rotate(90deg); }
 .cls-chip--on.cls-chip--shiyou { color: var(--cls-shiyou-ink); border-color: var(--cls-shiyou); }
 .cls-chip--on.cls-chip--kizuki { color: var(--cls-kizuki-ink); border-color: var(--cls-kizuki); }
 .cls-chip--on.cls-chip--horyu { color: var(--cls-horyu-ink); border-color: var(--cls-horyu); }
+.cls-chip--on.cls-chip--kyuushiyou { color: var(--cls-kyuushiyou-ink); border-color: var(--cls-kyuushiyou); }
 
 .list-controls { gap: 8px; }
 

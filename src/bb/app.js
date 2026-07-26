@@ -10,7 +10,7 @@ import { projectThreads } from "../common/thread-logic.js";
 const BA_API = `${window.AA_API_BASE}/ba`; // common/config.js から(ba-9)
 
 // 現在形ビューとしての並び順: 参照し続けるもの→動かすもの→考えるもの→ながめるもの
-const SECTION_ORDER = ["確定仕様", "案件", "保留論点", "気づき", null];
+const SECTION_ORDER = ["確定仕様", "案件", "保留論点", "気づき", "旧仕様", null];
 
 function itemHtml(t) {
   const isOpen = t.status === "open";

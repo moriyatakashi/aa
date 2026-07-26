@@ -18,13 +18,15 @@ export function fmtTs(iso) {
   return jst.replace(",", "") + " JST";
 }
 
-// ba-32: tagの予約語4種による分類
-export const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点"];
+// ba-32: tagの予約語による分類。「旧仕様」はba-32の語彙追加(ba-16の見直しで新設、
+// 確定仕様だったが対象システム消滅/後継スレッドへの委譲で現役でなくなったもの用)。
+export const CLASSIFICATIONS = ["案件", "確定仕様", "気づき", "保留論点", "旧仕様"];
 export const CLS_KEY = {
   "案件": "anken",
   "確定仕様": "shiyou",
   "気づき": "kizuki",
-  "保留論点": "horyu"
+  "保留論点": "horyu",
+  "旧仕様": "kyuushiyou"
 };
 
 // tagsから予約語を抽出
