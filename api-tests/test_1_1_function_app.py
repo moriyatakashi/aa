@@ -279,6 +279,63 @@ def test_ba_post_claude_pc_lane_can_write_react(monkeypatch, tables):
     assert json.loads(resp.get_body())["by"] == "claude-pc"
 
 
+# ---- link (ba-162: 関連付け) ---------------------------------------------
+
+def test_ba_post_human_lane_can_write_link(google_auth_ok, tables):
+    req = make_request(
+        "POST", "ba",
+        json_body={"credential": "token", "type": "link", "ref": "x", "relSeq": 42},
+    )
+    resp = fa.ba_log(req)
+    assert resp.status_code == 201
+    body = json.loads(resp.get_body())
+    assert body["by"] == "takashi"
+    assert body["relSeq"] == 42
+    assert body["value"] is True  # 省略時はtrue補完
+
+
+def test_ba_post_claude_pc_lane_can_write_link(monkeypatch, tables):
+    monkeypatch.setenv("BA_CLAUDE_KEY_PC", "pc-secret")
+    req = make_request(
+        "POST", "ba",
+        json_body={"claude_key": "pc-secret", "type": "link", "ref": "x", "relSeq": 1},
+    )
+    resp = fa.ba_log(req)
+    assert resp.status_code == 201
+    assert json.loads(resp.get_body())["by"] == "claude-pc"
+
+
+def test_ba_link_accepts_explicit_false_value_as_retraction(google_auth_ok, tables):
+    req = make_request(
+        "POST", "ba",
+        json_body={"credential": "token", "type": "link", "ref": "x", "relSeq": 1, "value": False},
+    )
+    resp = fa.ba_log(req)
+    assert resp.status_code == 201
+    assert json.loads(resp.get_body())["value"] is False
+
+
+def test_ba_link_rejects_missing_relseq(google_auth_ok, tables):
+    req = make_request("POST", "ba", json_body={"credential": "token", "type": "link", "ref": "x"})
+    assert fa.ba_log(req).status_code == 400
+
+
+def test_ba_link_rejects_non_integer_relseq(google_auth_ok, tables):
+    req = make_request(
+        "POST", "ba",
+        json_body={"credential": "token", "type": "link", "ref": "x", "relSeq": "ba-1"},
+    )
+    assert fa.ba_log(req).status_code == 400
+
+
+def test_ba_link_rejects_non_positive_relseq(google_auth_ok, tables):
+    req = make_request(
+        "POST", "ba",
+        json_body={"credential": "token", "type": "link", "ref": "x", "relSeq": 0},
+    )
+    assert fa.ba_log(req).status_code == 400
+
+
 def test_ba_post_dry_run_does_not_persist(google_auth_ok, tables):
     req = make_request(
         "POST", "ba",

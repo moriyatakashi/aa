@@ -42,6 +42,10 @@ export function groupThreads(items) {
     let status = "open";
     let displayTitle = root.title;
     let titleCorrected = false;
+    // ba-162: 関連付け(link)。追記のみ・(このスレッド, relSeq)の組ごとに最新のvalueが勝つ
+    // (voidと同じ「後勝ち」)。ここでは自スレッドが指す先(前方向)だけを集め、双方向化は
+    // 全スレッド構築後の2パス目でまとめて行う。
+    const linkValueBySeq = new Map();
     entries.forEach((e) => {
       if (e.type === "void" && e.by) voidView[e.by.startsWith("claude") ? "claude" : "takashi"] = !!e.value;
       if (e.type === "priority" && e.by) priorityByLane[e.by] = e.value;
@@ -49,7 +53,9 @@ export function groupThreads(items) {
       if (e.type === "status" && e.status) status = e.status;
       // タイトル訂正(有事用): titleを持つcorrectionが見出し表示だけを上書きする(最新優先)
       if (e.type === "correction" && e.title) { displayTitle = e.title; titleCorrected = true; }
+      if (e.type === "link" && Number.isInteger(e.relSeq)) linkValueBySeq.set(e.relSeq, e.value !== false);
     });
+    const forwardRelSeqs = [...linkValueBySeq.entries()].filter(([, v]) => v).map(([seq]) => seq);
 
     // 分類(ba-32/ba-33): new/noteのtagsから予約語を拾い、時系列で最新を採用
     let cls = null;
@@ -67,10 +73,37 @@ export function groupThreads(items) {
     // 両視点そろって無効のときも既定で隠す
     const hiddenVoid = isRootless || (voidView.claude === true && voidView.takashi === true);
 
-    threads.push({ threadId, root, children, entries, voidView, priorityByLane, reactByLane, status, displayTitle, titleCorrected, hiddenVoid, cls, clsVia });
+    threads.push({ threadId, root, children, entries, voidView, priorityByLane, reactByLane, status, displayTitle, titleCorrected, hiddenVoid, cls, clsVia, forwardRelSeqs });
+  });
+
+  // ba-162 projection: 双方向の関連付けとタイトルプレビューをここでまとめて計算する。
+  // 表示(チップ/折り畳みUI/文言)はすま側の担当のため、ここではrelatedSeqs(相手seqの
+  // 数値配列、双方向・重複排除・昇順)とseqTitle(seq→タイトル先頭10文字プレビュー)の
+  // 2つのデータ形を用意するところまでに留める。
+  const seqTitle = {};
+  threads.forEach((t) => {
+    if (Number.isInteger(t.root.seq)) seqTitle[t.root.seq] = (t.displayTitle || "").slice(0, 10);
+  });
+  const relatedBySeq = new Map();
+  const addRelated = (seq, other) => {
+    if (!relatedBySeq.has(seq)) relatedBySeq.set(seq, new Set());
+    relatedBySeq.get(seq).add(other);
+  };
+  threads.forEach((t) => {
+    if (!Number.isInteger(t.root.seq)) return;
+    t.forwardRelSeqs.forEach((target) => {
+      addRelated(t.root.seq, target);
+      addRelated(target, t.root.seq);
+    });
+  });
+  threads.forEach((t) => {
+    const set = Number.isInteger(t.root.seq) ? relatedBySeq.get(t.root.seq) : null;
+    t.relatedSeqs = set ? [...set].sort((a, b) => a - b) : [];
+    delete t.forwardRelSeqs;
   });
 
   threads.sort((a, b) => b.root.createdAt.localeCompare(a.root.createdAt));
+  threads.seqTitle = seqTitle;
   return threads;
 }
 

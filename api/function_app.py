@@ -244,7 +244,7 @@ def scores_item(req: func.HttpRequest) -> func.HttpResponse:
 # スマホ/PCで別鍵にし、"実機/実ブラウザで確認できた"ことを主張する種別
 # (verified_on_device)だけはPCレーンのみ書き込み可にする。
 BA_TABLE = "BaLog"
-BA_HUMAN_ALLOWED_TYPES = {"new", "note", "void", "status", "approval", "correction", "react"}
+BA_HUMAN_ALLOWED_TYPES = {"new", "note", "void", "status", "approval", "correction", "react", "link"}
 BA_DEVICE_VERIFIED_TYPES = {"verified_on_device"}
 # ba-77: 承認キュー。claudeレーンがproposeFor:"takashi"付きで投函した提案を、
 # takashi本人(人間レーン、実ログイン)だけが承認できるようにする。新しい秘密は増やさない。
@@ -261,6 +261,11 @@ BA_TAKASHI_ONLY_TYPES = {"approval"}
 # ba-53: スレッドクローズの難易度別得点(週次得点で使う)。
 BA_DIFFICULTY_POINTS = {"low": 2, "normal": 5, "high": 10}
 BA_DEFAULT_DIFFICULTY = "normal"
+# ba-162: スレッド間の関連付け(redmine風の関連チケット)。voidと同じ「追記のみ・
+# 最新値が勝つ」設計にし、rel先はthreadIdでなく人間が呼ぶseq番号(relSeq)で指定する
+# (投稿側がthreadIdを調べずに済む)。存在しないseqへの誤参照はreact同様に許容し、
+# POSTのたびにテーブル全体を走査してseqの実在確認はしない。双方向表示・タイトル
+# プレビューの集約はthread-logic.js側のprojectionが担う。
 
 
 def _ba_entry_dict(e):
@@ -366,6 +371,17 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
                 status_code=400,
             )
         body = {**body, "difficulty": difficulty}
+
+    # ba-162: 関連付け(link)。relSeq(対象スレッドのseq番号)必須、valueは省略時true、
+    # falseなら「この(ref, relSeq)の組の関連付けを取り消す」を意味する(追記のみ)。
+    if entry_type == "link":
+        rel_seq = body.get("relSeq")
+        if not isinstance(rel_seq, int) or isinstance(rel_seq, bool) or rel_seq <= 0:
+            return func.HttpResponse(
+                "relSeq must be a positive integer",
+                status_code=400,
+            )
+        body = {**body, "value": body.get("value", True)}
 
     # 疎通確認用: dry_run=trueなら鍵・種別の検証だけ行い、台帳には書き込まない(ba-5)。
     if body.get("dry_run"):
