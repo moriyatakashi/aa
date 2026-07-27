@@ -44,3 +44,6 @@ categories:
       - code: bi
         desc: COBOL ミニインタプリタ
         href: src/bi/
+      - code: ro
+        desc: Roulette
+        href: ro.html
