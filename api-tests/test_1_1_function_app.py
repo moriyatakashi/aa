@@ -436,6 +436,75 @@ def test_ba_seq_counter_entity_not_exposed_in_get(google_auth_ok, tables):
     assert items[0]["type"] == "new"
 
 
+# ---- open/minimal GETフィルタ(ba-174: 全件取得コスト削減) -------------------
+
+def test_ba_get_open_filter_excludes_voided_thread(google_auth_ok, tables):
+    root = json.loads(fa.ba_log(make_request(
+        "POST", "ba", json_body={"credential": "token", "type": "new", "title": "t", "body": "b"},
+    )).get_body())
+    fa.ba_log(make_request(
+        "POST", "ba", json_body={"credential": "token", "type": "void", "ref": root["id"]},
+    ))
+
+    items = json.loads(fa.ba_log(make_request("GET", "ba", params={"open": "1"})).get_body())
+    assert items == []
+
+
+def test_ba_get_open_filter_excludes_closed_status_thread(google_auth_ok, tables):
+    root = json.loads(fa.ba_log(make_request(
+        "POST", "ba", json_body={"credential": "token", "type": "new", "title": "t", "body": "b"},
+    )).get_body())
+    fa.ba_log(make_request("POST", "ba", json_body={
+        "credential": "token", "type": "status", "status": "closed", "ref": root["id"],
+    }))
+
+    items = json.loads(fa.ba_log(make_request("GET", "ba", params={"open": "1"})).get_body())
+    assert items == []
+
+
+def test_ba_get_open_filter_keeps_open_thread_and_its_notes(google_auth_ok, tables):
+    root = json.loads(fa.ba_log(make_request(
+        "POST", "ba", json_body={"credential": "token", "type": "new", "title": "t", "body": "b"},
+    )).get_body())
+    fa.ba_log(make_request("POST", "ba", json_body={
+        "credential": "token", "type": "note", "ref": root["id"], "body": "n",
+    }))
+
+    items = json.loads(fa.ba_log(make_request("GET", "ba", params={"open": "1"})).get_body())
+    assert {e["type"] for e in items} == {"new", "note"}
+
+
+def test_ba_get_minimal_strips_body(google_auth_ok, tables):
+    fa.ba_log(make_request(
+        "POST", "ba",
+        json_body={"credential": "token", "type": "new", "title": "t", "body": "long body text"},
+    ))
+
+    items = json.loads(fa.ba_log(make_request("GET", "ba", params={"minimal": "1"})).get_body())
+    assert len(items) == 1
+    assert "body" not in items[0]
+    assert items[0]["title"] == "t"
+
+
+def test_ba_get_open_and_minimal_combine(google_auth_ok, tables):
+    root = json.loads(fa.ba_log(make_request(
+        "POST", "ba", json_body={"credential": "token", "type": "new", "title": "t", "body": "b"},
+    )).get_body())
+    other = json.loads(fa.ba_log(make_request(
+        "POST", "ba", json_body={"credential": "token", "type": "new", "title": "t2", "body": "b2"},
+    )).get_body())
+    fa.ba_log(make_request("POST", "ba", json_body={
+        "credential": "token", "type": "status", "status": "closed", "ref": other["id"],
+    }))
+
+    items = json.loads(fa.ba_log(make_request(
+        "GET", "ba", params={"open": "1", "minimal": "1"},
+    )).get_body())
+    assert len(items) == 1
+    assert items[0]["id"] == root["id"]
+    assert "body" not in items[0]
+
+
 def test_ba_post_note_uses_ref_as_partition(google_auth_ok, tables):
     new_req = make_request("POST", "ba", json_body={"credential": "token", "type": "new", "title": "t"})
     new_entry = json.loads(fa.ba_log(new_req).get_body())

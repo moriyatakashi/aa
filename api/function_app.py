@@ -540,6 +540,42 @@ def _ba_claude_lane(claude_key):
     return None
 
 
+def _truthy_param(value):
+    return (value or "").strip().lower() in ("1", "true", "yes")
+
+
+def _ba_open_thread_ids(items):
+    """void済み・status=closedでないスレッドのthreadId集合を返す。
+    rbook(run.py)の_ba_is_voided/_ba_current_statusと同じ判定ロジック
+    (voidはref/threadId両対応、statusはref指定のみ)をサーバー側に複製したもの。"""
+    news_tids = [e["threadId"] for e in items if e.get("type") == "new"]
+
+    voided = set()
+    for e in items:
+        if e.get("type") != "void":
+            continue
+        if e.get("ref"):
+            voided.add(e["ref"])
+        if e.get("threadId"):
+            voided.add(e["threadId"])
+
+    latest_status = {}
+    for e in items:
+        if e.get("type") != "status":
+            continue
+        tid = e.get("ref")
+        if not tid:
+            continue
+        created = e.get("createdAt", "")
+        if tid not in latest_status or created > latest_status[tid][0]:
+            latest_status[tid] = (created, e.get("status") or "open")
+
+    return {
+        tid for tid in news_tids
+        if tid not in voided and latest_status.get(tid, ("", "open"))[1] == "open"
+    }
+
+
 @app.function_name(name="ba-log")
 @app.route(route="ba", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
 def ba_log(req: func.HttpRequest) -> func.HttpResponse:
@@ -553,6 +589,16 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
             if e["PartitionKey"] != BA_SEQ_PARTITION
         ]
         items.sort(key=lambda x: x["createdAt"])
+
+        # ba-174: セッション開始時の全件取得コストを下げるための軽量モード。
+        # open=1はクローズ済みスレッド一式を除外(実測37%程度に縮小)、
+        # minimal=1はbodyを削る(同28.7%)。組み合わせると実測10.7%まで縮む。
+        if _truthy_param(req.params.get("open")):
+            open_ids = _ba_open_thread_ids(items)
+            items = [e for e in items if e.get("threadId") in open_ids]
+        if _truthy_param(req.params.get("minimal")):
+            items = [{k: v for k, v in e.items() if k != "body"} for e in items]
+
         return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
 
     body = _get_body(req)
