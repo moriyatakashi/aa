@@ -26,6 +26,35 @@
   .note-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 10px; background: var(--input-bg); color: var(--ink); }
   .btn-save-score { width: 100%; padding: 10px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-size: 0.95rem; }
   .score-saved { font-size: 0.78rem; color: var(--ink-soft); margin-top: 6px; text-align: center; min-height: 1.2em; }
+
+  /* be(スコア推移グラフ)統合分。summary-bar/statはsrc/common/ledger.cssから移植、
+     --paper-bandはbase.cssに無いためn1既存の--input-bgで代用する。 */
+  .chart-wrap { margin: 20px 0 4px; }
+  #scoreSvg { width: 100%; height: auto; display: block; overflow: visible; }
+  .gridline { stroke: var(--line); stroke-width: 1; }
+  .baseline { stroke: var(--ink-soft); stroke-width: 1; }
+  .axis-label { fill: var(--ink-soft); font-size: 11px; }
+  .score-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .score-area { fill: var(--accent); opacity: 0.12; }
+  .score-dot { fill: var(--paper); stroke: var(--accent); stroke-width: 2; }
+  .crosshair { stroke: var(--ink-soft); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; pointer-events: none; }
+  .hit-area { fill: transparent; }
+  .summary-bar {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 8px;
+    overflow: hidden; margin: 0 0 20px;
+  }
+  .stat { background: var(--input-bg); padding: 10px 12px; text-align: center; }
+  .stat-num { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; font-size: 1.2rem; font-weight: 700; }
+  .stat-label { font-size: 0.62rem; color: var(--ink-soft); margin-top: 2px; }
+  .score-tooltip {
+    position: absolute; pointer-events: none; background: var(--input-bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
+    font-size: 0.78rem; color: var(--ink); opacity: 0; transition: opacity 0.08s ease;
+    white-space: nowrap;
+  }
+  .score-tooltip .t-date { color: var(--ink-soft); font-size: 0.68rem; margin-bottom: 2px; }
+  .score-tooltip .t-score { font-weight: 700; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -78,10 +107,23 @@
       <div class="score-saved" id="ruleSaved"></div>
     </div>
 
+    <div id="scoreChartSection" style="display:none;">
+      <div class="chart-wrap">
+        <svg id="scoreSvg" viewBox="0 0 680 300"></svg>
+      </div>
+      <div class="summary-bar">
+        <div class="stat"><div class="stat-num" id="statLatest">—</div><div class="stat-label">最新</div></div>
+        <div class="stat"><div class="stat-num" id="statAvg">—</div><div class="stat-label">平均</div></div>
+        <div class="stat"><div class="stat-num" id="statMax">—</div><div class="stat-label">最高</div></div>
+        <div class="stat"><div class="stat-num" id="statMin">—</div><div class="stat-label">最低</div></div>
+      </div>
+    </div>
+
     <p id="loadStatus">読み込み中...</p>
     <div id="list"></div>
     <p class="empty" id="emptyMsg" style="display:none;">記録はまだありません</p>
   </div>
+  <div class="score-tooltip" id="scoreTooltip"></div>
 
   <script>window.AA_AUTH_EVENT = "n1-login-success"; window.AA_PUBLIC_VIEW = true;</script>
   <script src="../common/auth.js?v=202607201000"></script>
