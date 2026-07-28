@@ -808,6 +808,86 @@ def test_weekly_scores_recalculate_persists_and_shows_in_list(google_auth_ok, ta
     assert json.loads(item_resp.get_body())["calculatedAt"] is not None
 
 
+def test_weekly_scores_dedupes_duplicate_close_without_reopen(tables):
+    # ba-109の実インシデント再現: 同じスレッドが間にopenを挟まず誤って2回closeされても
+    # 1回分しか数えない(2026-07-26発見、修正前は+5点分過大計上していた)。
+    thread_id = "thread-dup-close"
+    ba_table = fa._table_client("BaLog")
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id, "By": "takashi", "Ref": "", "Type": "new",
+        "Data": json.dumps({"title": "t", "difficulty": "normal"}), "CreatedAt": "2026-07-15T03:00:00+00:00", "Seq": 1,
+    })
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id + "-close1", "By": "claude-pc", "Ref": thread_id,
+        "Type": "status", "Data": json.dumps({"status": "closed"}), "CreatedAt": "2026-07-15T03:00:00+00:00",
+    })
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id + "-close2", "By": "claude-pc", "Ref": thread_id,
+        "Type": "status", "Data": json.dumps({"status": "closed"}), "CreatedAt": "2026-07-15T03:00:36+00:00",
+    })
+
+    resp = fa.weekly_scores_item(
+        make_request("GET", "weekly-scores/2026-W29", route_params={"week_key": "2026-W29"})
+    )
+    body = json.loads(resp.get_body())
+    assert body["closeCount"] == 1
+    assert body["closeValue"] == 5
+
+
+def test_weekly_scores_counts_close_again_after_reopen(tables):
+    # 間にopen(再オープン)を挟んだ2回目のcloseは、重複ではなく正当な追加イベントとして数える。
+    thread_id = "thread-reopen-close"
+    ba_table = fa._table_client("BaLog")
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id, "By": "takashi", "Ref": "", "Type": "new",
+        "Data": json.dumps({"title": "t", "difficulty": "normal"}), "CreatedAt": "2026-07-15T03:00:00+00:00", "Seq": 1,
+    })
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id + "-close1", "By": "takashi", "Ref": thread_id,
+        "Type": "status", "Data": json.dumps({"status": "closed"}), "CreatedAt": "2026-07-15T03:00:00+00:00",
+    })
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id + "-reopen", "By": "takashi", "Ref": thread_id,
+        "Type": "status", "Data": json.dumps({"status": "open"}), "CreatedAt": "2026-07-16T03:00:00+00:00",
+    })
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id + "-close2", "By": "takashi", "Ref": thread_id,
+        "Type": "status", "Data": json.dumps({"status": "closed"}), "CreatedAt": "2026-07-17T03:00:00+00:00",
+    })
+
+    resp = fa.weekly_scores_item(
+        make_request("GET", "weekly-scores/2026-W29", route_params={"week_key": "2026-W29"})
+    )
+    body = json.loads(resp.get_body())
+    assert body["closeCount"] == 2
+    assert body["closeValue"] == 10
+
+
+def test_weekly_scores_excludes_voided_thread(tables):
+    # voidされたスレッドのcloseは週次得点に一切数えない(ba-109で見つかったcalc側の未対応)。
+    thread_id = "thread-voided"
+    ba_table = fa._table_client("BaLog")
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id, "By": "takashi", "Ref": "", "Type": "new",
+        "Data": json.dumps({"title": "t", "difficulty": "high"}), "CreatedAt": "2026-07-15T03:00:00+00:00", "Seq": 1,
+    })
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id + "-close", "By": "takashi", "Ref": thread_id,
+        "Type": "status", "Data": json.dumps({"status": "closed"}), "CreatedAt": "2026-07-15T03:00:00+00:00",
+    })
+    ba_table.upsert_entity({
+        "PartitionKey": thread_id, "RowKey": thread_id + "-void", "By": "takashi", "Ref": thread_id,
+        "Type": "void", "Data": json.dumps({"value": True}), "CreatedAt": "2026-07-15T04:00:00+00:00",
+    })
+
+    resp = fa.weekly_scores_item(
+        make_request("GET", "weekly-scores/2026-W29", route_params={"week_key": "2026-W29"})
+    )
+    body = json.loads(resp.get_body())
+    assert body["closeCount"] == 0
+    assert body["closeValue"] == 0
+
+
 # ---- last-updated (ba-69: last-updated.js用のGitHub APIプロキシ) -------
 
 class FakeGithubCommitsResponse:

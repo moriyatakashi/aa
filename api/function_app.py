@@ -853,6 +853,43 @@ def scoring_rules(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse(json.dumps(_scoring_rule_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
 
 
+def _ba_close_transitions(ba_table):
+    """ba-109: スレッドごとのstatus履歴を辿り、「非closeからcloseへ転じた瞬間」だけを
+    close確定イベントとして抽出する。同じスレッドが間にopen(再オープン)を挟まず連続で
+    複数回closeされても(2026-07-26に実際発生した誤投稿・重複close)、2回目以降は数えない。
+    voidされたスレッドのcloseは(スレッド単位で)一切数えない。
+    戻り値: [(thread_id, closeエントリのCreatedAt文字列), ...]"""
+    statuses_by_thread = {}
+    voided_threads = set()
+    for e in ba_table.list_entities():
+        etype = e.get("Type")
+        if etype == "void":
+            voided_threads.add(e["PartitionKey"])
+            if e.get("Ref"):
+                voided_threads.add(e["Ref"])
+        elif etype == "status":
+            data = json.loads(e.get("Data") or "{}")
+            status = data.get("status")
+            if not status:
+                continue
+            statuses_by_thread.setdefault(e["PartitionKey"], []).append((e.get("CreatedAt", ""), status))
+
+    transitions = []
+    for thread_id, records in statuses_by_thread.items():
+        if thread_id in voided_threads:
+            continue
+        records.sort(key=lambda r: r[0])
+        was_closed = False
+        for created_at, status in records:
+            if status == "closed":
+                if not was_closed:
+                    transitions.append((thread_id, created_at))
+                was_closed = True
+            else:
+                was_closed = False
+    return transitions
+
+
 def _calc_weekly_score(iso_year, iso_week):
     """指定週の週次得点を、Scores(毎日スコア)とBaLog(クローズ)から都度計算する。
     永続化はせず、呼び出し元(GET detailまたはrecalculate)が必要に応じて保存する。"""
@@ -880,20 +917,14 @@ def _calc_weekly_score(iso_year, iso_week):
     close_count = 0
     close_value = 0
     close_value_as_of_latest = 0
-    for e in ba_table.list_entities():
-        if e.get("Type") != "status":
-            continue
-        data = json.loads(e.get("Data") or "{}")
-        if data.get("status") != "closed":
-            continue
+    for thread_id, created_at_str in _ba_close_transitions(ba_table):
         try:
-            created_at = datetime.fromisoformat(e.get("CreatedAt", ""))
+            created_at = datetime.fromisoformat(created_at_str)
         except ValueError:
             continue
         if not (start_utc <= created_at < end_utc):
             continue
 
-        thread_id = e["PartitionKey"]
         difficulty = BA_DEFAULT_DIFFICULTY
         try:
             root = ba_table.get_entity(partition_key=thread_id, row_key=thread_id)
