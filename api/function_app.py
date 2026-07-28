@@ -465,7 +465,7 @@ def scores_item(req: func.HttpRequest) -> func.HttpResponse:
 # スマホ/PCで別鍵にし、"実機/実ブラウザで確認できた"ことを主張する種別
 # (verified_on_device)だけはPCレーンのみ書き込み可にする。
 BA_TABLE = "BaLog"
-BA_HUMAN_ALLOWED_TYPES = {"new", "note", "void", "status", "approval", "correction", "react", "link"}
+BA_HUMAN_ALLOWED_TYPES = {"new", "note", "void", "status", "approval", "correction", "react", "link", "gist"}
 BA_DEVICE_VERIFIED_TYPES = {"verified_on_device"}
 # ba-77: 承認キュー。claudeレーンがproposeFor:"takashi"付きで投函した提案を、
 # takashi本人(人間レーン、実ログイン)だけが承認できるようにする。新しい秘密は増やさない。
@@ -487,6 +487,9 @@ BA_DEFAULT_DIFFICULTY = "normal"
 # (投稿側がthreadIdを調べずに済む)。存在しないseqへの誤参照はreact同様に許容し、
 # POSTのたびにテーブル全体を走査してseqの実在確認はしない。双方向表示・タイトル
 # プレビューの集約はthread-logic.js側のprojectionが担う。
+# gist: 確定仕様スレッドに「今の結論」を一言(200字以内)で持たせる種別。correction/statusと
+# 同じ「追記のみ・最新のtextが勝つ」設計。分類(確定仕様)に関わらず投稿・計算は無条件に行い、
+# 「確定仕様の時だけ意味を持つ」という制約は表示側(ba/bb/rbook)の判断に任せる。
 
 
 def _ba_entry_dict(e):
@@ -542,6 +545,26 @@ def _ba_claude_lane(claude_key):
 
 def _truthy_param(value):
     return (value or "").strip().lower() in ("1", "true", "yes")
+
+
+def _require_existing_root(table, entry_type, ref):
+    """rootless防止(ba-72/ba-101、gist追加でstatus専用から汎用化): refが
+    既存スレッドのroot(PartitionKey=RowKey=ref)を指していることを確認する。
+    問題なければNone、問題があれば返すべきHttpResponseを返す。"""
+    if ref:
+        try:
+            table.get_entity(partition_key=ref, row_key=ref)
+            return None
+        except ResourceNotFoundError:
+            pass
+    return func.HttpResponse(
+        json.dumps(
+            {"error": f"{entry_type}のref先スレッドが存在しません(rootless防止)", "ref": ref},
+            ensure_ascii=False,
+        ),
+        status_code=400,
+        mimetype="application/json",
+    )
 
 
 def _ba_open_thread_ids(items):
@@ -650,6 +673,14 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
             )
         body = {**body, "value": body.get("value", True)}
 
+    if entry_type == "gist":
+        text = (body.get("text") or "").strip()
+        if not text:
+            return func.HttpResponse("text is required", status_code=400)
+        if len(text) > 200:
+            return func.HttpResponse("text must be 200 characters or fewer", status_code=400)
+        body = {**body, "text": text}
+
     # 疎通確認用: dry_run=trueなら鍵・種別の検証だけ行い、台帳には書き込まない(ba-5)。
     if body.get("dry_run"):
         return func.HttpResponse(
@@ -661,27 +692,14 @@ def ba_log(req: func.HttpRequest) -> func.HttpResponse:
     if entry_type == "new":
         ref = ""  # newは常に新規スレッドの起点にする
 
-    # rootless close 防止(ba-72/ba-101): statusは必ず既存スレッドのroot
-    # (PartitionKey=RowKey=ref)を指していなければならない。スタレ/破損refのstatusを
-    # 通すと孤立エントリ(rootless)ができ、_calc_weekly_scoreのクローズ集計が静かにズレる。
+    # rootless防止(ba-72/ba-101、gist追加でstatus専用から汎用化): statusやgistは必ず
+    # 既存スレッドのroot(PartitionKey=RowKey=ref)を指していなければならない。スタレ/破損refを
+    # 通すと孤立エントリ(rootless)ができ、_calc_weekly_scoreのクローズ集計等が静かにズレる。
     # 発生源で拒否する。
-    if entry_type == "status":
-        root_exists = False
-        if ref:
-            try:
-                table.get_entity(partition_key=ref, row_key=ref)
-                root_exists = True
-            except ResourceNotFoundError:
-                root_exists = False
-        if not root_exists:
-            return func.HttpResponse(
-                json.dumps(
-                    {"error": "statusのref先スレッドが存在しません(rootless close防止)", "ref": ref},
-                    ensure_ascii=False,
-                ),
-                status_code=400,
-                mimetype="application/json",
-            )
+    if entry_type in ("status", "gist"):
+        err = _require_existing_root(table, entry_type, ref)
+        if err:
+            return err
 
     now = datetime.now(timezone.utc)
     entry_id = now.strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:8]

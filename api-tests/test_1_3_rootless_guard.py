@@ -40,3 +40,28 @@ def test_status_without_ref_rejected(monkeypatch, tables):
         "claude_key": "pc-secret", "type": "status", "status": "closed",
     }))
     assert resp.status_code == 400
+
+
+def test_gist_with_valid_ref_succeeds(monkeypatch, tables):
+    monkeypatch.setenv("BA_CLAUDE_KEY_PC", "pc-secret")
+    root = _new_root()
+    resp = fa.ba_log(make_request("POST", "ba", json_body={
+        "claude_key": "pc-secret", "type": "gist", "text": "結論はこう", "ref": root["id"],
+    }))
+    assert resp.status_code == 201
+
+
+def test_gist_with_unknown_ref_rejected(monkeypatch, tables):
+    monkeypatch.setenv("BA_CLAUDE_KEY_PC", "pc-secret")
+    resp = fa.ba_log(make_request("POST", "ba", json_body={
+        "claude_key": "pc-secret", "type": "gist", "text": "結論はこう", "ref": "20260723T183007",
+    }))
+    assert resp.status_code == 400
+
+
+def test_gist_without_ref_rejected(monkeypatch, tables):
+    monkeypatch.setenv("BA_CLAUDE_KEY_PC", "pc-secret")
+    resp = fa.ba_log(make_request("POST", "ba", json_body={
+        "claude_key": "pc-secret", "type": "gist", "text": "結論はこう",
+    }))
+    assert resp.status_code == 400

@@ -42,6 +42,10 @@ export function groupThreads(items) {
     let status = "open";
     let displayTitle = root.title;
     let titleCorrected = false;
+    // gist: 確定仕様スレッドの「今の結論」一言(200字以内)。correction/statusと同じ
+    // 「追記のみ・最新が勝つ」。分類に関わらず無条件に計算し、確定仕様の時だけ意味を
+    // 持つという制約は表示側(threadCardHtml)に任せる。
+    let gist = null;
     // ba-162: 関連付け(link)。追記のみ・(このスレッド, relSeq)の組ごとに最新のvalueが勝つ
     // (voidと同じ「後勝ち」)。ここでは自スレッドが指す先(前方向)だけを集め、双方向化は
     // 全スレッド構築後の2パス目でまとめて行う。
@@ -53,6 +57,7 @@ export function groupThreads(items) {
       if (e.type === "status" && e.status) status = e.status;
       // タイトル訂正(有事用): titleを持つcorrectionが見出し表示だけを上書きする(最新優先)
       if (e.type === "correction" && e.title) { displayTitle = e.title; titleCorrected = true; }
+      if (e.type === "gist" && e.text) gist = e.text;
       if (e.type === "link" && Number.isInteger(e.relSeq)) linkValueBySeq.set(e.relSeq, e.value !== false);
     });
     const forwardRelSeqs = [...linkValueBySeq.entries()].filter(([, v]) => v).map(([seq]) => seq);
@@ -73,7 +78,7 @@ export function groupThreads(items) {
     // 両視点そろって無効のときも既定で隠す
     const hiddenVoid = isRootless || (voidView.claude === true && voidView.takashi === true);
 
-    threads.push({ threadId, root, children, entries, voidView, priorityByLane, reactByLane, status, displayTitle, titleCorrected, hiddenVoid, cls, clsVia, forwardRelSeqs });
+    threads.push({ threadId, root, children, entries, voidView, priorityByLane, reactByLane, status, displayTitle, titleCorrected, gist, hiddenVoid, cls, clsVia, forwardRelSeqs });
   });
 
   // ba-162 projection: 双方向の関連付けとタイトルプレビューをここでまとめて計算する。
@@ -125,11 +130,13 @@ export function projectThreads(items) {
     let status = "open";
     let displayTitle = root.title;
     let cls = null;
+    let gist = null; // 確定仕様の「今の結論」一言(ba側と同じ計算、gist型entryの最新text)
     let latestText = null; // 現在形 = 最新の実質記述(new/note/correctionのbody)
     entries.forEach((e) => {
       if (e.type === "void" && e.by) voidView[e.by.startsWith("claude") ? "claude" : "takashi"] = !!e.value;
       if (e.type === "status" && e.status) status = e.status;
       if (e.type === "correction" && e.title) displayTitle = e.title;
+      if (e.type === "gist" && e.text) gist = e.text;
       if (e.type === "new" || e.type === "note" || e.type === "correction") {
         const found = findClassification(e.tags);
         if (found) cls = found;
@@ -141,7 +148,7 @@ export function projectThreads(items) {
     const isRootless = root.type !== "new";
     const hiddenVoid = isRootless || (voidView.claude === true && voidView.takashi === true);
     const lastAt = entries[entries.length - 1].createdAt;
-    threads.push({ threadId, root, status, displayTitle, cls, hiddenVoid, latestText, lastAt, count: entries.length });
+    threads.push({ threadId, root, status, displayTitle, cls, gist, hiddenVoid, latestText, lastAt, count: entries.length });
   });
 
   threads.sort((a, b) => b.lastAt.localeCompare(a.lastAt));
@@ -152,6 +159,7 @@ export function projectThreads(items) {
 export function entryTypeLabel(e) {
   if (e.type === "void") return `void = ${e.value ? "true" : "false"}`;
   if (e.type === "status") return `status → ${e.status || ""}`;
+  if (e.type === "gist") return `gist → ${e.text || ""}`;
   if (e.type === "priority") return `priority`;
   if (e.type === "verified_on_device") return `verified on device`;
   if (e.type === "approval") return `approval`;

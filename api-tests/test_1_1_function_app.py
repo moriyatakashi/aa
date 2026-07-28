@@ -386,6 +386,57 @@ def test_ba_link_rejects_non_positive_relseq(google_auth_ok, tables):
     assert fa.ba_log(req).status_code == 400
 
 
+# ---- gist(ba-175: 確定仕様スレッドの「今の結論」一言) ------------------------
+
+def test_ba_post_human_lane_can_write_gist(google_auth_ok, tables):
+    root = json.loads(fa.ba_log(make_request(
+        "POST", "ba", json_body={"credential": "token", "type": "new", "title": "t", "body": "b"},
+    )).get_body())
+    req = make_request(
+        "POST", "ba",
+        json_body={"credential": "token", "type": "gist", "ref": root["id"], "text": "結論はこう"},
+    )
+    resp = fa.ba_log(req)
+    assert resp.status_code == 201
+    body = json.loads(resp.get_body())
+    assert body["by"] == "takashi"
+    assert body["text"] == "結論はこう"
+
+
+def test_ba_post_claude_pc_lane_can_write_gist(monkeypatch, tables):
+    monkeypatch.setenv("BA_CLAUDE_KEY_PC", "pc-secret")
+    root = json.loads(fa.ba_log(make_request(
+        "POST", "ba",
+        json_body={"claude_key": "pc-secret", "type": "new", "title": "t", "body": "b"},
+    )).get_body())
+    req = make_request(
+        "POST", "ba",
+        json_body={"claude_key": "pc-secret", "type": "gist", "ref": root["id"], "text": "結論はこう"},
+    )
+    resp = fa.ba_log(req)
+    assert resp.status_code == 201
+    assert json.loads(resp.get_body())["by"] == "claude-pc"
+
+
+def test_ba_gist_rejects_missing_text(google_auth_ok, tables):
+    root = json.loads(fa.ba_log(make_request(
+        "POST", "ba", json_body={"credential": "token", "type": "new", "title": "t", "body": "b"},
+    )).get_body())
+    req = make_request("POST", "ba", json_body={"credential": "token", "type": "gist", "ref": root["id"]})
+    assert fa.ba_log(req).status_code == 400
+
+
+def test_ba_gist_rejects_text_over_max_length(google_auth_ok, tables):
+    root = json.loads(fa.ba_log(make_request(
+        "POST", "ba", json_body={"credential": "token", "type": "new", "title": "t", "body": "b"},
+    )).get_body())
+    req = make_request(
+        "POST", "ba",
+        json_body={"credential": "token", "type": "gist", "ref": root["id"], "text": "あ" * 201},
+    )
+    assert fa.ba_log(req).status_code == 400
+
+
 def test_ba_post_dry_run_does_not_persist(google_auth_ok, tables):
     req = make_request(
         "POST", "ba",
