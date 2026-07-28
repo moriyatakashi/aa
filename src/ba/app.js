@@ -95,6 +95,7 @@ function threadCardHtml(thread) {
           <span class="thread-title">${esc(title)}</span>
           ${thread.titleCorrected ? `<span class="title-corrected-chip">タイトル訂正済</span>` : ""}
         </div>
+        ${thread.gist ? `<div class="thread-gist">${esc(thread.gist)}</div>` : ""}
         <div class="meta-row">${tagsHtml}${ghHtml}</div>
         ${perspectiveRowHtml(thread.voidView)}
         ${reactRowHtml(thread.reactByLane)}

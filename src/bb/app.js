@@ -16,6 +16,7 @@ function itemHtml(t) {
   const isOpen = t.status === "open";
   const tags = filterFreeTags(t.root.tags);
   const excerpt = t.latestText ? esc(t.latestText.length > 120 ? t.latestText.slice(0, 120) + "…" : t.latestText) : "";
+  const gistHtml = t.gist ? `<div class="bb-gist">${esc(t.gist)}</div>` : "";
   return `
     <div class="bb-item">
       <div class="bb-item-top">
@@ -24,6 +25,7 @@ function itemHtml(t) {
         <span class="bb-item-title">${esc(t.displayTitle || "(無題)")}</span>
       </div>
       <div class="bb-item-sub">${tags.map((x) => `<span class="tag">#${esc(x)}</span>`).join(" ")} 最終更新 ${fmtTs(t.lastAt)} / ${t.count}件</div>
+      ${gistHtml}
       ${excerpt ? `<div class="bb-latest">${excerpt}</div>` : ""}
     </div>`;
 }
