@@ -178,37 +178,57 @@
     }
 
     .wheel-container {
-      perspective: 1000px;
-      margin: 20px 0;
+      position: relative;
+      width: 240px;
+      margin: 20px auto;
     }
 
-    .wheel {
-      width: 200px;
-      height: 200px;
+    .wheel-pointer {
+      position: absolute;
+      top: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 28px;
+      line-height: 1;
+      z-index: 2;
+      color: #e74c3c;
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
+    }
+
+    .wheel-svg {
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      box-shadow: 0 0 0 6px #4a90e2;
+      transform: rotate(0deg);
+    }
+
+    .wheel-svg.spinning {
+      transition: transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+    }
+
+    .wheel-svg .wedge-label {
+      font-size: 11px;
+      fill: white;
+      font-weight: 500;
+    }
+
+    .wheel-svg .wedge.winner {
+      stroke: #fff;
+      stroke-width: 3;
+    }
+
+    .wheel-empty {
+      width: 240px;
+      height: 240px;
       margin: 0 auto;
       border-radius: 50%;
-      border: 8px solid #4a90e2;
+      border: 6px solid #4a90e2;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
-      font-weight: bold;
-      color: white;
+      font-size: 40px;
       background: #4a90e2;
-      transition: transform 0.1s;
-      word-wrap: break-word;
-      word-break: break-word;
-      padding: 20px;
-      overflow: hidden;
-    }
-
-    .wheel.spinning {
-      animation: spin 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    }
-
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
     }
 
     .result {
@@ -322,7 +342,11 @@
 
     <div class="roulette-section">
       <div class="wheel-container">
-        <div class="wheel" id="wheel">🎡</div>
+        <div class="wheel-pointer">▼</div>
+        <svg id="wheelSvg" class="wheel-svg" viewBox="0 0 240 240" style="display:none;">
+          <g id="wheelGroup"></g>
+        </svg>
+        <div class="wheel-empty" id="wheelEmpty">🎡</div>
       </div>
       <div class="result">
         <div class="result-text" id="resultText">入力して回転を押してください</div>
@@ -344,8 +368,14 @@
 
   <script>
     const STORAGE_KEY = 'roulette_items';
+    // 扇形1つあたりの色。項目数がこれより多い場合は先頭から繰り返す。
+    const WEDGE_COLORS = ['#4a90e2', '#e67e22', '#2ecc71', '#e74c3c', '#9b59b6', '#1abc9c', '#f1c40f', '#34495e'];
+    const WHEEL_CX = 120, WHEEL_CY = 120, WHEEL_R = 118;
+    const SPIN_DURATION_MS = 3000;
+
     let items = [];
     let isSpinning = false;
+    let currentRotation = 0; // 累積回転角(度)。次の回転は必ずこれより先に進める(逆回転しない)。
 
     function loadItems() {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -357,10 +387,68 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     }
 
+    // 円周上の角度(0度=真上、時計回り)から、SVG座標系の点を返す。
+    function pointOnCircle(angleDeg, r) {
+      const rad = (angleDeg - 90) * Math.PI / 180;
+      return { x: WHEEL_CX + r * Math.cos(rad), y: WHEEL_CY + r * Math.sin(rad) };
+    }
+
+    function wedgePath(startAngle, endAngle) {
+      const start = pointOnCircle(startAngle, WHEEL_R);
+      const end = pointOnCircle(endAngle, WHEEL_R);
+      const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
+      return `M ${WHEEL_CX} ${WHEEL_CY} L ${start.x} ${start.y} A ${WHEEL_R} ${WHEEL_R} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+    }
+
+    // 項目数ぶんの扇形(wedge)+ラベルをSVGへ描画する。バグ①②(3つ入れても扇形が3つに
+    // ならず、回転はするが見た目がルーレットにならない)の対応: 以前は単一の円div+
+    // 一律360度の見た目だけの回転で、項目数に応じた扇形を一切描いていなかった。
+    function renderWheel() {
+      const svg = document.getElementById('wheelSvg');
+      const empty = document.getElementById('wheelEmpty');
+      const group = document.getElementById('wheelGroup');
+      group.innerHTML = '';
+
+      if (items.length === 0) {
+        svg.style.display = 'none';
+        empty.style.display = 'flex';
+        return;
+      }
+      svg.style.display = '';
+      empty.style.display = 'none';
+
+      const segmentAngle = 360 / items.length;
+      items.forEach((item, idx) => {
+        const startAngle = idx * segmentAngle;
+        const endAngle = startAngle + segmentAngle;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', wedgePath(startAngle, endAngle));
+        path.setAttribute('fill', WEDGE_COLORS[idx % WEDGE_COLORS.length]);
+        path.setAttribute('stroke', 'rgba(255,255,255,0.5)');
+        path.setAttribute('stroke-width', '1');
+        path.dataset.idx = idx;
+        path.classList.add('wedge');
+        group.appendChild(path);
+
+        // ラベルは扇形の中心角・8割の半径あたりに、外向きに回転させて置く。
+        const labelAngle = startAngle + segmentAngle / 2;
+        const labelPos = pointOnCircle(labelAngle, WHEEL_R * 0.62);
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', labelPos.x);
+        text.setAttribute('y', labelPos.y);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('transform', `rotate(${labelAngle}, ${labelPos.x}, ${labelPos.y})`);
+        text.classList.add('wedge-label');
+        text.textContent = item.length > 8 ? item.slice(0, 7) + '…' : item;
+        group.appendChild(text);
+      });
+    }
+
     function updateDisplay() {
       const textarea = document.getElementById('itemInput');
       textarea.value = items.join('\n');
-      
+
       const itemsList = document.getElementById('itemsList');
       if (items.length === 0) {
         itemsList.innerHTML = '<div class="empty-state">項目を入力してください</div>';
@@ -372,6 +460,7 @@
           </div>
         `).join('');
       }
+      renderWheel();
     }
 
     function updateItemsFromTextarea() {
@@ -392,7 +481,7 @@
 
     function spinRoulette() {
       updateItemsFromTextarea();
-      
+
       if (items.length === 0) {
         alert('項目を入力してください');
         return;
@@ -401,31 +490,42 @@
       if (isSpinning) return;
       isSpinning = true;
 
-      const wheel = document.getElementById('wheel');
+      const svg = document.getElementById('wheelSvg');
       const resultText = document.getElementById('resultText');
-      
-      wheel.classList.remove('spinning');
-      void wheel.offsetWidth;
-      wheel.classList.add('spinning');
-
-      const spinCount = Math.floor(Math.random() * items.length) + items.length * 5;
       const selectedIdx = Math.floor(Math.random() * items.length);
-      
+
+      // ポインタ(真上・0度)に選ばれた扇形の中心が来るよう、回転角を厳密に計算する。
+      // 見た目の派手さのため5周分を上乗せしつつ、常に「今より先」へ回す(巻き戻さない)。
+      const segmentAngle = 360 / items.length;
+      const targetCenter = (selectedIdx + 0.5) * segmentAngle;
+      const desiredMod360 = (360 - targetCenter) % 360;
+      const extraSpins = 5;
+      const delta = ((desiredMod360 - currentRotation) % 360 + 360) % 360;
+      currentRotation = currentRotation + extraSpins * 360 + delta;
+
+      svg.classList.add('spinning');
+      svg.style.transform = `rotate(${currentRotation}deg)`;
+
       setTimeout(() => {
-        wheel.classList.remove('spinning');
-        wheel.textContent = items[selectedIdx];
+        svg.classList.remove('spinning');
+        document.querySelectorAll('.wedge').forEach(w => w.classList.remove('winner'));
+        const winnerWedge = svg.querySelector(`.wedge[data-idx="${selectedIdx}"]`);
+        if (winnerWedge) winnerWedge.classList.add('winner');
         resultText.textContent = `🎉 ${items[selectedIdx]}`;
         isSpinning = false;
-      }, 800);
+      }, SPIN_DURATION_MS);
     }
 
     function clearItems() {
       if (confirm('すべての項目を削除しますか？')) {
         items = [];
+        currentRotation = 0;
         saveItems();
         updateDisplay();
         document.getElementById('resultText').textContent = '入力して回転を押してください';
-        document.getElementById('wheel').textContent = '🎡';
+        const svg = document.getElementById('wheelSvg');
+        svg.classList.remove('spinning');
+        svg.style.transform = 'rotate(0deg)';
       }
     }
 
