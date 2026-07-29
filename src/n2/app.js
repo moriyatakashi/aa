@@ -130,6 +130,9 @@ function initVisitInput() {
   elTimeInput.value = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
 
   let _lat = null, _lng = null;
+  // ba-165②(2026-07-29): 逆ジオコーディング結果のうち県/市/町の3階層を別フィールドとして
+  // 保持しておき、visits POST時にそのまま送る(自動加点の判定に使うのはbackend側)。
+  let _pref = null, _city = null, _town = null;
 
   elBtnGps.addEventListener("click", () => {
     if (!navigator.geolocation) { alert("位置情報非対応"); return; }
@@ -143,10 +146,13 @@ function initVisitInput() {
         );
         const data = await res.json();
         const addr = data.address;
-        const place = [addr.city || addr.town || addr.village, addr.suburb || addr.neighbourhood || addr.quarter]
-          .filter(Boolean).join(" ");
+        _pref = addr.state || addr.province || null;
+        _city = addr.city || addr.town || addr.village || null;
+        _town = addr.suburb || addr.neighbourhood || addr.quarter || null;
+        const place = [_city, _town].filter(Boolean).join(" ");
         elPlaceInput.value = place || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
       } catch {
+        _pref = _city = _town = null;
         elPlaceInput.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
       }
       elBtnGps.textContent = "📍 現在地";
@@ -172,13 +178,18 @@ function initVisitInput() {
       const res = await fetch(VISITS_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(withCredential({ place, date, time, lat: _lat, lng: _lng })),
+        body: JSON.stringify(withCredential({
+          place, date, time, lat: _lat, lng: _lng,
+          pref: _pref, city: _city, town: _town,
+        })),
       });
       if (!res.ok) { elStatus.textContent = "エラー: 追加に失敗しました"; return; }
+      const saved = await res.json();
       elPlaceInput.value = "";
-      _lat = null; _lng = null;
-      elStatus.textContent = "✓ 追加しました";
-      setTimeout(() => elStatus.textContent = "", 2000);
+      _lat = null; _lng = null; _pref = null; _city = null; _town = null;
+      const granLabel = { pref: "県", city: "市", town: "町" }[saved.autoPointGranularity];
+      elStatus.textContent = granLabel ? `✓ 追加しました(初${granLabel}で自動加点)` : "✓ 追加しました";
+      setTimeout(() => elStatus.textContent = "", 3000);
       load();
     } catch (e) {
       elStatus.textContent = "エラー: " + e.message;

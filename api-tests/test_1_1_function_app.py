@@ -101,7 +101,85 @@ def test_visits_post_creates_entity(google_auth_ok, tables):
     assert body["lat"] == 34.68
 
 
-# ---- points (ba-165: 加点軸の拡張) ------------------------------------------
+# ---- visits: ba-165②(初登録の自動加点、県>市>町) ------------------------------
+
+def test_visits_first_pref_awards_high_point_event(google_auth_ok, tables):
+    req = make_request("POST", "visits", json_body={
+        "credential": "token", "place": "梅田", "pref": "大阪府", "city": "大阪市",
+    })
+    resp = fa.visits(req)
+    body = json.loads(resp.get_body())
+    assert body["autoPointGranularity"] == "pref"
+
+    points = json.loads(fa.points(make_request("GET", "points")).get_body())
+    assert len(points) == 1
+    assert points[0]["points"] == 10  # high
+    assert points[0]["catalogId"] == "visit_new"
+
+
+def test_visits_repeat_pref_new_city_awards_normal_point_event(google_auth_ok, tables):
+    fa.visits(make_request("POST", "visits", json_body={
+        "credential": "token", "place": "梅田", "pref": "大阪府", "city": "大阪市",
+    }))
+    resp = fa.visits(make_request("POST", "visits", json_body={
+        "credential": "token", "place": "東大阪", "pref": "大阪府", "city": "東大阪市",
+    }))
+    body = json.loads(resp.get_body())
+    assert body["autoPointGranularity"] == "city"  # 県は既訪問なので市判定に落ちる
+
+    points = json.loads(fa.points(make_request("GET", "points")).get_body())
+    assert len(points) == 2
+    assert points[1]["points"] == 5  # normal
+
+
+def test_visits_repeat_pref_and_city_awards_low_point_event_for_new_town(google_auth_ok, tables):
+    fa.visits(make_request("POST", "visits", json_body={
+        "credential": "token", "place": "梅田", "pref": "大阪府", "city": "大阪市", "town": "梅田",
+    }))
+    resp = fa.visits(make_request("POST", "visits", json_body={
+        "credential": "token", "place": "難波", "pref": "大阪府", "city": "大阪市", "town": "難波",
+    }))
+    body = json.loads(resp.get_body())
+    assert body["autoPointGranularity"] == "town"
+
+    points = json.loads(fa.points(make_request("GET", "points")).get_body())
+    assert points[1]["points"] == 2  # low
+
+
+def test_visits_fully_repeat_location_awards_no_point_event(google_auth_ok, tables):
+    kwargs = {"credential": "token", "place": "梅田", "pref": "大阪府", "city": "大阪市", "town": "梅田"}
+    fa.visits(make_request("POST", "visits", json_body=kwargs))
+    fa.visits(make_request("POST", "visits", json_body=dict(kwargs, place="梅田(2回目)")))
+
+    points = json.loads(fa.points(make_request("GET", "points")).get_body())
+    assert len(points) == 1  # 1回目の分だけ
+
+
+def test_visits_without_pref_city_town_awards_no_point_event(google_auth_ok, tables):
+    resp = fa.visits(make_request("POST", "visits", json_body={"credential": "token", "place": "どこか"}))
+    body = json.loads(resp.get_body())
+    assert body["autoPointGranularity"] == ""
+
+    points = json.loads(fa.points(make_request("GET", "points")).get_body())
+    assert points == []
+
+
+# ---- score-events (ba-165①: 加点軸の固定カタログ) ----------------------------
+
+def test_score_events_get_returns_catalog():
+    req = make_request("GET", "score-events")
+    resp = fa.score_events(req)
+    assert resp.status_code == 200
+    body = json.loads(resp.get_body())
+    ids = [item["id"] for item in body["catalog"]]
+    assert "tidy_room" in ids
+    assert "visit_new" not in ids  # 自動加点分は手動カタログには含めない
+    automated_ids = [item["id"] for item in body["automated"]]
+    assert set(automated_ids) == {"visit_new", "plan_done", "daily_streak"}
+    assert body["difficultyPoints"] == {"low": 2, "normal": 5, "high": 10}
+
+
+# ---- points (ba-165①: 加点軸の固定選択肢化) ----------------------------------
 
 def test_points_get_is_public_no_auth(tables):
     req = make_request("GET", "points")
@@ -111,7 +189,7 @@ def test_points_get_is_public_no_auth(tables):
 
 
 def test_points_list_returns_saved_entries(tables, google_auth_ok):
-    post_req = make_request("POST", "points", json_body={"credential": "token", "axis": "部屋片付け", "points": 5})
+    post_req = make_request("POST", "points", json_body={"credential": "token", "axis": "tidy_room", "points": 2})
     fa.points(post_req)
 
     list_req = make_request("GET", "points")
@@ -119,12 +197,14 @@ def test_points_list_returns_saved_entries(tables, google_auth_ok):
     assert resp.status_code == 200
     items = json.loads(resp.get_body())
     assert len(items) == 1
-    assert items[0]["axis"] == "部屋片付け"
-    assert items[0]["points"] == 5
+    assert items[0]["axis"] == "部屋の片付け(衣装ケース等)"  # カタログの正規ラベルで保存される
+    assert items[0]["points"] == 2
+    assert items[0]["period"] == "week"
+    assert items[0]["catalogId"] == "tidy_room"
 
 
 def test_points_post_requires_auth(tables):
-    req = make_request("POST", "points", json_body={"axis": "部屋片付け", "points": 5})
+    req = make_request("POST", "points", json_body={"axis": "tidy_room", "points": 2})
     resp = fa.points(req)
     assert resp.status_code == 401
 
@@ -135,20 +215,54 @@ def test_points_post_requires_axis(google_auth_ok, tables):
     assert resp.status_code == 400
 
 
-def test_points_post_rejects_non_integer_points(google_auth_ok, tables):
-    req = make_request("POST", "points", json_body={"credential": "token", "axis": "運動", "points": "たくさん"})
+def test_points_post_rejects_unknown_axis(google_auth_ok, tables):
+    # カタログにもotherにも無い自由文字列はもう受け付けない(表記ゆれ防止が①の目的のため)
+    req = make_request("POST", "points", json_body={"credential": "token", "axis": "運動streak", "points": 5})
     resp = fa.points(req)
     assert resp.status_code == 400
 
 
-def test_points_post_creates_entity(google_auth_ok, tables):
-    req = make_request("POST", "points", json_body={"credential": "token", "axis": "新規市", "points": 3, "note": "神戸"})
+def test_points_post_rejects_non_integer_points(google_auth_ok, tables):
+    req = make_request("POST", "points", json_body={"credential": "token", "axis": "exercise", "points": "たくさん"})
+    resp = fa.points(req)
+    assert resp.status_code == 400
+
+
+def test_points_post_creates_entity_with_catalog_axis(google_auth_ok, tables):
+    req = make_request("POST", "points", json_body={"credential": "token", "axis": "gadget_use", "points": 3, "note": "ラズパイ"})
+    resp = fa.points(req)
+    assert resp.status_code == 201
+    body = json.loads(resp.get_body())
+    assert body["axis"] == "ガジェット活用(ラズパイ/クラコン等)"
+    assert body["points"] == 3
+    assert body["note"] == "ラズパイ"
+    assert body["catalogId"] == "gadget_use"
+
+
+def test_points_post_month_period_catalog_axis(google_auth_ok, tables):
+    # 生産/予測系はperiod="month"で記録され、月次得点(ba-165③)側の集計対象になる
+    req = make_request("POST", "points", json_body={"credential": "token", "axis": "earn_money", "points": 10})
+    resp = fa.points(req)
+    body = json.loads(resp.get_body())
+    assert body["period"] == "month"
+
+
+def test_points_post_other_requires_axis_label(google_auth_ok, tables):
+    req = make_request("POST", "points", json_body={"credential": "token", "axis": "other", "points": 3})
+    resp = fa.points(req)
+    assert resp.status_code == 400
+
+
+def test_points_post_other_creates_entity_with_freeform_label(google_auth_ok, tables):
+    req = make_request("POST", "points", json_body={
+        "credential": "token", "axis": "other", "axisLabel": "新規市", "points": 3, "note": "神戸",
+    })
     resp = fa.points(req)
     assert resp.status_code == 201
     body = json.loads(resp.get_body())
     assert body["axis"] == "新規市"
     assert body["points"] == 3
-    assert body["note"] == "神戸"
+    assert body["catalogId"] == "other"
 
 
 # ---- scores (list) ----------------------------------------------------------
@@ -886,6 +1000,153 @@ def test_weekly_scores_excludes_voided_thread(tables):
     body = json.loads(resp.get_body())
     assert body["closeCount"] == 0
     assert body["closeValue"] == 0
+
+
+# ---- monthly-scores (ba-165③: 生産/予測を週次得点と別集計) --------------------
+
+def test_monthly_scores_list_is_public_and_empty_initially(tables):
+    req = make_request("GET", "monthly-scores")
+    resp = fa.monthly_scores(req)
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == []
+
+
+def test_monthly_scores_item_rejects_malformed_month_key(tables):
+    resp = fa.monthly_scores_item(make_request("GET", "monthly-scores/2026-13", route_params={"month_key": "2026-13"}))
+    assert resp.status_code == 400
+
+
+def test_monthly_scores_item_computes_on_demand_when_not_saved(tables):
+    point_events_table = fa._table_client(fa.POINT_EVENTS_TABLE)
+    point_events_table.upsert_entity({
+        "PartitionKey": "point", "RowKey": "p1", "Axis": "お金を稼ぐ(出版/YouTube)", "Points": 10,
+        "Period": "month", "CatalogId": "earn_money", "CreatedAt": "2026-07-15T03:00:00+00:00",
+    })
+    # week軸(period="week")は月次には含めない
+    point_events_table.upsert_entity({
+        "PartitionKey": "point", "RowKey": "p2", "Axis": "部屋の片付け(衣装ケース等)", "Points": 2,
+        "Period": "week", "CatalogId": "tidy_room", "CreatedAt": "2026-07-15T03:00:00+00:00",
+    })
+    # 別の月のイベントは含めない
+    point_events_table.upsert_entity({
+        "PartitionKey": "point", "RowKey": "p3", "Axis": "知名度up", "Points": 10,
+        "Period": "month", "CatalogId": "fame", "CreatedAt": "2026-08-01T03:00:00+00:00",
+    })
+
+    resp = fa.monthly_scores_item(make_request("GET", "monthly-scores/2026-07", route_params={"month_key": "2026-07"}))
+    body = json.loads(resp.get_body())
+    assert body["monthScore"] == 10
+    assert body["breakdownByAxis"] == {"お金を稼ぐ(出版/YouTube)": 10}
+    assert body["calculatedAt"] is None
+
+
+def test_monthly_scores_recalculate_requires_auth(tables):
+    resp = fa.monthly_scores_recalculate(make_request("POST", "monthly-scores/recalculate", json_body={"monthKey": "2026-07"}))
+    assert resp.status_code == 401
+
+
+def test_monthly_scores_recalculate_persists_and_shows_in_list(google_auth_ok, tables):
+    point_events_table = fa._table_client(fa.POINT_EVENTS_TABLE)
+    point_events_table.upsert_entity({
+        "PartitionKey": "point", "RowKey": "p1", "Axis": "資産・体重をきっちり予測", "Points": 5,
+        "Period": "month", "CatalogId": "predict_data", "CreatedAt": "2026-07-15T03:00:00+00:00",
+    })
+
+    resp = fa.monthly_scores_recalculate(make_request(
+        "POST", "monthly-scores/recalculate", json_body={"credential": "token", "monthKey": "2026-07"}
+    ))
+    assert resp.status_code == 201
+
+    list_resp = fa.monthly_scores(make_request("GET", "monthly-scores"))
+    items = json.loads(list_resp.get_body())
+    assert len(items) == 1
+    assert items[0]["monthKey"] == "2026-07"
+    assert items[0]["monthScore"] == 5
+    assert items[0]["calculatedAt"]
+
+
+# ---- streak-checks (ba-165④: 連続作業5日で自動加点、週1回まで) -----------------
+
+def test_streak_checks_get_is_public_no_auth(tables):
+    req = make_request("GET", "streak-checks")
+    resp = fa.streak_checks(req)
+    assert resp.status_code == 200
+    assert json.loads(resp.get_body()) == []
+
+
+def test_streak_checks_post_requires_auth(tables):
+    resp = fa.streak_checks(make_request("POST", "streak-checks", json_body={"task": "散歩", "date": "2026-07-20"}))
+    assert resp.status_code == 401
+
+
+def test_streak_checks_post_requires_task(google_auth_ok, tables):
+    resp = fa.streak_checks(make_request(
+        "POST", "streak-checks", json_body={"credential": "token", "task": "  ", "date": "2026-07-20"}
+    ))
+    assert resp.status_code == 400
+
+
+def test_streak_checks_below_five_days_does_not_award(google_auth_ok, tables):
+    for day in ["2026-07-20", "2026-07-21", "2026-07-22"]:
+        resp = fa.streak_checks(make_request(
+            "POST", "streak-checks", json_body={"credential": "token", "task": "散歩", "date": day}
+        ))
+    body = json.loads(resp.get_body())
+    assert body["streakLength"] == 3
+    assert body["awarded"] is False
+    assert json.loads(fa.points(make_request("GET", "points")).get_body()) == []
+
+
+def test_streak_checks_five_consecutive_days_awards_high_point_event(google_auth_ok, tables):
+    days = ["2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24"]  # 月〜金
+    resp = None
+    for day in days:
+        resp = fa.streak_checks(make_request(
+            "POST", "streak-checks", json_body={"credential": "token", "task": "散歩", "date": day}
+        ))
+    body = json.loads(resp.get_body())
+    assert body["streakLength"] == 5
+    assert body["awarded"] is True
+
+    points = json.loads(fa.points(make_request("GET", "points")).get_body())
+    assert len(points) == 1
+    assert points[0]["points"] == 10
+    assert points[0]["axis"] == "継続達成"
+    assert points[0]["catalogId"] == "daily_streak"
+
+
+def test_streak_checks_gap_resets_streak(google_auth_ok, tables):
+    fa.streak_checks(make_request("POST", "streak-checks", json_body={"credential": "token", "task": "散歩", "date": "2026-07-20"}))
+    fa.streak_checks(make_request("POST", "streak-checks", json_body={"credential": "token", "task": "散歩", "date": "2026-07-21"}))
+    # 07-22を飛ばして07-23に申告 → 連続はリセットされ1から数え直し
+    resp = fa.streak_checks(make_request("POST", "streak-checks", json_body={"credential": "token", "task": "散歩", "date": "2026-07-23"}))
+    body = json.loads(resp.get_body())
+    assert body["streakLength"] == 1
+
+
+def test_streak_checks_only_awards_once_per_week(google_auth_ok, tables):
+    days = ["2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24", "2026-07-25", "2026-07-26"]  # 月〜日
+    resp = None
+    for day in days:
+        resp = fa.streak_checks(make_request(
+            "POST", "streak-checks", json_body={"credential": "token", "task": "散歩", "date": day}
+        ))
+    body = json.loads(resp.get_body())
+    assert body["streakLength"] == 7
+    assert body["awarded"] is False  # 5日目で既に付与済みなので7日目では付与しない
+
+    points = json.loads(fa.points(make_request("GET", "points")).get_body())
+    assert len(points) == 1
+
+
+def test_streak_checks_resubmitting_same_day_is_idempotent(google_auth_ok, tables):
+    fa.streak_checks(make_request("POST", "streak-checks", json_body={"credential": "token", "task": "散歩", "date": "2026-07-20"}))
+    resp = fa.streak_checks(make_request("POST", "streak-checks", json_body={"credential": "token", "task": "散歩", "date": "2026-07-20"}))
+    body = json.loads(resp.get_body())
+    assert body["streakLength"] == 1
+
+    checks = json.loads(fa.streak_checks(make_request("GET", "streak-checks")).get_body())
+    assert len(checks) == 1
 
 
 # ---- last-updated (ba-69: last-updated.js用のGitHub APIプロキシ) -------

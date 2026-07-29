@@ -9,6 +9,7 @@ import { CLASSIFICATIONS, findClassification } from "../common/utils.js";
 const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
 const BA_API = `${API_BASE}/ba`;
 const WEEKLY_API = `${API_BASE}/weekly-scores`;
+const MONTHLY_API = `${API_BASE}/monthly-scores`;
 
 // ba/app.jsのgroupThreadsを踏襲(status判定・PartitionKeyグルーピングのロジックを合わせるため)。
 function groupThreads(items) {
@@ -232,6 +233,46 @@ function renderWeeklyTable(theadRow, tbody, weeks) {
   }).join("");
 }
 
+// --- 月次得点(ba-165③のmonthly-scores API)----------------------------------
+// 生産(出版/YouTube/知名度)・予測(資産/体重)は月単位でしか意味を持たないため週次とは
+// 別集計。件数・軸の種類とも週次より少ない見込みのため、専用グラフは作らずテーブルのみにする
+// (ba-97: ページ/カードが増えすぎているというTakashiの指摘を踏まえ、既存タブに相乗りする)。
+const MONTH_COUNT = 6;
+
+function monthsBack(n) {
+  const now = new Date();
+  const jst = new Date(now.getTime() + (now.getTimezoneOffset() + 540) * 60000);
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth() - i, 1));
+    out.push({ year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 });
+  }
+  return out;
+}
+
+async function fetchMonthlyScores() {
+  const months = monthsBack(MONTH_COUNT);
+  const results = await Promise.all(months.map(async ({ year, month }) => {
+    try {
+      const key = `${year}-${String(month).padStart(2, "0")}`;
+      const res = await fetch(`${MONTHLY_API}/${key}`, { cache: "no-store" });
+      return res.ok ? await res.json() : null;
+    } catch (e) {
+      return null;
+    }
+  }));
+  return results.filter((r) => r && r.monthKey);
+}
+
+function renderMonthlyTable(theadRow, tbody, months) {
+  theadRow.innerHTML = "<th>月</th><th>軸別内訳</th><th>合計</th>";
+  tbody.innerHTML = months.slice().reverse().map((m) => {
+    const breakdown = Object.entries(m.breakdownByAxis || {})
+      .map(([axis, pts]) => `${axis}:${pts}`).join(", ") || "—";
+    return `<tr><td>${m.monthKey}</td><td>${breakdown}</td><td>${m.monthScore}</td></tr>`;
+  }).join("");
+}
+
 const VIEWS = {
   poster: {
     compute: computePosterCounts,
@@ -247,6 +288,7 @@ const VIEWS = {
 
 let currentThreads = [];
 let weeklyScores = [];
+let monthlyScores = [];
 let currentView = "poster";
 
 function render() {
@@ -255,7 +297,7 @@ function render() {
   const theadRow = document.getElementById("radarTableHead");
   const emptyEl = document.getElementById("radarEmpty");
 
-  if (!currentThreads.length && currentView !== "weekly") {
+  if (!currentThreads.length && currentView !== "weekly" && currentView !== "monthly") {
     emptyEl.style.display = "";
     svg.innerHTML = "";
     tbody.innerHTML = "";
@@ -273,6 +315,18 @@ function render() {
     }
     drawWeeklyBars(svg, weeklyScores);
     renderWeeklyTable(theadRow, tbody, weeklyScores);
+    return;
+  }
+
+  if (currentView === "monthly") {
+    svg.innerHTML = "";
+    if (!monthlyScores.length) {
+      emptyEl.textContent = "月次得点をまだ取得できていません";
+      emptyEl.style.display = "";
+      tbody.innerHTML = "";
+      return;
+    }
+    renderMonthlyTable(theadRow, tbody, monthlyScores);
     return;
   }
 
@@ -304,6 +358,8 @@ async function load() {
     render();
     weeklyScores = await fetchWeeklyScores();
     if (currentView === "weekly") render();
+    monthlyScores = await fetchMonthlyScores();
+    if (currentView === "monthly") render();
   } catch (e) {
     emptyEl.textContent = `読み込みエラー: ${e.message}`;
     emptyEl.style.display = "";

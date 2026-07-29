@@ -8,6 +8,8 @@ const API_BASE = window.AA_API_BASE; // common/config.js から(ba-9)
 const SCORES_API = `${API_BASE}/scores`;
 const VISITS_API = `${API_BASE}/visits`;
 const POINTS_API = `${API_BASE}/points`;
+const SCORE_EVENTS_API = `${API_BASE}/score-events`;
+const STREAK_CHECKS_API = `${API_BASE}/streak-checks`;
 const SCORING_RULES_API = `${API_BASE}/scoring-rules`;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -198,14 +200,37 @@ function initScoreInput() {
   loadTodayScore();
 }
 
-// ba-165: 加点軸の拡張。難易度と同じくTakashiの自己申告なので、軸(自由文字列)+点数を
-// そのままPointEventsへ記録するだけ。軸の意味(streakか予測的中か等)は判定しない。
-function initPointInput() {
+// ba-165①(2026-07-29): 加点軸を固定選択肢化。GET /score-eventsのカタログをプルダウンに
+// 反映し、「その他」選択時だけ自由入力欄(軸の名前)を出す。点数は引き続き自己申告のまま
+// (difficultyから機械的に決め打ちしない)。
+async function initPointInput() {
   const elAxis = document.getElementById("pointAxis");
+  const elAxisLabel = document.getElementById("pointAxisLabel");
   const elValue = document.getElementById("pointValue");
   const elNote = document.getElementById("pointNote");
   const elBtn = document.getElementById("btnSavePoint");
   const elSaved = document.getElementById("pointSaved");
+
+  try {
+    const res = await fetch(SCORE_EVENTS_API, { cache: "no-store" });
+    const data = res.ok ? await res.json() : { catalog: [] };
+    (data.catalog || []).forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item.id;
+      opt.textContent = `${item.label}(${item.cat}/${item.period === "month" ? "月次" : "週次"}/${item.difficulty})`;
+      elAxis.appendChild(opt);
+    });
+    const otherOpt = document.createElement("option");
+    otherOpt.value = "other";
+    otherOpt.textContent = "その他(自由入力)";
+    elAxis.appendChild(otherOpt);
+  } catch (e) {
+    elSaved.textContent = "カタログ取得エラー: " + e.message;
+  }
+
+  elAxis.addEventListener("change", () => {
+    elAxisLabel.style.display = elAxis.value === "other" ? "" : "none";
+  });
 
   elBtn.addEventListener("click", async () => {
     if (!window.__credential) {
@@ -213,22 +238,64 @@ function initPointInput() {
       if (window.aaShowLoginGate) window.aaShowLoginGate();
       return;
     }
-    const axis = elAxis.value.trim();
+    const axis = elAxis.value;
     const points = Number(elValue.value);
-    if (!axis) { elSaved.textContent = "軸を入力してください"; return; }
+    if (!axis) { elSaved.textContent = "軸を選択してください"; return; }
+    if (axis === "other" && !elAxisLabel.value.trim()) { elSaved.textContent = "その他の軸名を入力してください"; return; }
     if (!Number.isInteger(points)) { elSaved.textContent = "点数は整数で入力してください"; return; }
     try {
       const res = await fetch(POINTS_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(withCredential({ axis, points, note: elNote.value.trim() })),
+        body: JSON.stringify(withCredential({
+          axis, points, note: elNote.value.trim(),
+          axisLabel: axis === "other" ? elAxisLabel.value.trim() : undefined,
+        })),
       });
       if (!res.ok) { elSaved.textContent = "エラー: 記録に失敗しました"; return; }
       elAxis.value = "";
+      elAxisLabel.value = "";
+      elAxisLabel.style.display = "none";
       elValue.value = "";
       elNote.value = "";
       elSaved.textContent = "✓ 記録しました";
       setTimeout(() => elSaved.textContent = "", 2000);
+    } catch (e) {
+      elSaved.textContent = "エラー: " + e.message;
+    }
+  });
+}
+
+// ba-165④(2026-07-29): streak(連続作業)チェックイン。同じ作業名を毎日押すだけで、
+// サーバー側が連続日数を数えて5日ごとに自動加点する(週1回まで)。
+function initStreakInput() {
+  const elTask = document.getElementById("streakTask");
+  const elDate = document.getElementById("streakDate");
+  const elBtn = document.getElementById("btnStreakCheck");
+  const elSaved = document.getElementById("streakSaved");
+
+  elDate.value = todayStr();
+
+  elBtn.addEventListener("click", async () => {
+    if (!window.__credential) {
+      elSaved.textContent = "記録にはログインが必要です";
+      if (window.aaShowLoginGate) window.aaShowLoginGate();
+      return;
+    }
+    const task = elTask.value.trim();
+    if (!task) { elSaved.textContent = "作業名を入力してください"; return; }
+    try {
+      const res = await fetch(STREAK_CHECKS_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(withCredential({ task, date: elDate.value })),
+      });
+      if (!res.ok) { elSaved.textContent = "エラー: 記録に失敗しました"; return; }
+      const data = await res.json();
+      elSaved.textContent = data.awarded
+        ? `✓ ${data.streakLength}日連続達成、加点しました`
+        : `✓ 記録しました(${data.streakLength}日連続)`;
+      setTimeout(() => elSaved.textContent = "", 3000);
     } catch (e) {
       elSaved.textContent = "エラー: " + e.message;
     }
@@ -370,6 +437,7 @@ async function load() {
 function onLoginSuccess() {
   initScoreInput();
   initPointInput();
+  initStreakInput();
   initRuleInput();
   load();
 }

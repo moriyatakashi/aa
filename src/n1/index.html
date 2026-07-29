@@ -88,12 +88,21 @@
     </div>
 
     <div class="section">
-      <div class="section-title">加点イベントを記録(ba-165)</div>
-      <input class="note-input" id="pointAxis" type="text" placeholder="軸(例: 部屋片付け, 運動streak, 新規市)">
+      <div class="section-title">加点イベントを記録(ba-165①: 固定選択肢)</div>
+      <select class="note-input" id="pointAxis"><option value="">軸を選択...</option></select>
+      <input class="note-input" id="pointAxisLabel" type="text" placeholder="その他の場合: 軸の名前" style="display:none;">
       <input class="note-input" id="pointValue" type="number" placeholder="点数(整数)">
       <input class="note-input" id="pointNote" type="text" placeholder="一言メモ(任意)">
       <button class="btn-save-score" id="btnSavePoint">記録</button>
       <div class="score-saved" id="pointSaved"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">連続作業(streak)チェックイン(ba-165④)</div>
+      <input class="note-input" id="streakTask" type="text" placeholder="作業名(例: 10分散歩, 朝飯, 特定運動)">
+      <input class="note-input" id="streakDate" type="date">
+      <button class="btn-save-score" id="btnStreakCheck">今日の分を記録</button>
+      <div class="score-saved" id="streakSaved"></div>
     </div>
 
     <div class="section">

@@ -144,6 +144,14 @@ def _authorize_get(req):
 
 
 VISITS_TABLE = "Visits"
+# ba-165②(2026-07-29確定、Takashi判断): Visits初登録の自動検知→自動加点。
+# 粒度は県>市>町の順で粗い方を優先し(同時に複数が初登場でも二重加点しない)、
+# 県=high/市=normal/町=low(「経年で易化」=同じ都道府県内の別の市を後から訪れても
+# 県はもう新規でないのでnormal以下に自然に下がる、という設計でありスコアの割引処理は別途行わない)。
+# pref/city/townはn2側のGPS逆ジオコーディング結果を送ってもらう想定の追加フィールドで、
+# 過去のVisitsエントリはこれらを持たないため、既存訪問地との突合は「Pref/City/Townが
+# 一致した場合のみ既訪問扱い」になる(過去データへの遡及はしない、difficulty導入時と同じ方針)。
+VISIT_GRANULARITY_DIFFICULTY = {"pref": "high", "city": "normal", "town": "low"}
 
 
 def _visit_dict(e):
@@ -155,8 +163,18 @@ def _visit_dict(e):
         "memo": e.get("Memo", ""),
         "lat": e.get("Lat"),
         "lng": e.get("Lng"),
+        "pref": e.get("Pref", ""),
+        "city": e.get("City", ""),
+        "town": e.get("Town", ""),
+        "autoPointGranularity": e.get("AutoPointGranularity", ""),
         "createdAt": e.get("CreatedAt", ""),
     }
+
+
+def _is_new_visit_value(table, field_name, value):
+    if not value:
+        return False
+    return all(e.get(field_name) != value for e in table.list_entities())
 
 
 @app.function_name(name="visits")
@@ -178,6 +196,21 @@ def visits(req: func.HttpRequest) -> func.HttpResponse:
     if not place:
         return func.HttpResponse("place is required", status_code=400)
 
+    pref = (body.get("pref") or "").strip()
+    city = (body.get("city") or "").strip()
+    town = (body.get("town") or "").strip()
+
+    # 粗い粒度から先に判定する(同じ訪問で県も市も初登場なら県=highだけを採用しhigh+normalの
+    # 二重加点にしない)。
+    if pref and _is_new_visit_value(table, "Pref", pref):
+        granularity = "pref"
+    elif city and _is_new_visit_value(table, "City", city):
+        granularity = "city"
+    elif town and _is_new_visit_value(table, "Town", town):
+        granularity = "town"
+    else:
+        granularity = None
+
     entity = {
         "PartitionKey": "visit",
         "RowKey": str(uuid.uuid4()),
@@ -185,6 +218,10 @@ def visits(req: func.HttpRequest) -> func.HttpResponse:
         "Date": body.get("date", ""),
         "Time": body.get("time", ""),
         "Memo": body.get("memo", ""),
+        "Pref": pref,
+        "City": city,
+        "Town": town,
+        "AutoPointGranularity": granularity or "",
         "CreatedAt": datetime.now(timezone.utc).isoformat(),
     }
     if body.get("lat") is not None:
@@ -192,6 +229,14 @@ def visits(req: func.HttpRequest) -> func.HttpResponse:
     if body.get("lng") is not None:
         entity["Lng"] = float(body["lng"])
     table.upsert_entity(entity)
+
+    if granularity:
+        difficulty = VISIT_GRANULARITY_DIFFICULTY[granularity]
+        label = {"pref": pref, "city": city, "town": town}[granularity]
+        _create_point_event(
+            "初訪問", BA_DIFFICULTY_POINTS[difficulty], f"{label}({granularity})",
+            period="week", catalog_id="visit_new",
+        )
 
     return func.HttpResponse(json.dumps(_visit_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
 
@@ -205,31 +250,83 @@ def _point_event_dict(e):
         "axis": e.get("Axis", ""),
         "points": e.get("Points", 0),
         "note": e.get("Note", ""),
+        # ba-165(2026-07-29): 週次/月次のどちらの得点に合算するかの区分。旧データ(Period未設定)は
+        # 移行当時すべて週次のみが存在したためweek扱いにフォールバックする。
+        "period": e.get("Period", "week"),
+        "catalogId": e.get("CatalogId", ""),
         "createdAt": e.get("CreatedAt", ""),
     }
 
 
-def _create_point_event(axis, points_value, note=""):
-    """PointEventsへの追記だけを行う内部ヘルパー。POST /api/pointsの本体と、
-    ba-160のdeclarations achieve(宣言達成時の自動加点)の両方から呼ばれる。"""
+def _create_point_event(axis, points_value, note="", period="week", catalog_id=None, created_at=None):
+    """PointEventsへの追記だけを行う内部ヘルパー。POST /api/pointsの本体、
+    ba-160のdeclarations achieve(宣言達成時の自動加点)、ba-165②のVisits初登録自動加点、
+    ba-165④のstreak-checks自動加点の全てから呼ばれる。
+    created_atは通常省略(その場の"今")でよいが、streak-checksのように過去日付を自己申告
+    できる場合は、その申告日に紐づけないと週次得点・週1回までの判定が実際の投稿日時と
+    ずれるため、呼び出し側から明示的に渡す。"""
     entity = {
         "PartitionKey": "point",
         "RowKey": str(uuid.uuid4()),
         "Axis": axis,
         "Points": points_value,
         "Note": note,
-        "CreatedAt": datetime.now(timezone.utc).isoformat(),
+        "Period": period,
+        "CatalogId": catalog_id or "",
+        "CreatedAt": (created_at or datetime.now(timezone.utc)).isoformat(),
     }
     _table_client(POINT_EVENTS_TABLE).upsert_entity(entity)
     return entity
 
 
+# ba-165①(2026-07-29確定、Takashi判断): 加点軸を自由入力から固定選択肢へ変更する。
+# 以前は「軸(自由文字列)+点数」を無条件に記録していたため、同じ意味の軸が表記ゆれ
+# (例:「運動」と「運動streak」)で分裂し、k2の内訳集計が安定しなかった。
+# ここではba-53「加点カタログ確定版」(2026-07-26、すま)のJSON叩き台をそのまま採用する。
+# 12種のうちvisit_new(② Visits初登録で自動判定)とplan_done(既存のdeclarations achieveで
+# 既に自動化済み)は、二重加点を避けるため手動選択肢からは除外し、AUTOMATED_SCORE_EVENTSに
+# 分離して「自動で付く軸」として案内する。periodは週次得点(week)と月次得点(month、ba-165③)の
+# どちらに合算するかを示す。
+SCORE_EVENT_CATALOG = [
+    {"id": "tidy_room", "label": "部屋の片付け(衣装ケース等)", "cat": "生活", "period": "week", "difficulty": "low"},
+    {"id": "trash_planned", "label": "計画的なゴミ出し", "cat": "生活", "period": "week", "difficulty": "low"},
+    {"id": "brave_purchase", "label": "勇気ある買い物(食洗機/シュレッダー等)", "cat": "買物", "period": "week", "difficulty": "normal"},
+    {"id": "gadget_use", "label": "ガジェット活用(ラズパイ/クラコン等)", "cat": "買物", "period": "week", "difficulty": "normal"},
+    {"id": "local_food", "label": "名物を食べる", "cat": "移動", "period": "week", "difficulty": "low"},
+    {"id": "exercise", "label": "運動(単発)", "cat": "運動", "period": "week", "difficulty": "low"},
+    {"id": "earn_money", "label": "お金を稼ぐ(出版/YouTube)", "cat": "生産", "period": "month", "difficulty": "high"},
+    {"id": "fame", "label": "知名度up", "cat": "生産", "period": "month", "difficulty": "high"},
+    {"id": "hard_idea", "label": "難しい案件を思いつく", "cat": "予定", "period": "week", "difficulty": "high"},
+    {"id": "predict_data", "label": "資産・体重をきっちり予測", "cat": "予測", "period": "month", "difficulty": "normal"},
+]
+SCORE_EVENT_CATALOG_BY_ID = {e["id"]: e for e in SCORE_EVENT_CATALOG}
+AUTOMATED_SCORE_EVENTS = [
+    {"id": "visit_new", "label": "初訪問", "cat": "移動", "period": "week",
+     "note": "POST /api/visitsのpref/city/townで自動判定(県=high/市=normal/町=low、経年で易化)"},
+    {"id": "plan_done", "label": "宣言達成", "cat": "予定", "period": "week",
+     "note": "POST /api/declarations/{id}/achieveで自動加点(倍々式)"},
+    {"id": "daily_streak", "label": "継続達成", "cat": "継続", "period": "week",
+     "note": "POST /api/streak-checksへの5日連続自己申告で自動加点(週1回まで)"},
+]
+
+
+@app.function_name(name="score-events")
+@app.route(route="score-events", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def score_events(req: func.HttpRequest) -> func.HttpResponse:
+    # ba-165①: n1のプルダウン等が参照する、加点軸の固定カタログ(手動選択分+自動加点の案内)。
+    return func.HttpResponse(json.dumps({
+        "catalog": SCORE_EVENT_CATALOG,
+        "automated": AUTOMATED_SCORE_EVENTS,
+        "difficultyPoints": BA_DIFFICULTY_POINTS,
+    }, ensure_ascii=False), mimetype="application/json")
+
+
 @app.function_name(name="points")
 @app.route(route="points", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
 def points(req: func.HttpRequest) -> func.HttpResponse:
-    # ba-165: 加点軸の拡張。難易度付与と同じくTakashiの自己申告(2026-07-26確定)なので、
-    # サーバー側は「軸→点数」の対応表を持たず、axis(自由文字列)とpoints(申告値)を
-    # そのまま記録するだけにする。visits/scoresと同じ書式(閲覧公開・書き込みは認証必須)。
+    # ba-165①(2026-07-29): axisはSCORE_EVENT_CATALOGのidか、カタログにない事象を拾うための
+    # "other"のどちらかのみ受け付ける(以前の完全自由入力から変更)。pointsは引き続き自己申告
+    # (difficultyから機械的に決め打ちしない、ころころ変えてよい前提の運用のため)。
     table = _table_client(POINT_EVENTS_TABLE)
 
     if req.method == "GET":
@@ -241,15 +338,30 @@ def points(req: func.HttpRequest) -> func.HttpResponse:
     if err:
         return err
 
-    axis = (body.get("axis") or "").strip()
-    if not axis:
+    axis_id = (body.get("axis") or "").strip()
+    if not axis_id:
         return func.HttpResponse("axis is required", status_code=400)
 
     points_value = body.get("points")
     if not isinstance(points_value, int) or isinstance(points_value, bool):
         return func.HttpResponse("points must be an integer", status_code=400)
 
-    entity = _create_point_event(axis, points_value, body.get("note", ""))
+    if axis_id == "other":
+        label = (body.get("axisLabel") or "").strip()
+        if not label:
+            return func.HttpResponse("axisLabel is required when axis is 'other'", status_code=400)
+        entity = _create_point_event(label, points_value, body.get("note", ""), period="week", catalog_id="other")
+    else:
+        catalog_entry = SCORE_EVENT_CATALOG_BY_ID.get(axis_id)
+        if not catalog_entry:
+            return func.HttpResponse(
+                f"axis must be one of: {', '.join(SCORE_EVENT_CATALOG_BY_ID)}, other",
+                status_code=400,
+            )
+        entity = _create_point_event(
+            catalog_entry["label"], points_value, body.get("note", ""),
+            period=catalog_entry["period"], catalog_id=axis_id,
+        )
     return func.HttpResponse(json.dumps(_point_event_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
 
 
@@ -403,7 +515,7 @@ def declarations_achieve(req: func.HttpRequest) -> func.HttpResponse:
     entity["AchievedAt"] = datetime.now(timezone.utc).isoformat()
     table.upsert_entity(entity)
 
-    _create_point_event("宣言達成", awarded_points, f"{entity.get('Text', '')}({weeks_ahead}週先)")
+    _create_point_event("宣言達成", awarded_points, f"{entity.get('Text', '')}({weeks_ahead}週先)", catalog_id="plan_done")
 
     result = _declaration_dict(entity)
     result["awardedPoints"] = awarded_points
@@ -1068,6 +1180,245 @@ def weekly_scores_recalculate(req: func.HttpRequest) -> func.HttpResponse:
     entity = _persist_weekly_score(iso_year, iso_week)
     return func.HttpResponse(
         json.dumps(_weekly_score_entity_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json"
+    )
+
+
+# ba-165③(2026-07-29確定、Takashi判断): 月次得点。生産(出版/YouTube/知名度)・予測(資産/体重)は
+# 月単位でしか意味を持たない事象のため、週次得点(dailyScoreSum/closeValue)とは完全に別集計にする。
+# 週次側と対称的に、SCORE_EVENT_CATALOGでperiod="month"の軸のPointEventsだけを月範囲で合算する
+# (毎日スコアやbaクローズは月次には含めない)。オンデマンド計算+recalculateでの保存という
+# weekly-scoresと同じ設計を踏襲する。
+MONTHLY_SCORES_TABLE = "MonthlyScores"
+
+
+def _month_bounds(year, month):
+    """year/month(JST)から、その月の[1日0時JST, 翌月1日0時JST)をUTCで返す。"""
+    start_jst = datetime(year, month, 1, tzinfo=JST)
+    if month == 12:
+        end_jst = datetime(year + 1, 1, 1, tzinfo=JST)
+    else:
+        end_jst = datetime(year, month + 1, 1, tzinfo=JST)
+    return start_jst.astimezone(timezone.utc), end_jst.astimezone(timezone.utc)
+
+
+def _parse_month_key(month_key):
+    """"2026-07"形式をパースして(year, month)を返す。不正な形式ならNone。"""
+    parts = (month_key or "").split("-")
+    if len(parts) != 2:
+        return None
+    try:
+        year, month = int(parts[0]), int(parts[1])
+    except ValueError:
+        return None
+    if not (1 <= month <= 12):
+        return None
+    return year, month
+
+
+def _calc_monthly_score(year, month):
+    start_utc, end_utc = _month_bounds(year, month)
+    point_events_table = _table_client(POINT_EVENTS_TABLE)
+    breakdown = {}
+    total = 0
+    for e in point_events_table.list_entities():
+        if e.get("Period") != "month":
+            continue
+        try:
+            created_at = datetime.fromisoformat(e.get("CreatedAt", ""))
+        except ValueError:
+            continue
+        if not (start_utc <= created_at < end_utc):
+            continue
+        axis = e.get("Axis", "")
+        breakdown[axis] = breakdown.get(axis, 0) + e.get("Points", 0)
+        total += e.get("Points", 0)
+
+    return {
+        "year": year,
+        "month": month,
+        "monthKey": f"{year}-{month:02d}",
+        "breakdownByAxis": breakdown,
+        "monthScore": total,
+        "calculatedAt": None,
+    }
+
+
+def _monthly_score_entity_dict(e):
+    return {
+        "year": int(e["PartitionKey"]),
+        "month": e.get("Month"),
+        "monthKey": f"{e['PartitionKey']}-{e.get('Month', 0):02d}",
+        "breakdownByAxis": json.loads(e.get("BreakdownByAxis") or "{}"),
+        "monthScore": e.get("MonthScore", 0),
+        "calculatedAt": e.get("CalculatedAt", ""),
+    }
+
+
+def _persist_monthly_score(year, month):
+    result = _calc_monthly_score(year, month)
+    entity = {
+        "PartitionKey": str(year),
+        "RowKey": f"M{month:02d}",
+        "Month": month,
+        "BreakdownByAxis": json.dumps(result["breakdownByAxis"], ensure_ascii=False),
+        "MonthScore": result["monthScore"],
+        "CalculatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    _table_client(MONTHLY_SCORES_TABLE).upsert_entity(entity)
+    return entity
+
+
+@app.function_name(name="monthly-scores")
+@app.route(route="monthly-scores", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def monthly_scores(req: func.HttpRequest) -> func.HttpResponse:
+    table = _table_client(MONTHLY_SCORES_TABLE)
+    items = [_monthly_score_entity_dict(e) for e in table.list_entities()]
+    items.sort(key=lambda x: x["monthKey"])
+    return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+
+@app.function_name(name="monthly-scores-item")
+@app.route(route="monthly-scores/{month_key}", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def monthly_scores_item(req: func.HttpRequest) -> func.HttpResponse:
+    month_key = req.route_params.get("month_key")
+    parsed = _parse_month_key(month_key)
+    if not parsed:
+        return func.HttpResponse("month_key must look like 2026-07", status_code=400)
+    year, month = parsed
+
+    table = _table_client(MONTHLY_SCORES_TABLE)
+    try:
+        entity = table.get_entity(partition_key=str(year), row_key=f"M{month:02d}")
+        body = _monthly_score_entity_dict(entity)
+    except ResourceNotFoundError:
+        body = _calc_monthly_score(year, month)
+    return func.HttpResponse(json.dumps(body, ensure_ascii=False), mimetype="application/json")
+
+
+@app.function_name(name="monthly-scores-recalculate")
+@app.route(route="monthly-scores/recalculate", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def monthly_scores_recalculate(req: func.HttpRequest) -> func.HttpResponse:
+    body = _get_body(req)
+    err = _authorize(body)
+    if err:
+        return err
+
+    parsed = _parse_month_key(body.get("monthKey", ""))
+    if not parsed:
+        return func.HttpResponse("monthKey must look like 2026-07", status_code=400)
+    year, month = parsed
+
+    entity = _persist_monthly_score(year, month)
+    return func.HttpResponse(
+        json.dumps(_monthly_score_entity_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json"
+    )
+
+
+# ba-165④(2026-07-29確定、Takashi判断): 連続作業(streak)。同一作業(自己申告の文字列)を
+# 5日連続で申告したらhigh(10点)を自動加点し、途切れたら振り出しに戻る。streak成立(5日目)は
+# 週1回までしか加点しない(その週のうちに10日目・15日目…と伸びても2回目以降は加点しない)。
+# 専用の状態テーブルは持たず、既にPointEventsにAxis="継続達成"で記録されているかを都度
+# 週範囲で確認するだけにする(状態の単一の情報源をPointEventsに寄せる)。
+STREAK_CHECKS_TABLE = "StreakChecks"
+STREAK_PARTITION = "streak"
+STREAK_LENGTH = 5
+STREAK_DIFFICULTY = "high"
+STREAK_AWARD_AXIS = "継続達成"
+
+
+def _streak_check_dict(e):
+    return {"task": e.get("Task", ""), "date": e.get("Date", ""), "createdAt": e.get("CreatedAt", "")}
+
+
+def _streak_check_key(task, day):
+    return f"{task}|{day.isoformat()}"
+
+
+def _has_streak_check(table, task, day):
+    try:
+        table.get_entity(partition_key=STREAK_PARTITION, row_key=_streak_check_key(task, day))
+        return True
+    except ResourceNotFoundError:
+        return False
+
+
+def _streak_length_ending_at(table, task, end_day):
+    """taskについて、end_dayから遡って連続で自己申告があった日数を数える。"""
+    length = 0
+    d = end_day
+    while _has_streak_check(table, task, d):
+        length += 1
+        d = d - timedelta(days=1)
+    return length
+
+
+def _has_streak_award_this_week(point_events_table, task, on_day):
+    """on_dayが属する週(JST月〜日)内に、このtaskの継続達成報酬が既に付与済みか。"""
+    iso_year, iso_week, _ = on_day.isocalendar()
+    start_utc, end_utc, _ = _week_bounds(iso_year, iso_week)
+    prefix = f"{task}("
+    for e in point_events_table.list_entities():
+        if e.get("Axis") != STREAK_AWARD_AXIS or not e.get("Note", "").startswith(prefix):
+            continue
+        try:
+            created_at = datetime.fromisoformat(e.get("CreatedAt", ""))
+        except ValueError:
+            continue
+        if start_utc <= created_at < end_utc:
+            return True
+    return False
+
+
+@app.function_name(name="streak-checks")
+@app.route(route="streak-checks", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def streak_checks(req: func.HttpRequest) -> func.HttpResponse:
+    table = _table_client(STREAK_CHECKS_TABLE)
+
+    if req.method == "GET":
+        items = [_streak_check_dict(e) for e in table.list_entities()]
+        return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+    body = _get_body(req)
+    err = _authorize(body)
+    if err:
+        return err
+
+    task = (body.get("task") or "").strip()
+    if not task:
+        return func.HttpResponse("task is required", status_code=400)
+
+    day_str = body.get("date") or datetime.now(JST).date().isoformat()
+    try:
+        day = date.fromisoformat(day_str)
+    except ValueError:
+        return func.HttpResponse("date must look like YYYY-MM-DD", status_code=400)
+
+    entity = {
+        "PartitionKey": STREAK_PARTITION,
+        "RowKey": _streak_check_key(task, day),
+        "Task": task,
+        "Date": day.isoformat(),
+        "CreatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    table.upsert_entity(entity)  # 同一task+dateの再送はupsertで無害(二重記録にならない)
+
+    streak_len = _streak_length_ending_at(table, task, day)
+    awarded = False
+    if streak_len > 0 and streak_len % STREAK_LENGTH == 0:
+        point_events_table = _table_client(POINT_EVENTS_TABLE)
+        if not _has_streak_award_this_week(point_events_table, task, day):
+            # 申告日(day)の正午JSTをCreatedAtに使う。実行時刻(datetime.now)をそのまま使うと、
+            # 過去日付を後からまとめて申告した場合に週の境界判定がずれてしまうため。
+            day_created_at = datetime(day.year, day.month, day.day, 12, tzinfo=JST).astimezone(timezone.utc)
+            _create_point_event(
+                STREAK_AWARD_AXIS, BA_DIFFICULTY_POINTS[STREAK_DIFFICULTY], f"{task}({streak_len}日連続)",
+                period="week", catalog_id="daily_streak", created_at=day_created_at,
+            )
+            awarded = True
+
+    return func.HttpResponse(
+        json.dumps({**_streak_check_dict(entity), "streakLength": streak_len, "awarded": awarded}, ensure_ascii=False),
+        status_code=201, mimetype="application/json",
     )
 
 
