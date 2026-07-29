@@ -21,6 +21,9 @@ categories:
       - code: k2
         desc: baレーダーチャート
         href: src/k2/
+      - code: bj
+        desc: ba分類の遷移分析
+        href: src/bj/
   - label: あそび
     items:
       - code: k1
