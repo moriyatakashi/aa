@@ -74,8 +74,8 @@ test("k2: 投稿者別/分類別のスレッド集計が期待通りに出る", 
     const clsRows = await page.locator("#radarTableBody tr").allTextContents();
     assert.deepEqual(
       clsRows.map((r) => r.replace(/\s+/g, "")),
-      ["案件1", "確定仕様0", "気づき1", "保留論点1", "旧仕様0"],
-      "分類別: T1は気づき(後から上書き)、T2は案件、T3は保留論点(旧仕様はba-32の語彙追加分、この fixture では0件)"
+      ["案件1", "確定仕様0", "気づき1", "保留論点1", "旧仕様0", "記録0"],
+      "分類別: T1は気づき(後から上書き)、T2は案件、T3は保留論点(旧仕様・記録はba-32/ba-181の語彙追加分、この fixture では0件)"
     );
   } finally {
     await browser.close();

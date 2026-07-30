@@ -10,7 +10,8 @@ import { projectThreads } from "../common/thread-logic.js";
 const BA_API = `${window.AA_API_BASE}/ba`; // common/config.js から(ba-9)
 
 // 現在形ビューとしての並び順: 参照し続けるもの→動かすもの→考えるもの→ながめるもの
-const SECTION_ORDER = ["確定仕様", "案件", "保留論点", "気づき", "旧仕様", null];
+// 記録(ba-181・第2版ドラフト、2026-07-30追加)は確定仕様と同じ「参照側」(閉じない)なので隣に置く。
+const SECTION_ORDER = ["確定仕様", "記録", "案件", "保留論点", "気づき", "旧仕様", null];
 
 function itemHtml(t) {
   const isOpen = t.status === "open";
@@ -33,9 +34,14 @@ function itemHtml(t) {
 let showClosed = false;
 let cached = [];
 
+// 参照側(閉じずに残る)分類。確定仕様と同様、statusがclosedでもshowClosedに関係なく表示する。
+// 記録はba-181で追加(確定仕様・旧仕様と同じ「参照側」)だが、旧仕様は退役状態そのものなので
+// (closeされていても「退役済み」という情報として見せたい確定仕様/記録とは扱いが違う)ここには含めない。
+const ALWAYS_VISIBLE_CLASSES = ["確定仕様", "記録"];
+
 function render() {
   const threads = cached.filter((t) => !t.hiddenVoid);
-  const visible = showClosed ? threads : threads.filter((t) => t.status === "open" || t.cls === "確定仕様");
+  const visible = showClosed ? threads : threads.filter((t) => t.status === "open" || ALWAYS_VISIBLE_CLASSES.includes(t.cls));
 
   document.getElementById("statTotal").textContent = threads.length;
   document.getElementById("statOpen").textContent = threads.filter((t) => t.status === "open").length;
@@ -43,7 +49,7 @@ function render() {
   const latest = threads[0];
   document.getElementById("statLatest").textContent = latest ? fmtTs(latest.lastAt).slice(5, 10) : "—";
 
-  const closedCount = threads.filter((t) => t.status !== "open" && t.cls !== "確定仕様").length;
+  const closedCount = threads.filter((t) => t.status !== "open" && !ALWAYS_VISIBLE_CLASSES.includes(t.cls)).length;
   const btn = document.getElementById("btnToggleClosed");
   btn.textContent = showClosed ? `closedを隠す(${closedCount})` : `closedも表示(${closedCount})`;
 

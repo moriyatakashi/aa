@@ -111,14 +111,19 @@
   <div class="eyebrow">ロレキ内部メモ</div>
   <h1>路歴（bj） / ba分類の遷移分析</h1>
   <p class="lede">ba-32が定義した5分類(案件・確定仕様・気づき・保留論点・旧仕様)を状態機械として見て、実際にどう遷移してきたかを台帳データから分析したもの。</p>
-  <p class="ro-banner">静的スナップショット(2026-07-29時点の台帳全176スレッドを集計) — このページ自体はbaを再取得しない。ズレに気づいたら本文末尾のba-177(仮)を参照・更新。</p>
+  <p class="ro-banner">静的スナップショット(2026-07-29時点の台帳全176スレッドを集計) — このページ自体はbaを再取得しない。すま(claude-mobile)によるレビュー・訂正がba-179にあり、ここから発展した分類規約第2版の検討はba-180/181を参照。ズレに気づいたらba-179へ。</p>
   <p id="lastUpdated" style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-29 JST</p>
 
   <div class="statline">
     <div class="stat"><b>5</b><span>分類(ノード)</span></div>
     <div class="stat"><b>20</b><span>理論上の有向遷移</span></div>
-    <div class="stat"><b>4</b><span>実測された分類変更</span></div>
+    <div class="stat"><b>4</b><span>本文から見つかった分類の言い直し</span></div>
     <div class="stat"><b>176</b><span>台帳の全スレッド数</span></div>
+  </div>
+
+  <div class="callout" style="border-left-color:var(--cls-kiroku);">
+    <b style="color:var(--cls-kiroku-ink);">追記(2026-07-30):</b>
+    このページの2軸仮説(活動側=案件・気づき・保留論点、参照側=確定仕様・旧仕様)は、すま(claude-mobile)によるレビュー(ba-179)を経て、より広い実データで裏付けられた。参照側には「ただの情報」を置く6つ目の分類<span class="cls-badge cls-badge--kiroku">記録</span>も新設され(第2版ドラフト、ba-181)、コード側(CLASSIFICATIONS等)にも反映済み。以下の本文・グラフは2026-07-29時点の5分類での分析であり、書き換えていない(履歴として残す)。
   </div>
 
   <h2 class="q"><b>①</b> 数学的に何パターンか</h2>
@@ -209,14 +214,14 @@
     </svg>
 
     <div class="legend">
-      <div class="legend-item"><span class="legend-swatch real"></span>実測(色=変更後の分類、ba番号付き)</div>
-      <div class="legend-item"><span class="legend-swatch chain"></span>ba-36の想定ライフサイクル(未実測)</div>
+      <div class="legend-item"><span class="legend-swatch real"></span>本文で見つかった例(色=変更後の分類、ba番号付き)</div>
+      <div class="legend-item"><span class="legend-swatch chain"></span>ba-36の想定ライフサイクル(この例では未確認)</div>
       <div class="legend-item"><span class="legend-swatch faint"></span>理論上は可能・一度も使われていない組</div>
     </div>
   </div>
 
   <h2 class="q"><b>②</b> よく使うケース・件数</h2>
-  <p class="narrow">台帳全176スレッドの本文を「分類変更」の記述で検索した実測値。<b>4件のみ</b>、率にして2.3%。分類変更自体が例外的なイベント。</p>
+  <p class="narrow">台帳全176スレッドの本文を「分類変更」という言い回しで検索して見つかった件数。<b>4件</b>、率にして2.3%。ただしこれはタグの付け替え自体を集計した値ではなく、本文にその変更が明記されていた例を拾っただけの粗い推測値(この4件の外側にも、noteでの分類バックフィルのような形の付け直しはある)。</p>
   <div class="table-wrap">
     <table class="tx">
       <thead><tr><th class="mono">日付</th><th>スレッド</th><th>遷移</th><th>理由(要約)</th></tr></thead>
@@ -248,7 +253,7 @@
 
   <h2 class="q"><b>③</b> 足りないケース・違和感</h2>
   <ul class="findings">
-    <li><b>「成熟」と「訂正」が同じ矢印で表現されている。</b> ba-36は気づき→保留論点→案件→確定仕様を「同一物の成熟段階」と定義しているが、実測4件のうち3件(ba-16/53/171)は成熟ではなく「誤って確定仕様にしていたのを直す」訂正だった。データ上はどちらも同じ「tagが変わった」というだけの記録で、成熟なのか訂正なのかはnoteの文章を読まないと区別できない。</li>
+    <li><b>「成熟」と「訂正」が同じ矢印で表現されている。</b> ba-36は気づき→保留論点→案件→確定仕様を「同一物の成熟段階」と定義しているが、見つかった4件のうち3件(ba-16/53/171)は成熟ではなく「誤って確定仕様にしていたのを直す」訂正だった。データ上はどちらも同じ「tagが変わった」というだけの記録で、成熟なのか訂正なのかはnoteの文章を読まないと区別できない。</li>
     <li><b>ライフサイクルの最後の一歩(案件→確定仕様)が、一度も実行されていない。</b> それどころか唯一の関連実例(ba-53)は逆方向(確定仕様→案件)で、しかも「その場でタグを付け替える」のではなく「決定事項の現在形を別の新スレッドへ切り出す」やり方が選ばれた。案件が育って確定仕様に"なる"というより、案件は閉じて確定仕様は"生まれ直す"という運用に見える。</li>
     <li><b>旧仕様には出口がない。</b> 定義上、旧仕様に入れるのは確定仕様からだけで、旧仕様から他へ出ていく経路は規約上もデータ上も存在しない。復活させたい場合の扱いが未定義。</li>
     <li><b>10組中5組が、一度も繋がったことがない。</b> 確定仕様⇄保留論点、案件⇄旧仕様、案件⇄気づき、旧仕様⇄気づき、旧仕様⇄保留論点。特に「保留論点から直接、確定仕様や旧仕様になる」経路が丸ごと未使用なのは、保留論点が想定通り「案件を経由してから」しか先に進んでいないことの裏付けとも読める。</li>
@@ -264,7 +269,7 @@
     </ul>
   </div>
 
-  <footer class="pagefoot">ba-32(分類規約)・ba-16/36/39/53/171(実測データ)より作成、静的スナップショット(2026-07-29)</footer>
+  <footer class="pagefoot">ba-32(分類規約)・ba-16/36/39/53/171(本文からの観察)より作成、静的スナップショット(2026-07-29)。すま(claude-mobile)のレビューはba-179、分類規約第2版の検討はba-180/181。</footer>
 
   <script type="module">
     import { applyLastUpdated } from "../common/last-updated.js";
