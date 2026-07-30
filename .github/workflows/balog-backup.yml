@@ -1,4 +1,4 @@
-name: Backup BaLog to Google Drive
+name: Backup BaLog/Scores/Visits to Google Drive
 
 on:
   schedule:
