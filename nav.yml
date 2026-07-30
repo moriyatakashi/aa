@@ -27,6 +27,9 @@ categories:
       - code: bm
         desc: ba分類モデル(6分類・すま版)
         href: src/bm/
+      - code: bn
+        desc: 確定仕様の解説
+        href: src/bn/
   - label: あそび
     items:
       - code: k1
