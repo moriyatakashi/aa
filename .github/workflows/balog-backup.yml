@@ -27,7 +27,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install azure-data-tables requests
+        run: pip install azure-data-tables requests pyyaml
 
       - name: Azure login (OIDC)
         uses: azure/login@v2

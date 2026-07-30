@@ -1,8 +1,10 @@
 """指定テーブル(Azure Table Storage)を全件JSONダンプし、Google Driveの
 既存フォルダ(ba-backup)へ新規ファイルとして追加する。
 
-対象はBACKUP_TABLES(BaLog/Scores/Visits、2026-07-31にScores/Visitsを追加)。
-テーブルごとに1ファイル、同じ実行の中で順番にアップロードする。
+対象テーブルはscripts/backup_tables.ymlが正(2026-07-31、ハードコードのリストから
+切り出し)。ここに追記すればコード変更なしで次回実行から対象に入る
+(rbook run yml listにも自動的に載る)。テーブルごとに1ファイル、同じ実行の
+中で順番にアップロードする。
 
 追記のみを徹底するため、Drive側の呼び出しはfiles.create(新規作成)のみで、
 files.update/files.deleteは一切呼ばない。認可はOAuth(drive.fileスコープ)の
@@ -20,13 +22,21 @@ files.update/files.deleteは一切呼ばない。認可はOAuth(drive.fileスコ
 import json
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 import requests
+import yaml
 from azure.data.tables import TableServiceClient
 
-BACKUP_TABLES = ["BaLog", "Scores", "Visits"]
+BACKUP_TABLES_YML = Path(__file__).resolve().parent / "backup_tables.yml"
 TOKEN_URI = "https://oauth2.googleapis.com/token"
 UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart"
+
+
+def _load_backup_tables():
+    with open(BACKUP_TABLES_YML, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    return [t["name"] for t in data["tables"]]
 
 
 def _fetch_table_entities(table_name):
@@ -74,7 +84,7 @@ def main():
     access_token = _get_access_token()
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H%M%SZ')
 
-    for table_name in BACKUP_TABLES:
+    for table_name in _load_backup_tables():
         entities = _fetch_table_entities(table_name)
         content = json.dumps(entities, ensure_ascii=False, default=str).encode("utf-8")
         filename = f"{table_name.lower()}_full_{timestamp}.json"

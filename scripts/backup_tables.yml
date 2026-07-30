@@ -1,0 +1,12 @@
+# 日次バックアップ(scripts/backup-balog-to-drive.py)の対象テーブル一覧。
+# ここに追記すれば、次回の実行(手動 or 4:00 JSTの定期実行)から自動的に
+# バックアップ対象に入る(スクリプト本体の変更は不要)。
+# 1テーブル=Google Drive(ba-backupフォルダ)へ1ファイル(<name下>_full_<日時>.json)。
+
+tables:
+  - name: BaLog
+    note: ba台帳本体(追記オンリー・赤黒帳票)。日次バックアップの発端(2026-07-25実装)。
+  - name: Scores
+    note: 日々のスコア記録(n1)。2026-07-31追加。
+  - name: Visits
+    note: 訪問記録(n2)。2026-07-31追加。
