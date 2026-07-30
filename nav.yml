@@ -24,6 +24,9 @@ categories:
       - code: bj
         desc: ba分類の遷移分析
         href: src/bj/
+      - code: bm
+        desc: ba分類モデル(6分類・すま版)
+        href: src/bm/
   - label: あそび
     items:
       - code: k1
