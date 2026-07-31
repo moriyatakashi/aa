@@ -1541,10 +1541,43 @@ def _wip_task_dict(e):
 
 
 @app.function_name(name="wip-tasks")
-@app.route(route="s1", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+@app.route(route="s1", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
 def wip_tasks(req: func.HttpRequest) -> func.HttpResponse:
-    # 段2a: GETのみ。閲覧はba GETと同様に無認証。書き込み(POST)は段2bで追加。
+    # 段2a: GET(無認証・閲覧)。段2b: POST(登録/更新)を追加。POSTはba同様claude_key必須。
     table = _ensure_wip_table()
-    items = [_wip_task_dict(e) for e in table.list_entities()]
-    items.sort(key=lambda x: ((x.get("plannedDate") or ""), (x.get("createdAt") or "")))
-    return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+    if req.method == "GET":
+        items = [_wip_task_dict(e) for e in table.list_entities()]
+        items.sort(key=lambda x: ((x.get("plannedDate") or ""), (x.get("createdAt") or "")))
+        return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+    # POST: 登録/更新(upsert)。RowKey=baIdなので同じidの再送は上書き(二重にならない)。
+    body = _get_body(req)
+    by = _ba_claude_lane(body.get("claude_key", ""))
+    if by is None:
+        return func.HttpResponse("invalid credential", status_code=401)
+
+    ba_id = (body.get("baId") or "").strip()
+    if not ba_id:
+        return func.HttpResponse("baId is required", status_code=400)
+
+    # 既存があれば登録時間(CreatedAt)は据え置く。無ければ今。
+    try:
+        existing = table.get_entity(partition_key=WIP_TASKS_PARTITION, row_key=ba_id)
+        created_at = existing.get("CreatedAt") or datetime.now(timezone.utc).isoformat()
+    except ResourceNotFoundError:
+        created_at = datetime.now(timezone.utc).isoformat()
+
+    entity = {
+        "PartitionKey": WIP_TASKS_PARTITION,
+        "RowKey": ba_id,
+        "Important": bool(body.get("important", False)),
+        "Assignee": (body.get("assignee") or "").strip(),
+        "PlannedDate": (body.get("plannedDate") or "").strip(),
+        "CreatedAt": created_at,
+    }
+    seq = body.get("seq")
+    if seq is not None:
+        entity["Seq"] = seq
+    table.upsert_entity(entity)
+    return func.HttpResponse(json.dumps(_wip_task_dict(entity), ensure_ascii=False), status_code=201, mimetype="application/json")
