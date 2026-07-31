@@ -38,6 +38,12 @@
       margin: 22px 0 8px; display: flex; align-items: center; gap: 10px;
     }
     .cat-label::after { content: ""; flex: 1; height: 1px; background: var(--cat-line); }
+    /* ba-190: ページ成熟度の薄い印(ベータ🟦/真っ赤なウソ🔴)。隠さずこっそり併置 */
+    .nav-item.stage-beta { background: rgba(80,150,255,0.09); border-color: rgba(80,150,255,0.45); }
+    .nav-item.stage-joke { background: rgba(230,80,80,0.09); border-color: rgba(230,80,80,0.45); }
+    .stage-badge { margin-left: auto; font-size: 0.6rem; letter-spacing: 0.04em; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+    .stage-beta .stage-badge { background: rgba(80,150,255,0.16); color: #6ba7ff; }
+    .stage-joke .stage-badge { background: rgba(230,80,80,0.16); color: #f08a8a; }
   </style>
 </head>
 <body>
