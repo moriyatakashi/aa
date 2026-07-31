@@ -1510,3 +1510,41 @@ def last_updated(req: func.HttpRequest) -> func.HttpResponse:
     iso_date = data[0]["commit"]["committer"]["date"] if data else None
     _last_updated_cache[path] = (now, iso_date)
     return func.HttpResponse(json.dumps({"date": iso_date}), mimetype="application/json")
+
+
+# ===== s1 / WIP作業台 (ba-200) — 追記ブロック。既存には一切触れない =====
+# baから抽出したidに作業メタだけ別持ち。使い捨て前提・作り込まない。
+# テーブルはハンドラ内で遅延生成(create_table_if_not_exists)。az CLI不要。
+WIP_TASKS_TABLE = "WipTasks"
+WIP_TASKS_PARTITION = "wip"
+
+
+def _ensure_wip_table():
+    # _table_service(グローバル)を初期化しつつ、無ければ空テーブルを作る(冪等)。
+    _table_client(WIP_TASKS_TABLE)
+    try:
+        _table_service.create_table_if_not_exists(WIP_TASKS_TABLE)
+    except Exception:
+        pass
+    return _table_client(WIP_TASKS_TABLE)
+
+
+def _wip_task_dict(e):
+    return {
+        "baId": e["RowKey"],
+        "seq": e.get("Seq"),
+        "important": e.get("Important", False),
+        "assignee": e.get("Assignee", ""),
+        "plannedDate": e.get("PlannedDate", ""),
+        "createdAt": e.get("CreatedAt", ""),
+    }
+
+
+@app.function_name(name="wip-tasks")
+@app.route(route="s1", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def wip_tasks(req: func.HttpRequest) -> func.HttpResponse:
+    # 段2a: GETのみ。閲覧はba GETと同様に無認証。書き込み(POST)は段2bで追加。
+    table = _ensure_wip_table()
+    items = [_wip_task_dict(e) for e in table.list_entities()]
+    items.sort(key=lambda x: ((x.get("plannedDate") or ""), (x.get("createdAt") or "")))
+    return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
