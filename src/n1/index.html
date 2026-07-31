@@ -62,6 +62,28 @@
   <h1>路歴（n1） / 記録一覧</h1>
   <p id="lastUpdated" style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-16 07:48 JST</p>
 
+<!-- OMIKUJI:START (ba-190 真っ赤なウソ / n1を開くと勝手に回る運勢。表示だけ・スコアには触らない) -->
+  <style>
+    #omikuji{position:relative;border:1px solid var(--line,#2c3237);border-radius:14px;background-image:linear-gradient(rgba(230,80,80,0.06),rgba(230,80,80,0.06));padding:16px;margin:14px 0;overflow:hidden}
+    #omikuji .omk-badge{position:absolute;top:10px;right:12px;font-size:0.6rem;letter-spacing:.04em;padding:1px 8px;border-radius:999px;background:rgba(230,80,80,0.16);color:#e65050}
+    #omikuji .omk-label{font-size:12px;opacity:.7;margin:0 0 10px}
+    #omikuji .omk-window{height:88px;overflow:hidden;position:relative;border-radius:10px;background:rgba(128,128,128,0.06);border:1px solid var(--line,#2c3237);-webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent)}
+    #omikuji .omk-reel{position:absolute;left:0;right:0;top:0;will-change:transform}
+    #omikuji .omk-slot{height:88px;display:flex;align-items:center;justify-content:center;font-weight:800;letter-spacing:.08em;font-size:36px}
+    #omikuji .omk-kekka{margin:12px 2px 2px;font-size:14px;min-height:22px;opacity:.85}
+    #omikuji .omk-again{margin-top:10px}
+    #omikuji .omk-again button{background:none;border:1px solid var(--line,#2c3237);color:inherit;opacity:.7;border-radius:8px;padding:5px 11px;font-size:12px;cursor:pointer}
+    #omikuji .omk-again button:hover{border-color:#e65050;opacity:1}
+  </style>
+  <div id="omikuji">
+    <span class="omk-badge">真っ赤なウソ</span>
+    <p class="omk-label">今日の運勢</p>
+    <div class="omk-window"><div class="omk-reel" id="omkReel"></div></div>
+    <div class="omk-kekka" id="omkKekka"></div>
+    <div class="omk-again"><button id="omkAgain" type="button">もう一回まわす</button></div>
+  </div>
+<!-- OMIKUJI:END -->
+
 <!-- LOGIN_GATE:START -->
   <div id="login-gate">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -140,6 +162,25 @@
   <script type="module">
     import { applyLastUpdated } from "../common/last-updated.js";
     applyLastUpdated("src/n1", "lastUpdated", "最終更新");
+  </script>
+<!-- OMIKUJI SCRIPT (表示だけ・スコアには一切触らない) -->
+  <script>
+  (function(){
+    var FACES=[
+      {t:"大吉",w:1,c:"#e0b64a",m:"大吉じゃーん！ 今日はもう勝ち。"},
+      {t:"中吉",w:3,c:"#7ce0c4",m:"中吉。わるくない。"},
+      {t:"小吉",w:4,c:"#6ba7ff",m:"小吉。ぼちぼちいこう。"},
+      {t:"吉",w:3,c:"#9aa1a0",m:"吉。平常運転。"},
+      {t:"末吉",w:2,c:"#9aa1a0",m:"末吉。まあそういう日もある。"}
+    ];
+    var SLOT=88, reel=document.getElementById('omkReel'), kekka=document.getElementById('omkKekka');
+    if(!reel) return;
+    function pick(){var tot=FACES.reduce(function(s,f){return s+f.w;},0),r=Math.random()*tot;for(var i=0;i<FACES.length;i++){r-=FACES[i].w;if(r<0)return i;}return 0;}
+    function build(fin){var a=[],L=6;for(var l=0;l<L;l++)for(var i=0;i<FACES.length;i++)a.push(i);a.push(fin);reel.innerHTML=a.map(function(i){return '<div class="omk-slot" style="color:'+FACES[i].c+'">'+FACES[i].t+'</div>';}).join('');return a.length;}
+    function spin(){kekka.textContent='';var idx=pick(),n=build(idx),stop=(n-1)*SLOT;reel.style.transition='none';reel.style.transform='translateY(0)';reel.offsetHeight;reel.style.transition='transform 2.2s cubic-bezier(.12,.62,.15,1)';reel.style.transform='translateY(-'+stop+'px)';setTimeout(function(){var f=FACES[idx];kekka.innerHTML='\u2192 <b style="color:'+f.c+'">'+f.t+'</b> \uff0f '+f.m;},2250);}
+    var btn=document.getElementById('omkAgain'); if(btn) btn.addEventListener('click',spin);
+    window.addEventListener('load',function(){setTimeout(spin,350);});
+  })();
   </script>
 </body>
 </html>
