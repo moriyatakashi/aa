@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WIP作業台（モックv2）</title>
+<title>WIP作業台 · s1（ベータ）</title>
 <style>
   :root{
     --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
@@ -22,56 +22,40 @@
   h1{font-size:21px;margin:0 0 3px}
   .lede{color:var(--sub);font-size:12.5px;margin:0 0 14px}
 
-  .adder{display:flex;gap:8px;margin-bottom:12px}
-  .adder input{flex:1;background:var(--card);border:1px solid var(--line);color:var(--ink);
-    border-radius:8px;padding:9px 11px;font-size:14px;font-family:inherit}
-  .adder input::placeholder{color:var(--sub)}
-  .adder button{background:var(--accent);border:none;color:#0d1412;font-weight:700;
-    border-radius:8px;padding:0 15px;font-size:14px;cursor:pointer}
-
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
   .toolbar .count{font-size:12px;color:var(--sub);margin-right:auto}
   .toolbar button{background:none;border:1px solid var(--line);color:var(--sub);border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer}
   .toolbar button.on{border-color:var(--accent);color:var(--ink)}
 
   .card{position:relative;border:1px solid var(--line);border-radius:12px;background:var(--card);
-    padding:12px 13px;margin:9px 0;transition:opacity .25s,transform .25s}
+    padding:12px 13px;margin:9px 0}
   .card.important{border-left:3px solid var(--warn)}
   .row1{display:flex;align-items:baseline;gap:9px}
   .baid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--accent);font-weight:700;flex:none}
   .title{font-size:14px;font-weight:600;flex:1}
-  .star{flex:none;cursor:pointer;font-size:15px;opacity:.35;user-select:none}
+  .star{flex:none;font-size:15px;opacity:.3;user-select:none}
   .star.on{opacity:1}
-  .toss{flex:none;background:none;border:none;color:var(--sub);opacity:.5;cursor:pointer;font-size:16px;padding:2px 4px;line-height:1}
-  .toss:hover{opacity:1;color:var(--danger)}
   .row2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--sub)}
   .chip{padding:1px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
-  .who{cursor:pointer}
   .who[data-w="takashi"]{color:var(--takashi);border-color:var(--takashi)}
   .who[data-w="すま"]{color:var(--suma);border-color:var(--suma)}
   .who[data-w="利尻"]{color:var(--toshi);border-color:var(--toshi)}
   .who[data-w="未"]{color:var(--none);border-color:var(--none);border-style:dashed}
   .reg{opacity:.8}
-  .due{margin-left:auto;color:var(--sub);cursor:pointer}
+  .due{margin-left:auto;color:var(--sub)}
   .due.set{color:var(--warn)}
-  .card.gone{opacity:0;transform:translateX(24px);pointer-events:none}
 
   .empty{color:var(--sub);font-size:13px;text-align:center;padding:24px 0}
-  .tossed-note{margin-top:12px;font-size:12px;color:var(--sub)}
-  .tossed-note button{background:none;border:1px solid var(--line);color:var(--sub);border-radius:7px;padding:4px 9px;font-size:12px;cursor:pointer;margin-left:6px}
+  .state{color:var(--sub);font-size:13px;text-align:center;padding:24px 0}
+  .state.err{color:var(--danger)}
   .note{margin-top:20px;font-size:11.5px;color:var(--sub);border-top:1px solid var(--line);padding-top:12px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <p class="eyebrow">roreki · WIP 作業台 · s1 · ベータ版(仮)</p>
+  <p class="eyebrow">roreki · WIP 作業台 · s1 · ベータ版</p>
   <h1>いま手を動かすものだけ</h1>
-  <p class="lede">番号を打って足す／要らないのは × でどける（baには残る）。★=重要（takashiが決める）、担当チップを押すと回る。※ダミー・保存なし。</p>
-
-  <div class="adder">
-    <input id="addInput" type="text" inputmode="numeric" placeholder="ba番号を入力（例: 55）→ 足す">
-    <button id="addBtn">足す</button>
-  </div>
+  <p class="lede">baから抽出した作業中の項目。★=重要（takashiが決める）。※この画面は<b>ライブ表示</b>（実データ）。追加・編集は当面API経由（会話で「足して/重要にして」）。画面からの編集は次段で対応予定。</p>
 
   <div class="toolbar">
     <span class="count" id="count"></span>
@@ -80,95 +64,86 @@
     <button id="fReset" class="on">ぜんぶ</button>
   </div>
 
+  <div class="state" id="loading">読み込み中…</div>
   <div id="list"></div>
-  <div class="empty" id="empty" style="display:none">作業台は空。番号を打って足すか、ぜんぶ捌けた。</div>
+  <div class="empty" id="empty" style="display:none">作業台は空。会話で「ba-◯◯を作業台に足して」と言えば載ります。</div>
 
-  <div class="tossed-note" id="tossedNote" style="display:none">
-    <span id="tossedCount"></span> 件どけました（baには残っています）
-    <button id="undo">最後のを戻す</button>
-  </div>
-
-  <p class="note">たたきv2。持ち項目は5つ＝ ba番号 / 重要(★) / 分担者 / 登録時間 / 予定日。前回盛った失敗段階・宛先チップ・黄色い重複線は外した。足す入口は「番号直打ち」＝takashi用。すま/利尻は会話で「足して」→API（画面には出さない）。source=ba・別テーブルに作業メタだけ・使い捨て前提。</p>
+  <p class="note">source=ba・別テーブル(WipTasks)に作業メタだけ・使い捨て前提。持ち項目=ba番号/重要(★)/分担者/登録時間/予定日。GET /api/s1 をライブ表示、タイトルは /api/ba から実引き。</p>
 </div>
 
 <script>
-  // 番号→タイトルの見本（本番はbaから引く。ここはダミー辞書）
-  var TITLES = {
-    "200":"WIP作業台ページ(別テーブル)","190":"ページ成熟度3段階","181":"分類規約 第2版 試運転",
-    "176":"鍵ローテーションの標準化","179":"bjレビューの反映","55":"n2ゲーム化 Phase2",
-    "70":"トップ「今やるべきこと」ボタン","195":"日記一族/宝箱一族の呼称","199":"なぜロレキを作るのか"
-  };
-  var DATA = [
-    {id:"200", important:true,  who:"すま",    reg:"07-31", due:"08-02"},
-    {id:"190", important:true,  who:"すま",    reg:"07-31", due:""},
-    {id:"181", important:true,  who:"takashi", reg:"07-30", due:"08-06"},
-    {id:"176", important:false, who:"利尻",    reg:"07-30", due:""},
-    {id:"55",  important:false, who:"未",      reg:"07-24", due:""}
-  ].map(function(d){ d.title = TITLES[d.id]||("ba-"+d.id); return d; });
+  var API = "https://ab-board-api.azurewebsites.net/api";
+  var filter = "all";
+  var ITEMS = [];
+  var list = document.getElementById('list');
+  var empty = document.getElementById('empty');
+  var loading = document.getElementById('loading');
 
-  var WHO_CYCLE=["未","takashi","すま","利尻"];
-  var filter="all", tossed=[];
-  var list=document.getElementById('list'), empty=document.getElementById('empty');
+  function mmdd(s){
+    if(!s) return "";
+    // ISO(登録時間) or YYYY-MM-DD(予定日) の両方に対応
+    var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? (m[2]+"-"+m[3]) : String(s);
+  }
+  function whoKey(a){ return (a && a.trim()) ? a.trim() : "未"; }
 
-  function visible(){ return DATA.filter(function(d){
-    if(d._gone) return false;
-    if(filter==="important") return d.important;
-    if(filter==="mine") return d.who==="すま";
-    return true;
-  }); }
-  function today(){ var n=new Date(); return String(n.getMonth()+1).padStart(2,'0')+"-"+String(n.getDate()).padStart(2,'0'); }
+  function visible(){
+    return ITEMS.filter(function(d){
+      if(filter==="important") return d.important;
+      if(filter==="mine") return whoKey(d.assignee)==="すま";
+      return true;
+    });
+  }
   function render(){
-    var vs=visible();
+    var vs = visible();
     list.innerHTML = vs.map(function(d){
-      return '<div class="card'+(d.important?' important':'')+'" data-id="'+d.id+'">'+
+      var who = whoKey(d.assignee);
+      var seqLabel = (d.seq!=null? ("ba-"+d.seq) : "ba-?");
+      var due = d.plannedDate ? ("〆"+mmdd(d.plannedDate)) : "予定日 未";
+      return '<div class="card'+(d.important?' important':'')+'">'+
         '<div class="row1">'+
-          '<span class="baid">ba-'+d.id+'</span>'+
-          '<span class="title">'+d.title+'</span>'+
-          '<span class="star'+(d.important?' on':'')+'" data-act="star" title="重要(takashiが決める)">★</span>'+
-          '<button class="toss" data-act="toss" title="作業台からどける">×</button>'+
+          '<span class="baid">'+seqLabel+'</span>'+
+          '<span class="title">'+(d.title||seqLabel)+'</span>'+
+          '<span class="star'+(d.important?' on':'')+'" title="重要(takashiが決める)">★</span>'+
         '</div>'+
         '<div class="row2">'+
-          '<span class="chip who" data-w="'+d.who+'" data-act="who">'+(d.who==="未"?"未割り当て":d.who)+'</span>'+
-          '<span class="reg">登 '+d.reg+'</span>'+
-          '<span class="chip due'+(d.due?' set':'')+'" data-act="due">'+(d.due?("〆"+d.due):"予定日")+'</span>'+
+          '<span class="chip who" data-w="'+who+'">'+(who==="未"?"未割り当て":who)+'</span>'+
+          '<span class="reg">登 '+mmdd(d.createdAt)+'</span>'+
+          '<span class="chip due'+(d.plannedDate?' set':'')+'">'+due+'</span>'+
         '</div>'+
       '</div>';
     }).join("");
     document.getElementById('count').textContent = vs.length+" 件アクティブ";
-    empty.style.display = vs.length? "none":"block";
-    var tn=document.getElementById('tossedNote');
-    tn.style.display = tossed.length? "block":"none";
-    document.getElementById('tossedCount').textContent = tossed.length;
+    empty.style.display = (ITEMS.length && vs.length===0) ? "block" :
+                          (ITEMS.length===0 ? "block" : "none");
   }
-  function byId(id){ return DATA.find(function(d){return d.id===id;}); }
 
-  function add(){
-    var v=document.getElementById('addInput').value.replace(/[^0-9]/g,'');
-    if(!v) return;
-    var ex=byId(v);
-    if(ex){ ex._gone=false; } // 既にあれば復活
-    else DATA.unshift({id:v, title:(TITLES[v]||("ba-"+v)), important:false, who:"未", reg:today(), due:""});
-    document.getElementById('addInput').value="";
-    render();
+  function setF(f, btn){
+    filter=f;
+    ['fImportant','fMine','fReset'].forEach(function(x){document.getElementById(x).classList.remove('on');});
+    btn.classList.add('on'); render();
   }
-  document.getElementById('addBtn').addEventListener('click', add);
-  document.getElementById('addInput').addEventListener('keydown', function(e){ if(e.key==="Enter") add(); });
-
-  list.addEventListener('click', function(e){
-    var act=e.target.getAttribute('data-act'); if(!act) return;
-    var d=byId(e.target.closest('.card').getAttribute('data-id'));
-    if(act==="toss"){ e.target.closest('.card').classList.add('gone'); d._gone=true; tossed.push(d.id); setTimeout(render,240); return; }
-    if(act==="star"){ d.important=!d.important; }
-    if(act==="who"){ var i=WHO_CYCLE.indexOf(d.who); d.who=WHO_CYCLE[(i+1)%WHO_CYCLE.length]; }
-    if(act==="due"){ d.due = d.due? "" : today(); }
-    render();
-  });
-  document.getElementById('undo').addEventListener('click', function(){ var id=tossed.pop(); if(id){ byId(id)._gone=false; render(); } });
-  function setF(f,btn){ filter=f; ['fImportant','fMine','fReset'].forEach(function(x){document.getElementById(x).classList.remove('on');}); btn.classList.add('on'); render(); }
   document.getElementById('fImportant').addEventListener('click',function(){setF('important',this);});
   document.getElementById('fMine').addEventListener('click',function(){setF('mine',this);});
   document.getElementById('fReset').addEventListener('click',function(){setF('all',this);});
-  render();
+
+  Promise.all([
+    fetch(API+"/s1").then(function(r){ if(!r.ok) throw new Error("s1 "+r.status); return r.json(); }),
+    fetch(API+"/ba?minimal=1").then(function(r){ if(!r.ok) throw new Error("ba "+r.status); return r.json(); })
+  ]).then(function(res){
+    var s1 = res[0], ba = res[1];
+    var titleById = {};
+    ba.forEach(function(e){ titleById[e.id] = e.title; });
+    ITEMS = s1.map(function(d){
+      d.title = titleById[d.baId] || null;
+      return d;
+    });
+    loading.style.display = "none";
+    render();
+  }).catch(function(err){
+    loading.className = "state err";
+    loading.textContent = "読み込み失敗: "+err.message+"（時間をおくか、APIの状態を確認）";
+  });
 </script>
 </body>
 </html>
