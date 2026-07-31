@@ -17,10 +17,16 @@ function renderSections(categories) {
   return categories
     .map((category) => {
       const items = category.items
-        .map(
-          (item) =>
-            `    <a class="nav-item" href="${escapeHtml(item.href)}"><span class="nav-code">${escapeHtml(item.code)}</span><span class="nav-desc">${escapeHtml(item.desc)}</span></a>`
-        )
+        .map((item) => {
+          const stageClass = item.stage ? ` stage-${escapeHtml(item.stage)}` : "";
+          const stageLabel =
+            item.stage === "beta"
+              ? `<span class="stage-badge">ベータ版(仮)</span>`
+              : item.stage === "joke"
+              ? `<span class="stage-badge">真っ赤なウソ</span>`
+              : "";
+          return `    <a class="nav-item${stageClass}" href="${escapeHtml(item.href)}"><span class="nav-code">${escapeHtml(item.code)}</span><span class="nav-desc">${escapeHtml(item.desc)}</span>${stageLabel}</a>`;
+        })
         .join("\n");
       return `  <div class="cat-label">${escapeHtml(category.label)}</div>\n  <div class="nav-list">\n${items}\n  </div>`;
     })
