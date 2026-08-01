@@ -1541,15 +1541,36 @@ def _wip_task_dict(e):
 
 
 @app.function_name(name="wip-tasks")
-@app.route(route="s1", methods=["GET", "POST"], auth_level=func.AuthLevel.ANONYMOUS)
+@app.route(route="s1", methods=["GET", "POST", "DELETE"], auth_level=func.AuthLevel.ANONYMOUS)
 def wip_tasks(req: func.HttpRequest) -> func.HttpResponse:
     # 段2a: GET(無認証・閲覧)。段2b: POST(登録/更新)を追加。POSTはba同様claude_key必須。
+    # DELETE(2026-08-01、ba-200残課題対応): 作業台から外す。POSTと同じ認証(claude_key
+    # またはGoogleログイン)。ba本体(BaLog)には一切触れない(作業メタだけの削除)。
     table = _ensure_wip_table()
 
     if req.method == "GET":
         items = [_wip_task_dict(e) for e in table.list_entities()]
         items.sort(key=lambda x: ((x.get("plannedDate") or ""), (x.get("createdAt") or "")))
         return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
+
+    if req.method == "DELETE":
+        body = _get_body(req)
+        by = _ba_claude_lane(body.get("claude_key", ""))
+        if not by:
+            err = _authorize(body)
+            if err:
+                return err
+            by = "takashi"
+
+        ba_id = (body.get("baId") or "").strip()
+        if not ba_id:
+            return func.HttpResponse("baId is required", status_code=400)
+
+        try:
+            table.delete_entity(partition_key=WIP_TASKS_PARTITION, row_key=ba_id)
+        except ResourceNotFoundError:
+            pass  # 既に無ければそれで目的達成(冪等)
+        return func.HttpResponse(status_code=204)
 
     # POST: 登録/更新(upsert)。RowKey=baIdなので同じidの再送は上書き(二重にならない)。
     # ba_logと同じく、claude_keyが無ければGoogleログイン(_authorize)にフォールバックし、
