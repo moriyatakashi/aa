@@ -69,7 +69,20 @@ function perspectiveRowHtml(voidView) {
   return `<div class="perspective-row"><span class="perspective-label">無効フラグ:</span>${chip(c, "C")}${chip(t, "T")}</div>`;
 }
 
-function threadCardHtml(thread) {
+// ba-162: 関連番号(link)のチップ行。seqTitleは groupThreads が返す配列に生えている
+// threads.seqTitle(seq→タイトル先頭10文字)を渡す想定。
+function relatedRowHtml(relatedSeqs, seqTitle) {
+  if (!relatedSeqs || !relatedSeqs.length) return "";
+  const chips = relatedSeqs
+    .map((seq) => {
+      const preview = (seqTitle && seqTitle[seq]) || "";
+      return `<button type="button" class="related-chip" data-jump-seq="${seq}">ba-${seq}${preview ? " " + esc(preview) : ""}</button>`;
+    })
+    .join("");
+  return `<div class="related-row"><span class="related-label">関連:</span>${chips}</div>`;
+}
+
+function threadCardHtml(thread, seqTitle) {
   const { threadId, root, children, status } = thread;
   const title = thread.displayTitle || root.body || "(無題)";
   const tags = Array.isArray(root.tags) ? root.tags : [];
@@ -85,7 +98,7 @@ function threadCardHtml(thread) {
   const takashiReact = thread.reactByLane.takashi;
 
   return `
-    <details class="thread-card${thread.hiddenVoid ? " thread-card--void" : ""}" data-thread-id="${threadId}" ${isOpen ? "open" : ""}>
+    <details class="thread-card${thread.hiddenVoid ? " thread-card--void" : ""}" data-thread-id="${threadId}" data-seq="${root.seq || ""}" ${isOpen ? "open" : ""}>
       <summary>
         <div class="thread-top-row">
           <span class="chevron">▶</span>
@@ -97,6 +110,7 @@ function threadCardHtml(thread) {
         </div>
         ${thread.gist ? `<div class="thread-gist">${esc(thread.gist)}</div>` : ""}
         <div class="meta-row">${tagsHtml}${ghHtml}</div>
+        ${relatedRowHtml(thread.relatedSeqs, seqTitle)}
         ${perspectiveRowHtml(thread.voidView)}
         ${reactRowHtml(thread.reactByLane)}
       </summary>
@@ -262,7 +276,7 @@ function render() {
   const emptyMsg = searching
     ? `<p class="empty">「${esc(searchQuery.trim())}」に一致するスレッドはありません</p>`
     : `<p class="empty">表示できるスレッドがありません(分類フィルタと「closedも表示」を確認)</p>`;
-  listEl.innerHTML = visible.map(threadCardHtml).join("") || emptyMsg;
+  listEl.innerHTML = visible.map((t) => threadCardHtml(t, cachedThreads.seqTitle)).join("") || emptyMsg;
   visible.forEach((t) => attachThreadHandlers(listEl, t));
 }
 
@@ -350,6 +364,24 @@ function onLoginSuccess() {
       render();
     });
   }
+  // ba-162: 関連チップのジャンプ。ジャンプ先が絞り込みで隠れている場合に備え、
+  // フィルタを全解除してから探す(void/closed/分類/検索、どれで隠れていても辿り着けるように)。
+  document.getElementById("threadList").addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".related-chip");
+    if (!btn) return;
+    const seq = btn.dataset.jumpSeq;
+    showVoided = true;
+    showClosed = true;
+    filterCls = "all";
+    searchQuery = "";
+    if (searchEl) searchEl.value = "";
+    render();
+    const target = document.querySelector(`[data-seq="${seq}"]`);
+    if (target) {
+      target.open = true;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
   load();
 }
 

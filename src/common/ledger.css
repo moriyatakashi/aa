@@ -101,6 +101,15 @@ details[open] .chevron { transform: rotate(90deg); }
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.66rem;
   color: var(--accent); border: 1px dashed var(--accent); border-radius: 4px; padding: 2px 7px;
 }
+/* ba-162: 関連番号(link)チップ。表示層はthread-logic.jsのrelatedSeqs/seqTitleを使う(2026-08-02) */
+.related-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding-left: 20px; margin-top: 2px; }
+.related-label { font-size: 0.66rem; color: var(--ink-soft); }
+.related-chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.68rem;
+  color: var(--accent); background: transparent; border: 1px solid var(--accent); border-radius: 999px;
+  padding: 2px 10px; cursor: pointer;
+}
+.related-chip:hover { background: var(--accent); color: var(--paper); }
 
 .perspective-row { display: flex; gap: 8px; align-items: center; padding-left: 20px; margin-top: 2px; }
 .perspective-label { font-size: 0.62rem; color: var(--ink-soft); }
