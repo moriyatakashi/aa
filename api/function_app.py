@@ -1552,10 +1552,15 @@ def wip_tasks(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(json.dumps(items, ensure_ascii=False), mimetype="application/json")
 
     # POST: 登録/更新(upsert)。RowKey=baIdなので同じidの再送は上書き(二重にならない)。
+    # ba_logと同じく、claude_keyが無ければGoogleログイン(_authorize)にフォールバックし、
+    # 人間レーン(takashi本人)からも画面経由で登録できるようにする(2026-08-01、ba-200残課題対応)。
     body = _get_body(req)
     by = _ba_claude_lane(body.get("claude_key", ""))
-    if by is None:
-        return func.HttpResponse("invalid credential", status_code=401)
+    if not by:
+        err = _authorize(body)
+        if err:
+            return err
+        by = "takashi"
 
     ba_id = (body.get("baId") or "").strip()
     if not ba_id:
