@@ -35,6 +35,11 @@ categories:
       - code: bn
         desc: 確定仕様の解説
         href: src/bn/
+  - label: 関連
+    items:
+      - code: ab
+        desc: 実験場(路歴の姉妹サイト・別リポジトリ)
+        href: https://moriyatakashi.github.io/ab/
   - label: あそび
     items:
       - code: k1
