@@ -28,10 +28,6 @@ categories:
         desc: ba分類モデル(6分類・すま版)
         href: src/bm/
         stage: beta
-      - code: s1
-        desc: WIP作業台(モック・保存なし)
-        href: src/s1/
-        stage: beta
       - code: bn
         desc: 確定仕様の解説
         href: src/bn/
