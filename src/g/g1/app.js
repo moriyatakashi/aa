@@ -64,11 +64,14 @@ const GAMEPAD_MAP={0:1,1:0,8:2,9:3,12:4,13:5,14:6,15:7};
 let gamepadPrev={};
 function pollGamepad(){
   if(!cpu || !navigator.getGamepads) return;
-  const pad=navigator.getGamepads()[0];
-  if(!pad) return;
+  const pads=navigator.getGamepads();
   for(const btnIdx in GAMEPAD_MAP){
-    const b=pad.buttons[btnIdx];
-    const pressed=!!(b && b.pressed);
+    let pressed=false;
+    for(const pad of pads){
+      if(!pad) continue;
+      const b=pad.buttons[btnIdx];
+      if(b && b.pressed){ pressed=true; break; }
+    }
     if(pressed!==gamepadPrev[btnIdx]){
       cpu.joy1[GAMEPAD_MAP[btnIdx]]=pressed?1:0;
       gamepadPrev[btnIdx]=pressed;
@@ -82,8 +85,9 @@ const gamepadStatusEl=document.getElementById('gamepadStatus');
 function updateGamepadStatus(){
   if(!gamepadStatusEl) return;
   const pads=navigator.getGamepads?navigator.getGamepads():[];
-  const pad=pads&&pads[0];
-  gamepadStatusEl.textContent=pad?`🎮 接続中: ${pad.id}`:'🎮 未接続（キーボード/タッチで操作可）';
+  const connected=[];
+  for(const p of pads){ if(p) connected.push(p); }
+  gamepadStatusEl.textContent=connected.length?`🎮 接続中: ${connected.map(p=>p.id).join(' / ')}`:'🎮 未接続（キーボード/タッチで操作可）';
 }
 window.addEventListener('gamepadconnected',updateGamepadStatus);
 window.addEventListener('gamepaddisconnected',updateGamepadStatus);
