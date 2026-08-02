@@ -4,7 +4,7 @@
 <script src="../common/config.js?v=202607160712"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>k2 / baレーダーチャート</title>
+<title>bc / baレーダーチャート</title>
 <link rel="stylesheet" href="../common/ledger.css?v=202607262133">
 <style>
   .radar-wrap {
@@ -36,7 +36,7 @@
 <body>
   <p><a href="../../">← 戻る</a></p>
   <div class="eyebrow">ロレキ内部メモ</div>
-  <h1>路歴（k2） / baレーダーチャート</h1>
+  <h1>路歴（bc） / baレーダーチャート</h1>
   <p class="lede">ba(n4後継の追記ログ)を軸にしたレーダーチャート。投稿者別(参加スレッド数)、分類別(ba-32規約の4分類ごとのスレッド数)、週次得点(ba-53、直近8週の推移)を切り替えて見られる。</p>
   <p id="lastUpdated" style="font-size:0.8rem;color:var(--ink-soft);">最終更新: 2026-07-16 07:48 JST</p>
 
@@ -72,12 +72,12 @@
     <p class="radar-empty" id="radarEmpty" style="display:none;">スレッドがまだありません</p>
   </div>
 
-  <script>window.AA_AUTH_EVENT = "k2-login-success"; window.AA_PUBLIC_VIEW = true;</script>
+  <script>window.AA_AUTH_EVENT = "bc-login-success"; window.AA_PUBLIC_VIEW = true;</script>
   <script src="../common/auth.js?v=202607201000"></script>
   <script type="module" src="app.js?v=202607261305"></script>
   <script type="module">
     import { applyLastUpdated } from "../common/last-updated.js";
-    applyLastUpdated("src/k2", "lastUpdated", "最終更新");
+    applyLastUpdated("src/bc", "lastUpdated", "最終更新");
   </script>
 </body>
 </html>

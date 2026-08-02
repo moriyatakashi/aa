@@ -18,9 +18,9 @@ categories:
       - code: bb
         desc: ba現在形ビューワ
         href: src/bb/
-      - code: k2
+      - code: bc
         desc: baレーダーチャート
-        href: src/k2/
+        href: src/bc/
   - label: 関連
     items:
       - code: ab
