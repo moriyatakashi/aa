@@ -1,7 +1,7 @@
-// k1(NESエミュレータ)のスモークテスト。
-// CPU(6502)/PPU(2C02)はk1/index.html内の1つの<script>にべた書きで、
+// g1(NESエミュレータ、旧k1)のスモークテスト。
+// CPU(6502)/PPU(2C02)はg1/index.html内の1つの<script>にべた書きで、
 // importできるモジュールに分離されていないため、命令セット単位のユニットテストは
-// 大掛かりなリファクタなしには書けない(bc/のように別ファイル化されていればできる)。
+// 大掛かりなリファクタなしには書けない(g2/のように別ファイル化されていればできる)。
 // ここでは「同梱ROMを選んだら実際にフレームが描画され、エラー表示が出ない」ことだけを
 // 確認する低コストな回帰検知として置く。
 import { test } from "node:test";
@@ -30,7 +30,7 @@ function serveStatic() {
   });
 }
 
-test("k1: 同梱ROM(hello_nes4)を選ぶとエラーなくフレームが描画される", async () => {
+test("g1: 同梱ROM(hello_nes4)を選ぶとエラーなくフレームが描画される", async () => {
   const server = await serveStatic();
   const port = server.address().port;
   const browser = await chromium.launch();
@@ -39,7 +39,7 @@ test("k1: 同梱ROM(hello_nes4)を選ぶとエラーなくフレームが描画�
     const pageErrors = [];
     page.on("pageerror", (e) => pageErrors.push(e.message));
 
-    await page.goto(`http://localhost:${port}/src/k1/`);
+    await page.goto(`http://localhost:${port}/src/g/g1/`);
     await page.click('.rom-btn[data-rom="rom/hello_nes4.nes"]');
 
     await page.waitForFunction(

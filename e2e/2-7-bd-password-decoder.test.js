@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { decodePassword, hanToZen, normalizePassword } from "../src/bd/decoder.js";
+import { decodePassword, hanToZen, normalizePassword } from "../src/g/g3/decoder.js";
 
 // 元Notebookで実際に検証済みの入出力(ドラクエ1「ふっかつのじゅもん」)
 const SAMPLE_PASSWORD = "ふるいけや　かわずとびこむ　みずのおと　ばしや";

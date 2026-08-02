@@ -1,4 +1,4 @@
-// k2(baレーダーチャート)の集計ロジックの検証。
+// bc(baレーダーチャート、旧k2)の集計ロジックの検証。
 // (1) 投稿者別タブ: スレッドに発言した投稿者(by)ごとの参加スレッド数(open/closed問わず)。
 // (2) 分類別タブ: スレッド内で最後に見つかった分類タグ(4分類)がそのスレッドの分類になる
 //     (同スレッド内で分類タグが後から上書きされた場合は新しい方を採用)。
@@ -40,7 +40,7 @@ const FIXTURE = [
   { id: "T3-1", threadId: "T3", by: "claude-mobile", ref: "T3", type: "note", seq: null, createdAt: `${T}5+00:00`, body: "e", tags: ["保留論点"] },
 ];
 
-test("k2: 投稿者別/分類別のスレッド集計が期待通りに出る", async () => {
+test("bc: 投稿者別/分類別のスレッド集計が期待通りに出る", async () => {
   const server = await serveStatic();
   const port = server.address().port;
   const browser = await chromium.launch();
@@ -53,12 +53,12 @@ test("k2: 投稿者別/分類別のスレッド集計が期待通りに出る", 
       route.fulfill({ contentType: "application/json", body: JSON.stringify(FIXTURE) })
     );
 
-    await page.goto(`http://localhost:${port}/src/k2/`);
+    await page.goto(`http://localhost:${port}/src/bc/`);
     // ログインゲートは通さず、auth.jsが発火するのと同じイベントで直接開ける
     await page.evaluate(() => {
       document.getElementById("content").style.display = "block";
       window.__credential = "test";
-      window.dispatchEvent(new Event("k2-login-success"));
+      window.dispatchEvent(new Event("bc-login-success"));
     });
     await page.waitForSelector("#radarTableBody tr");
 

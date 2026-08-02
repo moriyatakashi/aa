@@ -1,9 +1,9 @@
 // ba-35残課題(2): ログイン無しで閲覧できる「公開閲覧モード」(common/auth.jsのAA_PUBLIC_VIEW)を
 // 検証する。ログインイベントを一切発火させずに#contentが表示され、データも取得できることを
-// 確認する(k2・beは元々書き込みUIを持たないため、閲覧のみのシンプルなケース)。
+// 確認する(bc(旧k2)・beは元々書き込みUIを持たないため、閲覧のみのシンプルなケース)。
 // n1・n2は書き込みフォームを持つため、未ログインで書き込みボタンを押すと通信(401)せずに
 // ログインへ誘導される(window.aaShowLoginGate)ことも検証する。
-// Stage2はk2のみが対象(パイロット)、Stage4でbe、Stage5でn1/n2を追加。
+// Stage2はbc(旧k2)のみが対象(パイロット)、Stage4でbe、Stage5でn1/n2を追加。
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
@@ -36,7 +36,7 @@ const BA_FIXTURE = [
 ];
 
 const PAGES = {
-  k2: {
+  bc: {
     routes: { [`${API_BASE}/ba`]: () => ({ status: 200, body: BA_FIXTURE }) },
     async assertLoaded(page) {
       await page.waitForFunction(() => document.querySelectorAll("#radarSvg polygon").length > 0, null, { timeout: 5000 });

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   generatePassword, ITEM_NAMES, TOWN_NAMES,
   MOON_STATE_NAMES, GATE_STATE_NAMES, PLUMAGE_STATE_NAMES, SHIP_STATE_NAMES, PRINCE_STATE_NAMES,
-} from "../src/bf/generator.js";
+} from "../src/g/g4/generator.js";
 
 // 元Notebook(Colab)のコードセルをPythonでそのまま動かして得た出力と突き合わせ済みの回帰テスト。
 // (bd用のサンプルと違い、Notebook自体には検証済みサンプル入出力の記載がないため、

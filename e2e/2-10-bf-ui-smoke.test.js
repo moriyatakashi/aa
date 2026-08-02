@@ -1,4 +1,4 @@
-// bf(ふっかつのじゅもん生成器)のUI配線スモークテスト。
+// g4(ふっかつのじゅもん生成器、旧bf)のUI配線スモークテスト。
 // generator.jsのロジック自体は2-9で網羅済みなので、ここでは「実際の画面操作で
 // フォーム入力→ボタン押下→表示」まで通ることだけを確認する(要素id不一致などの
 // 配線バグはユニットテストでは検知できないため)。
@@ -28,7 +28,7 @@ function serveStatic() {
   });
 }
 
-test("bf: 初期値のまま生成ボタンを押すと、2-9で検証済みの最小構成のじゅもんが表示される", async () => {
+test("g4: 初期値のまま生成ボタンを押すと、2-9で検証済みの最小構成のじゅもんが表示される", async () => {
   const server = await serveStatic();
   const port = server.address().port;
   const browser = await chromium.launch();
@@ -37,7 +37,7 @@ test("bf: 初期値のまま生成ボタンを押すと、2-9で検証済みの�
     const pageErrors = [];
     page.on("pageerror", (e) => pageErrors.push(e.message));
 
-    await page.goto(`http://localhost:${port}/src/bf/`);
+    await page.goto(`http://localhost:${port}/src/g/g4/`);
     await page.click("#btn-generate");
 
     await page.waitForSelector("#result", { state: "visible" });
@@ -53,13 +53,13 @@ test("bf: 初期値のまま生成ボタンを押すと、2-9で検証済みの�
   }
 });
 
-test("bf: なまえを3文字にすると生成せずエラーメッセージが出る", async () => {
+test("g4: なまえを3文字にすると生成せずエラーメッセージが出る", async () => {
   const server = await serveStatic();
   const port = server.address().port;
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
-    await page.goto(`http://localhost:${port}/src/bf/`);
+    await page.goto(`http://localhost:${port}/src/g/g4/`);
 
     await page.fill("#ro-name", "あいう");
     await page.click("#btn-generate");
@@ -74,13 +74,13 @@ test("bf: なまえを3文字にすると生成せずエラーメッセージが
   }
 });
 
-test("bf: サマルトリア王子のチェックを外すとムーンブルク王女の欄も無効化される", async () => {
+test("g4: サマルトリア王子のチェックを外すとムーンブルク王女の欄も無効化される", async () => {
   const server = await serveStatic();
   const port = server.address().port;
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
-    await page.goto(`http://localhost:${port}/src/bf/`);
+    await page.goto(`http://localhost:${port}/src/g/g4/`);
 
     assert.equal(await page.isDisabled("#mu-flag"), true, "サマルトリア未加入時はムーンブルクのチェックボックス自体が無効のはず");
 
