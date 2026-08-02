@@ -28,9 +28,6 @@ categories:
         desc: ba分類モデル(6分類・すま版)
         href: src/bm/
         stage: beta
-      - code: bn
-        desc: 確定仕様の解説
-        href: src/bn/
   - label: 関連
     items:
       - code: ab
