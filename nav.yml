@@ -28,24 +28,24 @@ categories:
         href: https://moriyatakashi.github.io/ab/
   - label: あそび
     items:
-      - code: k1
+      - code: g1
         desc: NES Emulator
-        href: src/k1/
-      - code: bc
+        href: src/g/g1/
+      - code: g2
         desc: CASL II シミュレータ
-        href: src/bc/
-      - code: bd
+        href: src/g/g2/
+      - code: g3
         desc: ふっかつのじゅもん解析器
-        href: src/bd/
-      - code: bf
+        href: src/g/g3/
+      - code: g4
         desc: DQ2 ふっかつのじゅもん生成器
-        href: src/bf/
-      - code: bh
+        href: src/g/g4/
+      - code: g5
         desc: NASM x86 エミュレータ
-        href: src/bh/
-      - code: bi
+        href: src/g/g5/
+      - code: g6
         desc: COBOL ミニインタプリタ
-        href: src/bi/
-      - code: ro
+        href: src/g/g6/
+      - code: g7
         desc: Roulette
-        href: ro.html
+        href: src/g/g7/

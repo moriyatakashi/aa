@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>bh / NASM x86 エミュレータ</title>
+<title>g2 / CASL II シミュレータ</title>
 <style>
   :root {
     --bg: #14170f;
@@ -19,6 +19,7 @@
     --console-bg: #05070a;
     --console-text: #9be89b;
     --pr-highlight: #4a4420;
+    --breakpoint: #ff6b57;
   }
   * { box-sizing: border-box; }
   body {
@@ -29,6 +30,7 @@
   a.back:hover { color: var(--text); }
   h1 { font-size: 1.1rem; margin: 10px 0 2px; }
   .lede { color: var(--text-dim); margin: 0 0 6px; font-size: 0.85rem; }
+  .lede a { color: var(--accent); }
   .updated { font-size: 0.68rem; color: var(--text-dim); margin: 0 0 14px; }
 
   .layout {
@@ -81,67 +83,67 @@
   }
 
   .regs {
-    display: grid; grid-template-columns: repeat(2, auto 1fr);
+    display: grid; grid-template-columns: repeat(4, auto 1fr);
     gap: 0.3rem 0.6rem; font-family: var(--mono); align-items: center;
   }
   .regs label { color: var(--text-dim); text-align: right; }
   .regs output {
     padding: 0.15rem 0.4rem; border: 1px solid var(--border); border-radius: 4px;
-    background: var(--bg); min-width: 6.5em; text-align: right;
-  }
-  .flags-line {
-    margin-top: 0.5rem; font-family: var(--mono); font-size: 0.85rem; color: var(--text-dim);
+    background: var(--bg); min-width: 3.5em; text-align: right;
   }
 
   .memview {
-    display: grid; grid-template-columns: auto 1fr;
-    gap: 0.2rem 0.6rem; font-family: var(--mono); font-size: 12px; align-items: center;
+    display: grid; grid-template-columns: auto repeat(4, 1fr);
+    gap: 0.3rem 0.6rem; font-family: var(--mono); align-items: center;
   }
   .memview label { color: var(--text-dim); }
   .memview output {
-    padding: 0.1rem 0.4rem; border: 1px solid var(--border); border-radius: 4px;
-    background: var(--bg); text-align: left; white-space: pre;
+    padding: 0.15rem 0.4rem; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--bg); min-width: 3.5em; text-align: right;
   }
 
+  .radix-toggle { margin: 0.6rem 0; display: flex; gap: 0.9rem; font-size: 0.85rem; color: var(--text-dim); }
   .status-line { margin-top: 0.6rem; font-size: 0.85rem; color: var(--text-dim); }
 
   .console-box {
     background: var(--console-bg); color: var(--console-text);
     font-family: var(--mono); font-size: 13px; padding: 0.6rem; border-radius: 6px;
-    height: 100px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+    height: 130px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
   }
 
   .listing {
     margin-top: 1rem; font-family: var(--mono); font-size: 12.5px;
     max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px;
   }
-  .listing-line { display: flex; gap: 0.5rem; padding: 1px 0.5rem; white-space: pre; }
+  .listing-line { display: flex; gap: 0.5rem; padding: 1px 0.5rem; white-space: pre; cursor: default; }
+  .listing-line.has-addr { cursor: pointer; }
   .listing-line.pr { background: var(--pr-highlight); }
-  .listing-line .addr { color: var(--text-dim); width: 3.5em; flex-shrink: 0; text-align: right; }
+  .listing-line .addr { color: var(--text-dim); width: 4.5em; flex-shrink: 0; }
+  .listing-line.breakpoint .addr { color: var(--breakpoint); font-weight: bold; }
+  .listing-line .addr::before { content: "  "; }
+  .listing-line.breakpoint .addr::before { content: "● "; color: var(--breakpoint); }
 </style>
 </head>
 <body>
-<a class="back" href="../../">← 戻る</a>
-<h1>路歴（bh） / NASM x86 エミュレータ</h1>
+<a class="back" href="../../../">← 戻る</a>
+<h1>路歴（g2） / CASL II シミュレータ</h1>
 <p class="lede">
-  NASM構文のごく一部を解釈するミニアセンブラ + 簡易x86仮想機械。ブラウザ内で完結(本物のnasmは未使用)。
-  対応命令: MOV/ADD/SUB/CMP/JMP/JE/JNE/JL/JLE/JG/JGE/INT 0x80(sys_write, sys_exitのみ)。
+  COMET II 仮想機械上で CASL II プログラムをアセンブル・実行します。
+  (<a href="https://www.officedaytime.com/dcaslj/" target="_blank" rel="noopener">仕様参考: officedaytime.com</a>)
 </p>
-<p class="updated" id="lastUpdated">v1(初版)</p>
+<p class="updated" id="lastUpdated">更新: 2026-07-18 JST</p>
 
 <div class="layout">
   <div class="panel">
-    <h2>ソース(NASM風)</h2>
+    <h2>ソース</h2>
     <textarea id="source" spellcheck="false"></textarea>
     <div class="toolbar">
       <button id="btn-assemble" class="primary" type="button">アセンブル</button>
       <button id="btn-run" type="button" disabled>実行</button>
       <button id="btn-step" type="button" disabled>ステップ</button>
+      <button id="btn-pause" type="button" disabled>一時停止</button>
       <button id="btn-reset" type="button" disabled>リセット</button>
-    </div>
-    <div class="toolbar">
-      <button id="btn-sample-hello" type="button">サンプル: Hello World</button>
-      <button id="btn-sample-loop" type="button">サンプル: ループ</button>
+      <button id="btn-clear-bp" type="button" disabled>ブレークポイント解除</button>
     </div>
     <div class="status-line" id="status">ソースを編集して「アセンブル」を押してください。</div>
     <div class="errors" id="errors"></div>
@@ -149,26 +151,41 @@
 
   <div class="panel">
     <h2>レジスタ</h2>
+    <div class="radix-toggle">
+      <label><input type="radio" name="radix" value="hex" checked /> 16進</label>
+      <label><input type="radio" name="radix" value="unsigned" /> 10進(符号なし)</label>
+      <label><input type="radio" name="radix" value="signed" /> 10進(符号付き)</label>
+    </div>
     <div class="regs" id="regs"></div>
-    <div class="flags-line" id="flags">ZF=- SF=- CF=- OF=-</div>
 
-    <h2 style="margin-top: 1rem">コンソール出力(int 0x80 sys_write)</h2>
+    <h2 style="margin-top: 1rem">コンソール (IN/OUT)</h2>
     <div class="console-box" id="console"></div>
 
-    <h2 style="margin-top: 1rem">データメモリ(.dataセクション)</h2>
-    <div class="memview" id="memview"></div>
+    <h2 style="margin-top: 1rem">メモリ</h2>
+    <div class="toolbar" style="margin-top: 0">
+      <label for="mem-addr" style="align-self: center; color: var(--text-dim)">アドレス(16進)</label>
+      <input
+        type="text"
+        id="mem-addr"
+        value="0000"
+        maxlength="4"
+        style="font-family: var(--mono); width: 5em; text-transform: uppercase"
+      />
+      <button id="btn-mem-show" type="button">表示</button>
+    </div>
+    <div class="memview" id="memview" style="margin-top: 0.5rem"></div>
   </div>
 </div>
 
 <div class="panel">
-  <h2>プログラムリスト(実行中の命令をハイライト)</h2>
+  <h2>プログラムリスト (アドレスをクリックでブレークポイント切替)</h2>
   <div class="listing" id="listing"></div>
 </div>
 
-<script type="module" src="app.js?v=202607232000"></script>
+<script type="module" src="app.js?v=202607181300"></script>
 <script type="module">
-  import { applyLastUpdated } from "../common/last-updated.js";
-  applyLastUpdated("src/bh");
+  import { applyLastUpdated } from "../../common/last-updated.js";
+  applyLastUpdated("src/g/g2");
 </script>
 </body>
 </html>
