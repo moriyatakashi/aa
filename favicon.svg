@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <style>
+    .bg{fill:#0a6c96}
+    .fg{fill:#f7f6f0}
+    @media (prefers-color-scheme: dark){
+      .bg{fill:#66ccff}
+      .fg{fill:#14170f}
+    }
+  </style>
+  <rect x="1" y="1" width="14" height="14" rx="4" class="bg"/>
+  <text x="8" y="12" text-anchor="middle" font-size="11" font-weight="900" font-family="system-ui, sans-serif" class="fg">a</text>
+</svg>
