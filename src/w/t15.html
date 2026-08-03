@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t15 / 仕様来歴の三層規約(ba-36)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:700px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block p{font-size:13px;margin:0 0 8px}
+  .theme-block p:last-child{margin-bottom:0}
+  .theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:5px 0}
+  .quote-src{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .quote-src b{color:var(--ink);font-weight:600}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .diagram{margin:6px 0 12px;color:var(--sub)}
+  .diagram svg{width:100%;height:auto;display:block}
+  .diagram text{fill:currentColor;font-family:"Hiragino Kaku Gothic ProN",sans-serif}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:44px;height:44px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12px;margin:0 0 6px}
+  .toss-card p{font-size:11px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+
+  <p class="mock-label">確定仕様の可視化パターン</p>
+  <h1>仕様来歴の三層規約(ba-36)</h1>
+  <p class="lede">確定事項タブは、baに文字通り書かれていることだけに絞っている。</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button>
+    <button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button>
+    <button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button>
+  </div>
+
+  <div class="panel on" id="solid">
+    <p class="panel-note">ba-36に文字通り書かれていることだけ。</p>
+
+    <div class="theme-block">
+      <h2>三層の役割分担 <span class="src">ba-36</span></h2>
+      <div class="diagram">
+        <svg viewBox="0 0 300 110">
+          <rect x="10" y="10" width="86" height="50" rx="6" fill="var(--solid)" opacity="0.15" stroke="currentColor"/>
+          <text x="53" y="30" text-anchor="middle" font-size="10" font-weight="700">ba</text>
+          <text x="53" y="44" text-anchor="middle" font-size="8.5">なぜ決めたか</text>
+          <text x="53" y="55" text-anchor="middle" font-size="8.5">(決定と来歴)</text>
+          <rect x="107" y="10" width="86" height="50" rx="6" fill="var(--beta)" opacity="0.15" stroke="currentColor"/>
+          <text x="150" y="30" text-anchor="middle" font-size="10" font-weight="700">yml+テスト</text>
+          <text x="150" y="44" text-anchor="middle" font-size="8.5">何が正か</text>
+          <text x="150" y="55" text-anchor="middle" font-size="8.5">(現在形の定義)</text>
+          <rect x="204" y="10" width="86" height="50" rx="6" fill="none" stroke="currentColor"/>
+          <text x="247" y="30" text-anchor="middle" font-size="10" font-weight="700">bb</text>
+          <text x="247" y="44" text-anchor="middle" font-size="8.5">いまどうなってるか</text>
+          <text x="247" y="55" text-anchor="middle" font-size="8.5">(読み取り専用の眺め)</text>
+          <text x="150" y="82" text-anchor="middle" font-size="9.5">重複記載せず、ポインタで結ぶ</text>
+        </svg>
+      </div>
+      <p>アイデアと仕様は同一物の成熟段階(気づき→保留論点→案件→確定仕様、ba-32のライフサイクル)とみなす。</p>
+    </div>
+
+    <div class="theme-block">
+      <h2>相互リンク規約 <span class="src">ba-36</span></h2>
+      <ul>
+        <li>yml/テスト側はファイルヘッダに準拠ba番号を書く(例: <code># 準拠: ba-32</code>)</li>
+        <li>baの確定仕様スレッドはnoteに実装先ファイルパスを書く</li>
+        <li>ドリフト発見時はbaに気づきスレッドを立てて解消する</li>
+      </ul>
+    </div>
+
+    <div class="theme-block">
+      <h2>却下した案 <span class="src">ba-36</span></h2>
+      <ul>
+        <li>仕様全文をbaへ集める(追記オンリーでは現在形が見えない)</li>
+        <li>テストをbaから生成する(散文→構造化の変換層がymlの再発明になる)</li>
+      </ul>
+    </div>
+
+    <div class="theme-block">
+      <h2>ポインタ切れへの備え(追加ルール) <span class="src">ba-36・2026-07-29追加</span></h2>
+      <p>確定仕様スレッドがポインタ型(外部ファイル・他リポジトリ参照)の場合、指し先が将来消える保証はない(実例: ba-39が指していたc1、ba-48が指していたc2、どちらも実際に削除済み)。指し先が消える見込みが立った時点で、致命的に失われる前に要点をba本文へ埋め込んで救出すること。</p>
+      <div class="quote-src"><b>この規約が実際に効いた例:</b> aa側のページ(bj/bm/bn/s1)整理・削除の際、この規約に従って要点をab/t3・t10等へ救出してから削除した。</div>
+    </div>
+
+    <div class="theme-block">
+      <h2>cross-repo版の教訓(追加ルール) <span class="src">ba-36・2026-08-02追加</span></h2>
+      <p>本規約は同一repo内の確定仕様→外部ファイルの参照を想定していたが、別の実例が見つかった。aaでbe(ページ)を2026-07-29に正式削除した際、aa内部の参照は全て追従していたが、別リポジトリのx2側のテスト設定(pages.yml等)は追従できておらず、7件のテスト失敗として後から(2026-08-02)検出された。同時にWipTasksテーブル追加もx2のexpected_azure_tables.ymlへの反映漏れが見つかった。</p>
+      <p><b>教訓:</b> 他repoを変更する時は、その変更を前提にしているかもしれない別repoの設定・テストも確認する。特にx2はaa/abの構造(ページ一覧・Azureテーブル一覧)を前提にテストを持っているため、ページ/テーブルの追加・削除・改名時はx2側のpages.yml・expected_azure_tables.yml等も都度確認する。</p>
+    </div>
+
+    <div class="theme-block">
+      <h2>close/分類は別軸(このスレッド自身の実例) <span class="src">ba-36</span></h2>
+      <p>「確定仕様として内容は確定済みで、これ以上の議論・対応待ちは無い」としてclose済み。close後もこの規約は引き続き参照・遵守する(void化しない限り有効)。</p>
+    </div>
+  </div>
+
+  <div class="panel" id="beta">
+    <p class="panel-note">構想はあるが未実装。</p>
+    <div class="theme-block">
+      <h2>ポインタ切れの網羅確認 <span class="src">ba-36関連・未着手</span></h2>
+      <p>「確定仕様の指し先が消えていて未救出」という事例は、ba-39/48/109の3件で個別確認済みとのみ記録されている。全確定仕様スレッドを対象にした網羅チェックの仕組みはまだ無い。</p>
+    </div>
+  </div>
+
+  <div class="panel" id="toss">
+    <p class="panel-note">お遊び枠。テーマから外れてよい。</p>
+    <div class="toss-grid">
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="18" fill="none" stroke="currentColor" stroke-width="2"/><path d="M30 20 v10 l7 7" stroke="currentColor" stroke-width="2"/></svg></div>
+        <h3>ポインタ切れ監視AI</h3>
+        <p>確定仕様の指し先URLを定期的に叩いて、404になった瞬間にアラートを出す番人AI。今のところ空想。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="10" y="10" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="34" y="34" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M26 18 L42 42" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 3"/></svg></div>
+        <h3>三層を家族に見立てる</h3>
+        <p>ba=おじいちゃん(来歴を語る)、yml+テスト=お母さん(今を仕切る)、bb=鏡(ただ映すだけ)、みたいな寸劇で三層規約を説明する。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><path d="M14 44 L46 44 L46 20 L30 10 L14 20 Z" fill="none" stroke="currentColor" stroke-width="2"/><text x="30" y="34" text-anchor="middle" font-size="9">RIP</text></svg></div>
+        <h3>「救出できず」殿堂</h3>
+        <p>もし将来、本当に救出できなかったポインタ切れが出たら、その事例だけを集めた反省ページを作る。今のところ0件なので空。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="8" y="24" width="26" height="16" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><line x1="15" y1="32" x2="21" y2="32" stroke="currentColor" stroke-width="2"/><line x1="18" y1="29" x2="18" y2="35" stroke="currentColor" stroke-width="2"/><rect x="40" y="20" width="14" height="24" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></div>
+        <h3>GamePadで「救出」ボタン</h3>
+        <p>削除作業中にポインタ切れリスクを見つけたら、GamePadの専用ボタンを押して救出モードに入る、実際には何も自動化されない演出。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function(){
+    var tabs = document.querySelectorAll('.tab-btn');
+    var panels = document.querySelectorAll('.panel');
+    function activate(tabId){
+      tabs.forEach(function(b){ b.classList.toggle('on', b.dataset.tab === tabId); });
+      panels.forEach(function(p){ p.classList.toggle('on', p.id === tabId); });
+    }
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        activate(btn.dataset.tab);
+        history.replaceState(null, '', '#' + btn.dataset.tab);
+      });
+    });
+    var initial = location.hash.replace('#', '');
+    if (initial && document.getElementById(initial)) {
+      activate(initial);
+    }
+  })();
+</script>
+</body>
+</html>

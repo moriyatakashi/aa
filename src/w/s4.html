@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>s4 / GitHub PAT(すまさん用)更新手順</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <p><a href="../../">&larr; 戻る</a></p>
+  <h1>GitHub PAT(すまさん用)更新手順</h1>
+  <p>rbook\runがすまさん(mobile)環境で使うGitHub Personal Access Tokenを再発行し、反映する手順。値はここに書かない。人間が手で実行する前提(自動化は今回見送り)。</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-spine"><div class="step-num">1</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">GitHubのトークン発行画面を開く</h2>
+        <p><span class="path">github.com/settings/tokens</span> にアクセスする。既存の(失効した)トークンがあれば、まず見つけて確認しておく。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">2</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">新しいPATを発行する</h2>
+        <ul>
+          <li>スコープ: <span class="field">repo, workflow</span>。rbook\runのPAT依存コマンド(repos/repo/dump/test)が実際に必要とする最小分(最新値は <span class="path">config/values.yml</span> のgithub_patを参照)。</li>
+          <li>有効期限: 選べるなら長め(fine-grainedなら最長1年、classicならNo expirationも選択肢)を選び、更新頻度そのものを減らす。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">3</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">発行された値をコピーする</h2>
+        <p>この画面を離れると二度と表示されないので、この時点で控える。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">4</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">すまさんのClaude Projectのファイルを差し替える</h2>
+        <p>Projectのファイル一覧にある <span class="field">github_pat.txt</span> を、新しい値で上書きする。rbook\run側は <span class="path">/mnt/project/github_pat.txt</span> をこの名前で読みに行く実装になっている。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">5</div></div>
+      <div class="step-body">
+        <h2 class="step-title">動作確認する</h2>
+        <div class="callout">
+          <div class="label">この手順書には値を書かない</div>
+          <p>すまさん側で <span class="field">rbook\run repos</span> を叩き、レポ一覧が返ってくれば完了。失敗する場合はスコープ不足かファイルの反映先を疑う。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="color:var(--dim); font-size:0.85rem; margin-top:32px;">自動化について: GitHubの新規PAT発行もWeb UI操作に限定されており、公式APIからの自動発行はできない。今回は人間の手動実行を前提にした(Power Automate Desktop等での自動化は保留、2026-08-02判断)。</p>
+</body>
+</html>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t3 / スレッド分類規約 — 6分類・2軸の仕組み(ba-32)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:700px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block p{font-size:13px;margin:0 0 8px}
+  .theme-block p:last-child{margin-bottom:0}
+  .theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:5px 0}
+  .quote-src{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .quote-src b{color:var(--ink);font-weight:600}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  /* 視点軸(bj=利尻/bm=すまさん)。成熟度軸の色(--solid/--beta/--toss)とは別チャンネルにするため、
+     色でなくラベル文言で区別する(2026-08-02、takashiとの整理)。 */
+  .persp-split{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:480px){.persp-split{grid-template-columns:1fr}}
+  .persp-card{border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:12px 14px}
+  .persp-tag{
+    font-size:10.5px;letter-spacing:.04em;color:var(--sub);border:1px solid var(--line);
+    border-radius:999px;padding:2px 9px;display:inline-block;margin-bottom:8px;
+  }
+  .persp-card h3{font-size:13px;margin:0 0 8px}
+  .persp-card ul{margin:0;padding-left:1.1em;font-size:12.5px}
+  .persp-card li{margin:5px 0}
+  .block-num{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:var(--sub);
+    border:1px solid var(--line);border-radius:5px;padding:0 5px;flex:none;
+  }
+
+  .diagram{margin:6px 0 12px;color:var(--sub)}
+  .diagram svg{width:100%;height:auto;display:block}
+  .diagram text{fill:currentColor;font-family:"Hiragino Kaku Gothic ProN",sans-serif}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:44px;height:44px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12px;margin:0 0 6px}
+  .toss-card p{font-size:11px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+
+  <p class="mock-label">確定仕様の可視化パターン</p>
+  <h1>スレッド分類規約 — 6分類・2軸の仕組み(ba-32)</h1>
+  <p class="lede">確定事項タブは、baのgistに文字通り書かれていることだけに絞っている。</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button>
+    <button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>深掘り(bj/bm比較)</button>
+    <button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button>
+  </div>
+
+  <div class="panel on" id="solid">
+    <p class="panel-note">ba-32に文字通り書かれていることだけ(gist・note含む)。</p>
+    <div class="theme-block">
+      <h2>分類の形 <span class="src">ba-32</span></h2>
+      <div class="diagram">
+        <svg viewBox="0 0 260 90">
+          <rect x="10" y="10" width="110" height="60" rx="8" fill="var(--solid)" opacity="0.15" stroke="currentColor"/>
+          <text x="65" y="26" text-anchor="middle" font-size="10" font-weight="700">活動側(閉じる)</text>
+          <text x="65" y="42" text-anchor="middle" font-size="9">気づき / 案件</text>
+          <text x="65" y="56" text-anchor="middle" font-size="9">保留論点</text>
+          <rect x="140" y="10" width="110" height="60" rx="8" fill="var(--solid)" opacity="0.15" stroke="currentColor"/>
+          <text x="195" y="26" text-anchor="middle" font-size="10" font-weight="700">参照側(残る)</text>
+          <text x="195" y="42" text-anchor="middle" font-size="9">確定仕様 / 旧仕様</text>
+          <text x="195" y="56" text-anchor="middle" font-size="9">記録</text>
+        </svg>
+      </div>
+      <p>新規スレッドは6分類のいずれか1つをtagで付ける。2軸(活動側/参照側)構造。</p>
+      <div class="quote-src"><b>ba-32 gist:</b> 「新規スレッドは6分類(案件/確定仕様/気づき/保留論点/旧仕様/記録)をtagで1つ付ける。気づき/案件/保留論点は閉じる活動側、確定仕様/旧仕様/記録は閉じずに残る参照側(bm六角形モデル)。」</div>
+    </div>
+    <div class="theme-block">
+      <h2>void/closeの整理 <span class="src">ba-32</span></h2>
+      <p>voidは記述自体が無効という唯一の確実な除外シグナルで、見る価値が無いことを意味する。close(進行状態)は分類(確定仕様等)とは別軸で、close自体は「見る価値が無い」を意味しない。参照側(確定仕様/旧仕様/記録)はcloseしていても継続して参照される前提。</p>
+      <div class="quote-src"><b>ba-32 note(2026-08-02):</b> 「voidは記述自体が無効という唯一の確実な除外シグナルで、見る価値が無いことを意味する。close(進行状態)は分類(確定仕様等)とは別軸で、close自体は「見る価値が無い」を意味しない(ba-36の通り)。特に参照側(確定仕様/旧仕様/記録)はcloseしていても継続して参照される前提であり、closeが「もう見なくていい」の印ではない。」</div>
+    </div>
+  </div>
+
+  <div class="panel" id="beta">
+    <p class="panel-note">bj(遷移分析)とbm(モデル図)、2枚のページを読み比べた分析。確定事項タブと違い、ここは合成・解釈を含む。</p>
+
+    <div class="theme-block">
+      <h2><span class="block-num">1</span>読み比べての結論 <span class="src">分析・ba未反映</span></h2>
+      <p><strong>分類の形(何個・どの軸)</strong>については、bmが答えに近い。bmが提案した6分類・2軸(活動側/参照側)は、実際に今のコードに採用済みで、「記録」も含めて6個とも実装されている。</p>
+      <p><strong>運用の細部(どう遷移するか)</strong>については、bjが洗い出した3つの疑問のうち1つ(旧仕様の出口)は問題視しない方針で決着、残り2つはba-220として切り出し・追跡中。</p>
+      <p>「どちらか一方が正解」ではなく、<strong>形の答えはbm、運用の細部はba-220で継続</strong>、というのが実態に近い。</p>
+    </div>
+
+    <div class="theme-block">
+      <h2><span class="block-num">2</span>合成遷移図 <span class="src">bmの6分類にbjの観測結果を重ねたもの</span></h2>
+      <div class="diagram">
+        <svg viewBox="0 0 500 460" role="img" aria-label="6分類の遷移図、観測された事例つき">
+          <rect x="0" y="0" width="250" height="460" fill="var(--solid)" opacity="0.05"/>
+          <rect x="250" y="0" width="250" height="460" fill="var(--beta)" opacity="0.06"/>
+          <line x1="250" y1="40" x2="250" y2="420" stroke="var(--line)" stroke-width="1.4" stroke-dasharray="2 6"/>
+          <text x="125" y="26" text-anchor="middle" font-size="12.5" font-weight="700">活動側(閉じる)</text>
+          <text x="375" y="26" text-anchor="middle" font-size="12.5" font-weight="700">参照側(残る)</text>
+
+          <defs>
+            <marker id="ah1" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L7,3 L0,6 Z" fill="currentColor"/>
+            </marker>
+            <marker id="ah2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L7,3 L0,6 Z" fill="var(--toss)"/>
+            </marker>
+          </defs>
+
+          <path d="M163,128 Q120,170 108,222" fill="none" stroke="currentColor" stroke-width="2.6" marker-end="url(#ah1)"/>
+          <text x="94" y="178" font-size="10.5" text-anchor="end">育つ・22件</text>
+
+          <path d="M198,95 Q260,60 302,92" fill="none" stroke="currentColor" stroke-width="2.2" marker-end="url(#ah1)"/>
+          <text x="250" y="58" font-size="10" text-anchor="middle">ba-39(格上げ)</text>
+
+          <path d="M340,132 Q360,250 340,348" fill="none" stroke="currentColor" stroke-width="2.2" marker-end="url(#ah1)"/>
+          <text x="368" y="242" font-size="10" text-anchor="start">ba-16(退役)</text>
+
+          <path d="M300,128 Q210,190 128,232" fill="none" stroke="var(--toss)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ah2)"/>
+          <text x="214" y="205" font-size="10" text-anchor="middle" fill="var(--toss)">ba-53(訂正・逆行)</text>
+
+          <path d="M292,100 Q220,75 190,92" fill="none" stroke="var(--toss)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ah2)"/>
+          <text x="240" y="80" font-size="9.5" text-anchor="middle" fill="var(--toss)">ba-171(誤タグ)</text>
+
+          <path d="M122,222 Q220,140 300,120" fill="none" stroke="var(--sub)" stroke-width="1.8" stroke-dasharray="1 5" marker-end="url(#ah1)"/>
+          <text x="214" y="152" font-size="9.5" text-anchor="middle" fill="var(--sub)">0件・実際は切り出し</text>
+
+          <text x="325" y="410" font-size="10" text-anchor="middle" fill="var(--sub)">出口の経路なし</text>
+
+          <g><circle cx="175" cy="105" r="44" fill="var(--solid)" opacity="0.15" stroke="var(--solid)" stroke-width="2.2"/>
+            <text x="175" y="101" text-anchor="middle" font-size="15" font-weight="700">気づき</text>
+            <text x="175" y="117" text-anchor="middle" font-size="10">観察・学び</text></g>
+
+          <g><circle cx="100" cy="238" r="44" fill="var(--solid)" opacity="0.15" stroke="var(--solid)" stroke-width="2.2"/>
+            <text x="100" y="234" text-anchor="middle" font-size="15" font-weight="700">案件</text>
+            <text x="100" y="250" text-anchor="middle" font-size="10">やること</text></g>
+
+          <g><circle cx="175" cy="368" r="44" fill="var(--solid)" opacity="0.15" stroke="var(--solid)" stroke-width="2.2" stroke-dasharray="3 4"/>
+            <text x="175" y="364" text-anchor="middle" font-size="14" font-weight="700">保留論点</text>
+            <text x="175" y="380" text-anchor="middle" font-size="10">いつか考える</text></g>
+
+          <g><circle cx="325" cy="105" r="44" fill="var(--beta)" opacity="0.15" stroke="var(--beta)" stroke-width="2.2"/>
+            <text x="325" y="101" text-anchor="middle" font-size="14" font-weight="700">確定仕様</text>
+            <text x="325" y="117" text-anchor="middle" font-size="10">決めた規約</text></g>
+
+          <g><circle cx="398" cy="238" r="47" fill="var(--beta)" opacity="0.15" stroke="var(--toss)" stroke-width="2.4" stroke-dasharray="4 4"/>
+            <text x="398" y="234" text-anchor="middle" font-size="15" font-weight="700">記録</text>
+            <text x="398" y="250" text-anchor="middle" font-size="10">ただの情報</text></g>
+
+          <g><circle cx="325" cy="368" r="44" fill="var(--beta)" opacity="0.15" stroke="var(--beta)" stroke-width="2.2"/>
+            <text x="325" y="364" text-anchor="middle" font-size="15" font-weight="700">旧仕様</text>
+            <text x="325" y="380" text-anchor="middle" font-size="10">退役した参照</text></g>
+        </svg>
+      </div>
+      <p style="font-size:11.5px;color:var(--sub)">凡例: 実線=実際に観測された遷移／破線(赤)=訂正・逆行として観測／点線=想定はあるが未観測。ノード配置と6分類・2軸の構成はbmの図を踏襲。矢印はbjが台帳から拾った実例(ba-39/16/53/171)と、bmが確認した「気づき→案件」22件を重ねた。案件→確定仕様の"想定ルート"は0件で、bjいわく実際は別スレッドへの切り出しで行われていた。</p>
+    </div>
+
+    <div class="theme-block">
+      <h2><span class="block-num">3</span>bjとbm、それぞれの立ち位置</h2>
+      <p style="font-size:12px;color:var(--sub);margin-bottom:10px">上下関係ではなく、同じテーマの2つの視点(成熟度軸のタブとは別の軸)。</p>
+      <div class="persp-split">
+        <div class="persp-card">
+          <span class="persp-tag">利尻版 · 分析(bj)</span>
+          <h3>ba分類の遷移分析</h3>
+          <ul>
+            <li>2026-07-29時点、台帳176スレッドの静的スナップショットを集計</li>
+            <li>5分類を状態機械として観測。実際の遷移は4件(2.3%)のみ確認</li>
+            <li>4件中3件は「成熟」ではなく「誤タグの訂正」だった</li>
+            <li>気づき: 「5分類は本当は2軸(成熟度×現役/退役)かもしれない」</li>
+          </ul>
+        </div>
+        <div class="persp-card">
+          <span class="persp-tag">すま版 · モデル(bm)</span>
+          <h3>六角形の台帳</h3>
+          <ul>
+            <li>bjの五角形を、2軸・6分類に描き直した提案</li>
+            <li>活動側(気づき/案件/保留論点)と参照側(確定仕様/旧仕様/記録)</li>
+            <li>「記録」を新設し、3対3の対称形に</li>
+            <li>bj本人の「2軸かもしれない」という気づきを、実際に形にしたもの</li>
+          </ul>
+        </div>
+      </div>
+      <div class="quote-src"><b>bmページ本文より:</b> 「これはモデル図です（すま版）。利尻版（遷移分析）は bj。同じ「分類」テーマの別の見え方で、後勝ちさせず両方を残しています。」</div>
+    </div>
+
+    <div class="theme-block">
+      <h2><span class="block-num">4</span>気づき/記録の見分け方・矢印の意味 <span class="src">bmページ由来</span></h2>
+      <ul>
+        <li><b>気づき vs 記録:</b> 気づき=「だから次こうする」がある(活かすために残す)／記録=「だから」が無い(残す・リンクするだけ)。独り言・報告・解説は記録側</li>
+        <li><b>太い矢印の意味:</b> 活動側(気づき/案件/保留論点)から参照側(確定仕様/旧仕様/記録)へ渡る太い矢印が、「決定」でものが動いて残る側になる瞬間</li>
+      </ul>
+    </div>
+
+    <div class="theme-block">
+      <h2><span class="block-num">5</span>bjが残した3つの宿題、その後 <span class="src">bjページ由来</span></h2>
+      <ul>
+        <li>旧仕様に入る経路はあるが、出る経路(復活)は未定義。検討の結果、特に問題視しない方針(2026-08-02、takashi)</li>
+      </ul>
+      <div class="quote-src"><b>ba-220へ切り出し:</b> 「成熟による格上げと誤分類の訂正の区別」「案件→確定仕様の切り出し手順の明文化」の2点は、新規スレッドba-220として起票済み。</div>
+    </div>
+  </div>
+
+  <div class="panel" id="toss">
+    <p class="panel-note">お遊び枠。テーマから外れてよい。</p>
+    <div class="toss-grid">
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><circle cx="30" cy="24" r="12" fill="none" stroke="currentColor" stroke-width="2"/><path d="M18 44 q12 -14 24 0" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <h3>自動分類AI</h3>
+        <p>本文からAIが自動で気づき/案件等をタグ付けする構想。人が選ぶ手間を無くす。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><text x="30" y="38" text-anchor="middle" font-size="24">💡</text></svg></div>
+        <h3>分類ごとの絵文字バッジ</h3>
+        <p>気づき=💡、確定仕様=📌、記録=🗂のように、分類ごとに絵文字を割り当てて視認性を上げる。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="6" fill="currentColor"/><circle cx="12" cy="14" r="4" fill="none" stroke="currentColor"/><circle cx="48" cy="14" r="4" fill="none" stroke="currentColor"/><circle cx="12" cy="46" r="4" fill="none" stroke="currentColor"/><circle cx="48" cy="46" r="4" fill="none" stroke="currentColor"/><line x1="30" y1="30" x2="12" y2="14" stroke="currentColor"/><line x1="30" y1="30" x2="48" y2="14" stroke="currentColor"/><line x1="30" y1="30" x2="12" y2="46" stroke="currentColor"/><line x1="30" y1="30" x2="48" y2="46" stroke="currentColor"/></svg></div>
+        <h3>六角形をスキルツリー風に</h3>
+        <p>bmの六角形図を、ゲームのスキルツリーのように「解放条件」付きで描き直す。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function(){
+    var tabs = document.querySelectorAll('.tab-btn');
+    var panels = document.querySelectorAll('.panel');
+    function activate(tabId){
+      tabs.forEach(function(b){ b.classList.toggle('on', b.dataset.tab === tabId); });
+      panels.forEach(function(p){ p.classList.toggle('on', p.id === tabId); });
+    }
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        activate(btn.dataset.tab);
+        history.replaceState(null, '', '#' + btn.dataset.tab);
+      });
+    });
+    var initial = location.hash.replace('#', '');
+    if (initial && document.getElementById(initial)) {
+      activate(initial);
+    }
+  })();
+</script>
+</body>
+</html>

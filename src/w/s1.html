@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<script src="../common/config.js?v=202608012000"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>s1 / WIP作業台（ba-200、ベータ）</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --accent:#7ce0c4; --warn:#e0b64a; --danger:#e65050;
+    --takashi:#6ba7ff; --suma:#7ce0c4; --toshi:#c99bff; --none:#8a8f98;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 14px 60px;line-height:1.55}
+  .wrap{max-width:640px;margin:0 auto}
+  .back{font-size:12px}
+  .back a{color:var(--accent)}
+  .eyebrow{font-size:11px;letter-spacing:.18em;color:var(--sub);text-transform:uppercase;margin:14px 0 3px}
+  h1{font-size:21px;margin:0 0 3px}
+  .lede{color:var(--sub);font-size:12.5px;margin:0 0 14px}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .toolbar .count{font-size:12px;color:var(--sub);margin-right:auto}
+  .toolbar button{background:none;border:1px solid var(--line);color:var(--sub);border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer}
+  .toolbar button.on{border-color:var(--accent);color:var(--ink)}
+
+  .card{position:relative;border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:12px 13px;margin:9px 0}
+  .card.important{border-left:3px solid var(--warn)}
+  .card.voided{opacity:.45}
+  .card.voided .title{text-decoration:line-through;text-decoration-color:var(--sub)}
+  .void-badge{flex:none;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--sub);border:1px solid var(--sub);border-radius:999px;padding:1px 7px}
+  .row1{display:flex;align-items:baseline;gap:9px}
+  .baid{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--accent);font-weight:700;flex:none}
+  .title{font-size:14px;font-weight:600;flex:1}
+  .star{flex:none;font-size:15px;opacity:.3;user-select:none}
+  .star.on{opacity:1}
+  .btn-remove{flex:none;background:none;border:1px solid var(--line);color:var(--sub);
+    border-radius:6px;width:20px;height:20px;line-height:1;font-size:13px;cursor:pointer;padding:0}
+  .btn-remove:hover{border-color:var(--danger);color:var(--danger)}
+  .row2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--sub)}
+  .chip{padding:1px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+  .who[data-w="takashi"]{color:var(--takashi);border-color:var(--takashi)}
+  .who[data-w="すま"]{color:var(--suma);border-color:var(--suma)}
+  .who[data-w="利尻"]{color:var(--toshi);border-color:var(--toshi)}
+  .who[data-w="未"]{color:var(--none);border-color:var(--none);border-style:dashed}
+  .reg{opacity:.8}
+  .due{margin-left:auto;color:var(--sub)}
+  .due.set{color:var(--warn)}
+
+  .gist-row{margin-top:6px;font-size:11.5px;color:var(--sub);border-top:1px dashed var(--line);padding-top:6px}
+  .gist-row .gist-text{white-space:pre-wrap}
+  .btn-expand{background:none;border:none;color:var(--accent);font-size:11.5px;
+    cursor:pointer;padding:0;margin-left:4px;text-decoration:underline}
+
+  .empty{color:var(--sub);font-size:13px;text-align:center;padding:24px 0}
+  .state{color:var(--sub);font-size:13px;text-align:center;padding:24px 0}
+  .state.err{color:var(--danger)}
+  .note{margin-top:20px;font-size:11.5px;color:var(--sub);border-top:1px solid var(--line);padding-top:12px}
+
+  .add-form{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:12px 13px;margin:0 0 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .add-form input[type="number"]{width:78px}
+  .add-form input[type="text"]{width:110px}
+  .add-form input{background:var(--bg);border:1px solid var(--line);color:var(--ink);
+    border-radius:7px;padding:5px 8px;font-size:12.5px}
+  .add-form label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--sub)}
+  .add-form button{background:var(--accent);border:none;color:#0c1210;font-weight:700;
+    border-radius:7px;padding:6px 12px;font-size:12.5px;cursor:pointer}
+  .add-status{width:100%;font-size:11.5px;color:var(--sub)}
+  .add-status.err{color:var(--danger)}
+  .add-status.ok{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+  <p class="eyebrow">roreki · WIP 作業台 · s1 · ベータ版</p>
+  <h1>いま手を動かすものだけ</h1>
+  <p class="lede">baから抽出した作業中の項目。★=重要（takashiが決める）。※この画面は<b>ライブ表示</b>（実データ）。</p>
+
+<script>window.AA_PUBLIC_VIEW = true; window.AA_AUTH_EVENT = "s1-login-success";</script>
+  <div id="login-gate" style="display:none;">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div id="g_id_onload"
+      data-callback="handleCredentialResponse"
+      data-auto_prompt="false">
+    </div>
+    <script>document.getElementById('g_id_onload').setAttribute('data-client_id', window.AA_GOOGLE_CLIENT_ID);</script>
+    <div class="g_id_signin"></div>
+    <p id="status">未ログイン(ログインすると自分で候補を追加できます)</p>
+  </div>
+
+  <div class="add-form">
+    <input type="number" id="addBaId" placeholder="ba番号" min="1">
+    <label><input type="checkbox" id="addImportant"> ★重要</label>
+    <input type="text" id="addAssignee" placeholder="担当(任意)">
+    <input type="date" id="addPlannedDate">
+    <button type="button" id="btnAdd">作業台に足す</button>
+    <span class="add-status" id="addStatus"></span>
+  </div>
+
+  <div class="toolbar">
+    <span class="count" id="count"></span>
+    <button id="fImportant">★ 重要だけ</button>
+    <button id="fMine">自分の番</button>
+    <button id="fReset" class="on">ぜんぶ</button>
+  </div>
+
+  <div class="state" id="loading">読み込み中…</div>
+  <div id="list"></div>
+  <div class="empty" id="empty" style="display:none">作業台は空。会話で「ba-◯◯を作業台に足して」と言えば載ります。</div>
+
+  <p class="note">source=ba・別テーブル(WipTasks)に作業メタだけ・使い捨て前提。持ち項目=ba番号/重要(★)/分担者/登録時間/予定日。GET /api/s1 をライブ表示、タイトルは /api/ba から実引き。</p>
+</div>
+
+<script>
+  var API = "https://ab-board-api.azurewebsites.net/api";
+  var filter = "all";
+  var ITEMS = [];
+  var list = document.getElementById('list');
+  var empty = document.getElementById('empty');
+  var loading = document.getElementById('loading');
+
+  function mmdd(s){
+    if(!s) return "";
+    // ISO(登録時間) or YYYY-MM-DD(予定日) の両方に対応
+    var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? (m[2]+"-"+m[3]) : String(s);
+  }
+  function whoKey(a){ return (a && a.trim()) ? a.trim() : "未"; }
+  function esc(s){
+    return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  var GIST_PREVIEW_LEN = 45;
+
+  function visible(){
+    return ITEMS.filter(function(d){
+      if(filter==="important") return d.important;
+      if(filter==="mine") return whoKey(d.assignee)==="すま";
+      return true;
+    });
+  }
+  function gistRowHtml(gist){
+    if (gist.length <= GIST_PREVIEW_LEN) {
+      return '<div class="gist-row"><span class="gist-text">'+esc(gist)+'</span></div>';
+    }
+    var preview = esc(gist.slice(0, GIST_PREVIEW_LEN))+'…';
+    return '<div class="gist-row" data-full="'+esc(gist)+'">'+
+      '<span class="gist-text">'+preview+'</span>'+
+      '<button class="btn-expand">続きを読む</button>'+
+    '</div>';
+  }
+  function render(){
+    var vs = visible();
+    list.innerHTML = vs.map(function(d){
+      var who = whoKey(d.assignee);
+      var seqLabel = (d.seq!=null? ("ba-"+d.seq) : "ba-?");
+      var due = d.plannedDate ? ("〆"+mmdd(d.plannedDate)) : "予定日 未";
+      return '<div class="card'+(d.important?' important':'')+(d.voided?' voided':'')+'">'+
+        '<div class="row1">'+
+          '<span class="baid">'+seqLabel+'</span>'+
+          '<span class="title">'+(d.title||seqLabel)+'</span>'+
+          (d.voided ? '<span class="void-badge" title="ba本体でvoid済み(もう見なくていい)">void</span>' : '')+
+          '<span class="star'+(d.important?' on':'')+'" title="重要(takashiが決める)">★</span>'+
+          '<button class="btn-remove" data-baid="'+d.baId+'" title="作業台から外す">&times;</button>'+
+        '</div>'+
+        '<div class="row2">'+
+          '<span class="chip who" data-w="'+who+'">'+(who==="未"?"未割り当て":who)+'</span>'+
+          '<span class="reg">登 '+mmdd(d.createdAt)+'</span>'+
+          '<span class="chip due'+(d.plannedDate?' set':'')+'">'+due+'</span>'+
+        '</div>'+
+        (d.gist ? gistRowHtml(d.gist) : '')+
+      '</div>';
+    }).join("");
+    document.getElementById('count').textContent = vs.length+" 件アクティブ";
+    empty.style.display = (ITEMS.length && vs.length===0) ? "block" :
+                          (ITEMS.length===0 ? "block" : "none");
+  }
+
+  function setF(f, btn){
+    filter=f;
+    ['fImportant','fMine','fReset'].forEach(function(x){document.getElementById(x).classList.remove('on');});
+    btn.classList.add('on'); render();
+  }
+  document.getElementById('fImportant').addEventListener('click',function(){setF('important',this);});
+  document.getElementById('fMine').addEventListener('click',function(){setF('mine',this);});
+  document.getElementById('fReset').addEventListener('click',function(){setF('all',this);});
+
+  var BA_BY_SEQ = {}; // ba番号(seq、人間が入力する方)から実idを引くための対応表
+
+  function loadItems(){
+    return Promise.all([
+      fetch(API+"/s1").then(function(r){ if(!r.ok) throw new Error("s1 "+r.status); return r.json(); }),
+      fetch(API+"/ba?minimal=1").then(function(r){ if(!r.ok) throw new Error("ba "+r.status); return r.json(); })
+    ]).then(function(res){
+      var s1 = res[0], ba = res[1];
+      var titleById = {};
+      // gist: type="gist"のentryはref=threadIdを持ち、"new"entryはthreadId==自分のidなので
+      // ref(==元のbaId)をキーに、最新のtext(createdAt比較)を採用する(_ba_current_gist相当)。
+      var gistByBaId = {};
+      // void: 通常はref、一部の古い投稿はthreadId直指定で無効化している(rbookの
+      // _ba_is_voidedと同じ判定、2026-08-01追加)。voidは外さずグレー表示に留める
+      // (見なくていい、と分かった上で本人が見返したい場合もあるため)。
+      var voidedIds = {};
+      BA_BY_SEQ = {};
+      ba.forEach(function(e){
+        titleById[e.id] = e.title;
+        if (e.seq != null) BA_BY_SEQ[e.seq] = { id: e.id, title: e.title };
+        if (e.type === "gist" && e.text && e.ref) {
+          var prev = gistByBaId[e.ref];
+          if (!prev || (e.createdAt||"") > (prev.createdAt||"")) {
+            gistByBaId[e.ref] = { text: e.text, createdAt: e.createdAt };
+          }
+        }
+        if (e.type === "void") {
+          if (e.ref) voidedIds[e.ref] = true;
+          if (e.threadId) voidedIds[e.threadId] = true;
+        }
+      });
+      ITEMS = s1.map(function(d){
+        // WipTasksのbaIdはba側の実id(RowKey、タイムスタンプ文字列)。
+        // ba番号(seq)そのものではない(2026-08-01、混同していたバグを修正)。
+        d.title = titleById[d.baId] || null;
+        d.voided = !!voidedIds[d.baId];
+        d.gist = (gistByBaId[d.baId] || {}).text || null;
+        return d;
+      });
+      ITEMS.sort(function(a, b){ return (b.seq||0) - (a.seq||0); }); // ba番号の降順(2026-08-01)
+      loading.style.display = "none";
+      render();
+    }).catch(function(err){
+      loading.className = "state err";
+      loading.textContent = "読み込み失敗: "+err.message+"（時間をおくか、APIの状態を確認）";
+    });
+  }
+  loadItems();
+
+  list.addEventListener('click', function(e){
+    var expandBtn = e.target.closest('.btn-expand');
+    if (expandBtn) {
+      var row = expandBtn.closest('.gist-row');
+      row.querySelector('.gist-text').textContent = row.dataset.full;
+      expandBtn.remove();
+      return;
+    }
+    var btn = e.target.closest('.btn-remove');
+    if (!btn) return;
+    if (!window.__credential) {
+      if (window.aaShowLoginGate) window.aaShowLoginGate();
+      return;
+    }
+    if (!confirm('作業台から外しますか？(ba本体は消えません)')) return;
+    fetch(API+"/s1", {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baId: btn.dataset.baid, credential: window.__credential }),
+    }).then(function(r){
+      if (!r.ok) throw new Error('削除失敗 '+r.status);
+      loadItems();
+    }).catch(function(err){
+      alert(err.message);
+    });
+  });
+
+  document.getElementById('btnAdd').addEventListener('click', function(){
+    var statusEl = document.getElementById('addStatus');
+    statusEl.className = 'add-status';
+    if (!window.__credential) {
+      statusEl.className = 'add-status err';
+      statusEl.textContent = 'ログインしてください(右上のリンクから)';
+      if (window.aaShowLoginGate) window.aaShowLoginGate();
+      return;
+    }
+    var seqInput = document.getElementById('addBaId').value;
+    if (!seqInput) {
+      statusEl.className = 'add-status err';
+      statusEl.textContent = 'ba番号を入力してください';
+      return;
+    }
+    var match = BA_BY_SEQ[Number(seqInput)];
+    if (!match) {
+      statusEl.className = 'add-status err';
+      statusEl.textContent = 'ba-'+seqInput+' が見つかりません(存在しない番号の可能性)';
+      return;
+    }
+    statusEl.textContent = '登録中…';
+    fetch(API+"/s1", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        baId: match.id,
+        seq: Number(seqInput),
+        important: document.getElementById('addImportant').checked,
+        assignee: document.getElementById('addAssignee').value,
+        plannedDate: document.getElementById('addPlannedDate').value,
+        credential: window.__credential,
+      }),
+    }).then(function(r){
+      if (!r.ok) throw new Error('登録失敗 '+r.status);
+      return r.json();
+    }).then(function(){
+      statusEl.className = 'add-status ok';
+      statusEl.textContent = '追加しました';
+      document.getElementById('addBaId').value = '';
+      document.getElementById('addImportant').checked = false;
+      document.getElementById('addAssignee').value = '';
+      document.getElementById('addPlannedDate').value = '';
+      loadItems();
+    }).catch(function(err){
+      statusEl.className = 'add-status err';
+      statusEl.textContent = err.message;
+    });
+  });
+</script>
+<script src="../common/auth.js?v=202607201000"></script>
+</body>
+</html>

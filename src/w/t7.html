@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t7 / baとab(tXページ)のバックリンクをどう持つか(ba-219)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:700px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block p{font-size:13px;margin:0 0 8px}
+  .theme-block p:last-child{margin-bottom:0}
+  .theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:5px 0}
+  .scope-note{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .scope-note b{color:var(--ink);font-weight:600}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .diagram{margin:6px 0 12px;color:var(--sub)}
+  .diagram svg{width:100%;height:auto;display:block}
+  .diagram text{fill:currentColor;font-family:"Hiragino Kaku Gothic ProN",sans-serif}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:520px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:48px;height:48px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12.5px;margin:0 0 6px}
+  .toss-card p{font-size:11.5px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+
+  <p class="mock-label">確定仕様の可視化パターン</p>
+  <h1>baとab(tXページ)のバックリンクをどう持つか(ba-219)</h1>
+  <p class="lede">確定事項タブはba-219で決めた設計判断そのもの。ベータ版は未着手の実装案。</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button>
+    <button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button>
+    <button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button>
+  </div>
+
+  <div class="panel on" id="solid">
+    <p class="panel-note">ba-219で確定した設計判断そのもの。</p>
+    <div class="theme-block">
+      <h2>課題 <span class="src">ba-219</span></h2>
+      <p><code>run ba open</code>等でopenなba番号を見ても、それがab(路歴の実験場)のどのtXページで解説・可視化されているか分からない。tXページ側は既にba番号を引用しているが、ba側からab側への逆参照は無い。</p>
+    </div>
+    <div class="theme-block">
+      <h2>検討した2案と決定 <span class="src">ba-219</span></h2>
+      <div class="diagram">
+        <svg viewBox="0 0 300 120">
+          <rect x="8" y="8" width="130" height="46" rx="8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="4 4" opacity="0.55"/>
+          <text x="73" y="28" text-anchor="middle" font-size="11" font-weight="700" opacity="0.7">A) タグ方式</text>
+          <text x="73" y="43" text-anchor="middle" font-size="9" opacity="0.7">ba側に手動でタグ付与</text>
+          <text x="73" y="66" text-anchor="middle" font-size="10" fill="var(--toss)">却下</text>
+
+          <rect x="162" y="8" width="130" height="46" rx="8" fill="var(--solid)" opacity="0.15" stroke="var(--solid)" stroke-width="2"/>
+          <text x="227" y="28" text-anchor="middle" font-size="11" font-weight="700">B) scan方式</text>
+          <text x="227" y="43" text-anchor="middle" font-size="9">ab側の既存引用を逆引き</text>
+          <text x="227" y="66" text-anchor="middle" font-size="10" fill="var(--solid)" font-weight="700">採用</text>
+
+          <text x="150" y="98" text-anchor="middle" font-size="9.5">baが下流(ab)の構成を知る向きを避け、手動タグの付け忘れも避ける</text>
+        </svg>
+      </div>
+      <ul>
+        <li>A案は、tXページを作る度にba側にもタグを付け忘れないよう二重管理が必要になる</li>
+        <li>A案は、ba(芯)側が下流のab(ドキュメント)のファイル構成を知ることになり、「baが芯、tXは芯を超えない」の向きと逆になる</li>
+        <li>B案は、ab側の既存のba番号引用から自動で拾えるため、ba側は一切変更不要で追従できる</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="panel" id="beta">
+    <p class="panel-note">構想はあるが未実装。ba-219本文に記載の実装案。</p>
+    <div class="theme-block">
+      <h2>実装の形 <span class="src">ba-219・未着手</span></h2>
+      <div class="diagram">
+        <svg viewBox="0 0 300 150">
+          <rect x="80" y="8" width="140" height="28" rx="6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <text x="150" y="26" text-anchor="middle" font-size="10">get_ab_backlinks()</text>
+          <text x="150" y="48" text-anchor="middle" font-size="12">↓</text>
+          <rect x="60" y="54" width="180" height="28" rx="6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <text x="150" y="72" text-anchor="middle" font-size="10">_ba_line() / _ba_show_thread()</text>
+          <text x="150" y="94" text-anchor="middle" font-size="12">↓ 波及</text>
+          <rect x="6" y="102" width="288" height="26" rx="13" fill="none" stroke="currentColor" stroke-dasharray="3 3"/>
+          <text x="150" y="119" text-anchor="middle" font-size="9.5">open / all / tag / search / recent 全部に自動反映</text>
+          <text x="150" y="140" text-anchor="middle" font-size="9" fill="var(--sub)">別途 ba links &lt;番号&gt; の単体コマンドも検討</text>
+        </svg>
+      </div>
+      <ul>
+        <li>ab/src/*/index.htmlをスキャンし、{ba番号: [tXラベル,...]}の辞書を返す読み取り専用関数を1つ作る</li>
+        <li>共通の行表示関数に1箇所差し込むだけで、複数コマンドに波及する設計</li>
+        <li>単体で逆引きしたい場面向けに、専用サブコマンドも別案として検討中</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="panel" id="toss">
+    <p class="panel-note">お遊び枠。テーマから外れてよい。</p>
+    <div class="toss-grid">
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><circle cx="16" cy="16" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="44" cy="16" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="44" r="8" fill="none" stroke="currentColor" stroke-width="2"/><line x1="16" y1="16" x2="30" y2="44" stroke="currentColor" stroke-width="1.5"/><line x1="44" y1="16" x2="30" y2="44" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="16" x2="44" y2="16" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 3"/></svg></div>
+        <h3>ba↔tXの関係グラフ表示</h3>
+        <p>backlinkの辞書をそのままノードグラフとして描画。どのba番号がどのtXに集約されているか一目で見える謎ページを作る。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="14" y="14" width="32" height="32" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="20" y="20" width="6" height="6" fill="currentColor"/><rect x="34" y="20" width="6" height="6" fill="currentColor"/><rect x="20" y="34" width="6" height="6" fill="currentColor"/></svg></div>
+        <h3>ba番号をQRコード化</h3>
+        <p>tXページにQRコードを埋め込み、スマホで読むと該当ba番号にジャンプする。物理的にリンクを貼っている気分を味わえる。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><path d="M20 40 q10 -28 20 0" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="40" r="3" fill="currentColor"/><circle cx="40" cy="40" r="3" fill="currentColor"/><text x="30" y="16" text-anchor="middle" font-size="14">🏆</text></svg></div>
+        <h3>backlink数ランキング</h3>
+        <p>tXから多く参照されているba番号を「人気スレッド」として毎週ランキング表示する、実務上まったく意味の無い集計機能。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="8" y="24" width="26" height="16" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><line x1="15" y1="32" x2="21" y2="32" stroke="currentColor" stroke-width="2"/><line x1="18" y1="29" x2="18" y2="35" stroke="currentColor" stroke-width="2"/><circle cx="27" cy="30" r="1.6" fill="currentColor"/><circle cx="30" cy="33" r="1.6" fill="currentColor"/><path d="M40 30 h14 M47 23 v14" stroke="currentColor" stroke-width="2"/></svg></div>
+        <h3>k1のGamePadでbacklinkを辿る</h3>
+        <p>D-padでba番号の一覧を送り、Aボタンで対応するtXページへジャンプする。物理コントローラでドキュメントを渡り歩く未来。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function(){
+    var tabs = document.querySelectorAll('.tab-btn');
+    var panels = document.querySelectorAll('.panel');
+    function activate(tabId){
+      tabs.forEach(function(b){ b.classList.toggle('on', b.dataset.tab === tabId); });
+      panels.forEach(function(p){ p.classList.toggle('on', p.id === tabId); });
+    }
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        activate(btn.dataset.tab);
+        history.replaceState(null, '', '#' + btn.dataset.tab);
+      });
+    });
+    var initial = location.hash.replace('#', '');
+    if (initial && document.getElementById(initial)) {
+      activate(initial);
+    }
+  })();
+</script>
+</body>
+</html>

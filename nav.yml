@@ -23,9 +23,9 @@ categories:
         href: src/bc/
   - label: 関連
     items:
-      - code: ab
-        desc: 実験場(路歴の姉妹サイト・別リポジトリ)
-        href: https://moriyatakashi.github.io/ab/
+      - code: w
+        desc: 窓（図解・baの可視化）
+        href: src/w/
   - label: あそび
     items:
       - code: g1

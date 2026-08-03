@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t4 / k1×n2ゲーム化(ba-52/ba-55)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:700px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:5px 0}
+  .scope-note{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .scope-note b{color:var(--ink);font-weight:600}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .diagram{margin:6px 0 12px;color:var(--sub)}
+  .diagram svg{width:100%;height:auto;display:block}
+  .diagram text{fill:currentColor;font-family:"Hiragino Kaku Gothic ProN",sans-serif}
+
+  .fun{font-style:italic}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:520px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:52px;height:52px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12.5px;margin:0 0 6px}
+  .toss-card p{font-size:11.5px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+
+  <p class="mock-label">検討中 &middot; 成熟度3タブ構成</p>
+  <h1>k1コントローラ × n2ゲーム化(ba-52 / ba-55)</h1>
+  <p class="lede">同じテーマを、成熟度3段階のタブで並べる。「捨て案」タブだけはテーマから多少ずれてお遊び寄りでもよい(ba-190の成熟度マーカーの発展形)。</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>最終候補</button>
+    <button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button>
+    <button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案</button>
+  </div>
+
+  <div class="panel on" id="solid">
+    <p class="panel-note">実装・デプロイ・動作確認済みのもの。今のところの「一番育っている案」。</p>
+    <div class="theme-block">
+      <h2>k1 物理コントローラ対応 <span class="src">ba-52</span></h2>
+      <div class="diagram">
+        <svg viewBox="0 0 300 130">
+          <rect x="10" y="8" width="280" height="26" rx="4" fill="none" stroke="currentColor"/>
+          <text x="150" y="25" text-anchor="middle" font-size="10.5">入力層: Keyboard / Touch / GamePad</text>
+          <text x="150" y="46" text-anchor="middle" font-size="12">↓</text>
+          <rect x="10" y="52" width="280" height="26" rx="4" fill="none" stroke="currentColor"/>
+          <text x="150" y="69" text-anchor="middle" font-size="10.5">中間層: 接続/切断イベント監視・状態表示</text>
+          <text x="150" y="90" text-anchor="middle" font-size="12">↓</text>
+          <rect x="10" y="96" width="280" height="26" rx="4" fill="none" stroke="currentColor"/>
+          <text x="150" y="113" text-anchor="middle" font-size="10.5">統一インターフェース: cpu.joy1[0-7]</text>
+        </svg>
+      </div>
+      <ul>
+        <li>Phase1: GamePad Poller、本番反映確認済み</li>
+        <li>Phase2: 接続/切断の状態表示、本番反映確認済み</li>
+      </ul>
+      <div class="scope-note"><b>既知の制約(ba-52記載):</b> keyboard/touch/GamePadが同じjoy1配列に直接書き込むため、複数入力ソース併用時の押しっぱなし判定は厳密には独立していない。実機コントローラーでの動作確認はtakashi側テスト待ち(未実施、ベータ版参照)。</div>
+    </div>
+    <div class="theme-block">
+      <h2>n2 訪問地図の拡張 <span class="src">ba-55</span></h2>
+      <div class="diagram">
+        <svg viewBox="0 0 220 100">
+          <circle cx="80" cy="55" r="36" fill="var(--solid)" opacity="0.22" stroke="currentColor"/>
+          <circle cx="120" cy="48" r="32" fill="var(--solid)" opacity="0.22" stroke="currentColor"/>
+          <circle cx="150" cy="65" r="26" fill="var(--solid)" opacity="0.22" stroke="currentColor"/>
+          <text x="60" y="58" font-size="10">東大阪市</text>
+          <text x="105" y="30" font-size="10">大阪市</text>
+          <text x="135" y="90" font-size="10">尼崎市</text>
+        </svg>
+      </div>
+      <ul>
+        <li>尼崎市の行政境界geojson追加・地図描画に組み込み、本番反映確認済み</li>
+        <li>兵庫県のVisits登録、Azure側で完了確認済み</li>
+      </ul>
+      <div class="scope-note"><b>範囲の明記:</b> ここまでは「地図データの整備」の完了。ba-55が企図する<b>ゲーム本体(コントローラで移動・訪問済み判定によるロック・大阪→神奈川ゴール到達)は、記録されている範囲では未着手</b>。Phase1のタスク5項目のうち、完了報告があるのは「県の図形データ」「訪問データ取得(Visits登録)」の2つのみで、「隣接情報の定義」「コントローラ移動の実装」「移動ロック判定ロジック」の完了報告はまだ無い。</div>
+    </div>
+  </div>
+
+  <div class="panel" id="beta">
+    <p class="panel-note">構想はあるが未実装、または「記録のみ・実装はまだ」と明言されているもの。</p>
+    <div class="theme-block">
+      <h2>k1 物理コントローラ対応 <span class="src">ba-52</span></h2>
+      <ul>
+        <li>Phase3: キーバインド設定・プロファイル保存(将来機能、未着手)</li>
+        <li>実機コントローラーでの動作確認自体が未実施(takashi側の実機テスト待ち)</li>
+      </ul>
+    </div>
+    <div class="theme-block">
+      <h2>n2 訪問地図の拡張 <span class="src">ba-55</span></h2>
+      <div class="diagram">
+        <svg viewBox="0 0 260 90">
+          <rect x="10" y="8" width="80" height="24" rx="12" fill="none" stroke="currentColor"/>
+          <text x="50" y="24" text-anchor="middle" font-size="10">市表示</text>
+          <text x="98" y="24" font-size="12">⇄</text>
+          <rect x="112" y="8" width="100" height="24" rx="12" fill="none" stroke="currentColor" stroke-dasharray="3 3"/>
+          <text x="162" y="24" text-anchor="middle" font-size="10">県表示(未実装)</text>
+          <g>
+            <circle cx="16" cy="60" r="7" fill="currentColor"/>
+            <circle cx="34" cy="60" r="7" fill="currentColor"/>
+            <circle cx="52" cy="60" r="7" fill="currentColor"/>
+            <circle cx="70" cy="60" r="7" fill="currentColor"/>
+            <circle cx="88" cy="60" r="7" fill="currentColor"/>
+            <circle cx="106" cy="60" r="7" fill="none" stroke="currentColor"/>
+            <circle cx="124" cy="60" r="7" fill="none" stroke="currentColor"/>
+            <circle cx="142" cy="60" r="7" fill="none" stroke="currentColor"/>
+            <text x="10" y="80" font-size="9">近畿8県データ: 塗り=用意済み / 枠のみ=未使用のまま</text>
+          </g>
+        </svg>
+      </div>
+      <ul>
+        <li>市⇄県の表示レベル切替構想(takashi明示: 実装はまだ、記録のみ)</li>
+        <li>近畿8県のjson/svgデータは作成済みだが、ゲームロジック本体は未着手のまま</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="panel" id="toss">
+    <p class="panel-note">当初構想から差し替わった・保留になったもの。ここはテーマから外れて遊んでよい。突拍子もない案4つ。</p>
+
+    <div class="toss-grid">
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="14" y="10" width="32" height="40" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="20" y="16" width="20" height="12" fill="currentColor" opacity="0.3"/><rect x="26" y="34" width="3" height="3" fill="currentColor"/><rect x="31" y="34" width="3" height="3" fill="currentColor"/><rect x="26" y="39" width="8" height="3" fill="currentColor"/></svg></div>
+        <h3>n2の県移動を、k1の中でドット絵ゲーム化</h3>
+        <p>大阪→神奈川の県移動を、n2の地図上でなくk1(NESエミュレータ)内の自作ROMとして動かす。GamePad Pollerはそのまま流用できる。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><path d="M16 8 h28 v40 l-4 4 -4 -4 -4 4 -4 -4 -4 4 -4 -4 -4 4z" fill="none" stroke="currentColor" stroke-width="2"/><line x1="20" y1="18" x2="40" y2="18" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="24" x2="40" y2="24" stroke="currentColor" stroke-width="1.5"/><line x1="20" y1="30" x2="34" y2="30" stroke="currentColor" stroke-width="1.5"/></svg></div>
+        <h3>訪問県数をbi(COBOL)で謎の月次帳票に</h3>
+        <p>ba-66のCOBOLミニインタプリタで、訪問県数・移動距離をDISPLAY文の桁埋め表示で出力する、実用性ゼロの月次帳票を作る。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="12" y="12" width="24" height="24" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="18" r="1.8" fill="currentColor"/><circle cx="30" cy="18" r="1.8" fill="currentColor"/><circle cx="24" cy="24" r="1.8" fill="currentColor"/><circle cx="18" cy="30" r="1.8" fill="currentColor"/><circle cx="30" cy="30" r="1.8" fill="currentColor"/><rect x="42" y="10" width="8" height="34" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></div>
+        <h3>「今日の許可県」ガチャ</h3>
+        <p>ba-70の運勢構想と接続し、その日サイコロで決まった県にしか移動できなくする。訪問実績と無関係に日替わりで制約が変わる。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="8" y="24" width="26" height="16" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><line x1="15" y1="32" x2="21" y2="32" stroke="currentColor" stroke-width="2"/><line x1="18" y1="29" x2="18" y2="35" stroke="currentColor" stroke-width="2"/><circle cx="27" cy="30" r="1.6" fill="currentColor"/><circle cx="30" cy="33" r="1.6" fill="currentColor"/><rect x="38" y="18" width="16" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><line x1="41" y1="24" x2="51" y2="24" stroke="currentColor" stroke-width="1.5"/><line x1="41" y1="29" x2="51" y2="29" stroke="currentColor" stroke-width="1.5"/><line x1="41" y1="34" x2="47" y2="34" stroke="currentColor" stroke-width="1.5"/></svg></div>
+        <h3>「ba探検隊」— GamePadでba台帳を操作</h3>
+        <p>k1のGamePad Pollerを流用し、D-padでbaのスレッド一覧を送り、Aボタンで開く。物理コントローラでrbook\runを操作する未来。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function(){
+    var tabs = document.querySelectorAll('.tab-btn');
+    var panels = document.querySelectorAll('.panel');
+    function activate(tabId){
+      tabs.forEach(function(b){ b.classList.toggle('on', b.dataset.tab === tabId); });
+      panels.forEach(function(p){ p.classList.toggle('on', p.id === tabId); });
+    }
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        activate(btn.dataset.tab);
+        history.replaceState(null, '', '#' + btn.dataset.tab);
+      });
+    });
+    var initial = location.hash.replace('#', '');
+    if (initial && document.getElementById(initial)) {
+      activate(initial);
+    }
+  })();
+</script>
+</body>
+</html>

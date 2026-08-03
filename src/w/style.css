@@ -1,0 +1,146 @@
+:root {
+  --paper: #14170f;
+  --ink: #eeeeee;
+  --dim: #9a9a90;
+  --line: #33362c;
+  --accent: #6cc9b6;
+  --accent-soft: #1e2b28;
+  --warn: #d99a68;
+  --warn-soft: #2c231c;
+  --now: #c8ff4d;
+  --now-soft: #1e2a10;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --paper: #f7f6f0;
+    --ink: #22261c;
+    --dim: #6b6659;
+    --line: #ddd8cb;
+    --accent: #2f7d6c;
+    --accent-soft: #e3efea;
+    --warn: #a65d2e;
+    --warn-soft: #f3e7db;
+    --now: #5f8a0a;
+    --now-soft: #eef7d8;
+  }
+}
+
+body {
+  font-family: sans-serif;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+a { color: var(--accent); }
+h1, h2 { text-wrap: balance; }
+
+/* トップページ: aa本体へのリンク行 */
+.aa-link-row {
+  display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--dim);
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 0 0 16px;
+}
+.aa-link-row a { font-weight: bold; text-decoration: none; }
+.aa-link-row a:hover { text-decoration: underline; }
+
+/* トップページのカードリンク一覧 */
+.nav-list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.nav-item {
+  display: flex; align-items: baseline; gap: 10px;
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px;
+  text-decoration: none; color: inherit;
+}
+.nav-item:hover { border-color: var(--accent); }
+.nav-code { font-weight: bold; color: var(--accent); }
+.nav-desc { color: var(--dim); font-size: 0.9rem; }
+
+/* トップページ: 熱量3段階(ba-222) */
+.tier { margin: 26px 0 6px; }
+.tier-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.tier-title { font-size: 1rem; font-weight: 800; }
+.tier-note { font-size: 0.78rem; color: var(--dim); }
+.tier-head::after { content: ""; flex: 1; height: 1px; background: var(--line); align-self: center; }
+.tier.now .tier-title { color: var(--now); }
+.tier.asneeded .tier-title { color: var(--accent); }
+.tier.always .tier-title { color: var(--dim); }
+.tier.now .nav-list { gap: 8px; }
+.tier.now .nav-item { border-color: rgba(200,255,77,0.35); background: var(--now-soft); }
+.tier.now .nav-code { color: var(--now); }
+.tier.always .nav-item { background: var(--accent-soft); border-style: dashed; }
+
+/* トップページ: ツール・手順(sX)は熱量の階層に混ぜず控えめに */
+.tier.tools { margin: 34px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
+.tier.tools .tier-head::after { display: none; }
+.tier.tools .tier-title { font-size: 0.8rem; color: var(--dim); font-weight: 700; }
+.tier.tools .nav-list { gap: 6px; }
+.tier.tools .nav-item { padding: 6px 11px; opacity: 0.85; }
+.tier.tools .nav-code { font-size: 0.78rem; color: var(--dim); }
+.tier.tools .nav-desc { font-size: 0.8rem; }
+
+/* 手順ページの番号ステップ */
+.steps { display: flex; flex-direction: column; }
+.step { display: grid; grid-template-columns: 32px 1fr; column-gap: 16px; }
+.step-spine { display: flex; flex-direction: column; align-items: center; }
+.step-num {
+  width: 28px; height: 28px; min-height: 28px; border-radius: 50%;
+  border: 1.5px solid var(--accent); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: bold; flex: none;
+}
+.step-line { width: 1.5px; flex: 1; background: var(--line); margin: 4px 0; }
+.step:last-of-type .step-line { display: none; }
+.step-body { padding-bottom: 28px; }
+.step-title { font-size: 1.05rem; font-weight: bold; margin: 4px 0 8px; }
+
+/* 注意書き */
+.callout {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  border-radius: 0 8px 8px 0; padding: 12px 16px; margin-top: 4px;
+}
+.callout .label {
+  font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--accent); font-weight: bold; margin-bottom: 6px;
+}
+.callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+.callout.warn .label { color: var(--warn); }
+
+.field, .path {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.86em;
+  background: rgba(128,128,128,0.15);
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+
+pre.cmd {
+  margin: 10px 0 0; padding: 10px 12px;
+  background: rgba(128,128,128,0.12); border: 1px solid var(--line);
+  border-radius: 8px; overflow-x: auto;
+  font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem;
+}
+
+/* タグ(バッジ)行 */
+.scope-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 20px; }
+.scope-tag {
+  font-size: 0.76rem; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--dim);
+}
+.scope-tag.accent { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.scope-tag.warn { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+
+/* ツール一覧 */
+.tool-grid { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.tool-card {
+  display: grid; grid-template-columns: 130px 1fr; gap: 12px;
+  padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; align-items: baseline;
+}
+.tool-name { font-family: ui-monospace, Consolas, monospace; font-size: 0.86rem; color: var(--accent); font-weight: bold; }
+.tool-desc { font-size: 0.86rem; color: var(--dim); }
+.tool-card.highlight { border-color: var(--accent); background: var(--accent-soft); }
+.tool-card.highlight .tool-desc { color: var(--ink); }
+@media (max-width: 480px) {
+  .tool-card { grid-template-columns: 1fr; gap: 2px; }
+}

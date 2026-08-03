@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t18 / aaトップページ再設計(ba-97)</title>
+<style>
+  :root{
+    --bg:#171b20; --card:#20262c; --ink:#eef1ee; --sub:#9aa3a6; --line:#2d353b;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff8a65;
+    --tag-a:#ffb64d; --tag-b:#7ce0c4; --tag-c:#c99bff; --tag-d:#66ccff;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#fbf7ee; --card:#ffffff; --ink:#24282b; --sub:#6c7478; --line:#e3ddca;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c9552b;
+      --tag-a:#c97f14; --tag-b:#2a8f6f; --tag-c:#7a4fd6; --tag-d:#0a6c96;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;
+    padding:20px 16px 70px;line-height:1.6}
+  .wrap{max-width:720px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta);text-decoration:none}
+  h1{font-size:22px;margin:14px 0 4px}
+  .lede{font-size:13.5px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:22px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:14px;padding:10px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;font-weight:600;
+  }
+  .tab-btn .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink)}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+
+  .card{
+    border:1px solid var(--line);border-radius:18px;background:var(--card);
+    padding:20px;margin:0 0 20px;
+  }
+  .card h2{font-size:15px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+  .card .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:var(--sub);font-weight:400}
+  .card .caption{font-size:12.5px;color:var(--sub);margin:8px 0 14px}
+
+  .shelf{display:flex;align-items:flex-end;gap:10px;padding:14px 6px 4px;overflow-x:auto}
+  .shelf-slot{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none}
+  .shelf-box{
+    border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-family:ui-monospace,Consolas,monospace;font-weight:700;color:#12161a;
+  }
+  .shelf-label{font-size:10.5px;color:var(--sub)}
+  .shelf-bar{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--solid),var(--line));margin:0 6px 4px}
+  .shelf-endcaps{display:flex;justify-content:space-between;font-size:11px;color:var(--sub);padding:0 6px}
+
+  .map{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media (max-width:520px){.map{grid-template-columns:1fr}}
+  .zone{border:2px dashed var(--line);border-radius:16px;padding:12px}
+  .zone-title{font-size:12px;font-weight:700;color:var(--ink);margin:0 0 8px;display:flex;align-items:center;gap:6px}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{
+    font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:700;
+    padding:5px 10px;border-radius:999px;color:#12161a;
+  }
+
+  .houses{display:flex;gap:14px;align-items:flex-end;justify-content:center;margin:10px 0 6px;flex-wrap:wrap}
+  .house{display:flex;flex-direction:column;align-items:center;gap:8px;width:130px}
+  .house svg{width:84px;height:70px}
+  .house-name{font-size:12.5px;font-weight:700}
+  .house-note{font-size:10.5px;color:var(--sub);text-align:center}
+  .floaters{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:16px 0}
+  .float-chip{
+    font-family:ui-monospace,Consolas,monospace;font-size:11.5px;font-weight:700;
+    padding:5px 10px;border-radius:999px;background:var(--card);border:2px dashed var(--toss);color:var(--toss);
+  }
+  .qmark{font-size:22px;color:var(--toss);text-align:center;margin:2px 0 10px}
+
+  .empty-note{font-size:12.5px;color:var(--sub);text-align:center;padding:20px 10px;
+    border:1px dashed var(--line);border-radius:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+
+  <h1>🗂️ aaトップページ、整理してみよう</h1>
+  <p class="lede">主にba-97、bc(旧k2)のところはba-93も見てね。文字より絵で。</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button>
+    <button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button>
+    <button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button>
+  </div>
+
+  <div class="panel on" id="solid">
+
+    <div class="card">
+      <h2>📚 コードは「棚の位置」なだけ <span class="src">ba-193</span></h2>
+      <p class="caption">意味はない。若い(小さい)ほど手前でよく見る棚、大きいほど奥の棚。それだけ。</p>
+      <div class="shelf">
+        <div class="shelf-slot"><div class="shelf-box" style="width:46px;height:46px;background:var(--tag-b)">ba</div><div class="shelf-label">よく見る</div></div>
+        <div class="shelf-slot"><div class="shelf-box" style="width:42px;height:42px;background:var(--tag-b)">bb</div><div class="shelf-label">&nbsp;</div></div>
+        <div class="shelf-slot"><div class="shelf-box" style="width:40px;height:40px;background:var(--tag-c)">bc</div><div class="shelf-label">&nbsp;</div></div>
+        <div class="shelf-slot"><div class="shelf-box" style="width:36px;height:36px;background:var(--tag-a)">bc</div><div class="shelf-label">&nbsp;</div></div>
+        <div class="shelf-slot"><div class="shelf-box" style="width:32px;height:32px;background:var(--tag-a);opacity:.85">bd</div><div class="shelf-label">&nbsp;</div></div>
+        <div class="shelf-slot"><div class="shelf-box" style="width:28px;height:28px;background:var(--tag-a);opacity:.7">bf</div><div class="shelf-label">&nbsp;</div></div>
+        <div class="shelf-slot"><div class="shelf-box" style="width:24px;height:24px;background:var(--tag-a);opacity:.55;font-size:10px">bh</div><div class="shelf-label">&nbsp;</div></div>
+        <div class="shelf-slot"><div class="shelf-box" style="width:22px;height:22px;background:var(--tag-a);opacity:.45;font-size:9px">bi</div><div class="shelf-label">奥</div></div>
+      </div>
+      <div class="shelf-bar"></div>
+      <div class="shelf-endcaps"><span>手前(よく見る)</span><span>奥(たまに見る)</span></div>
+      <p class="caption" style="margin-top:14px">b系の2文字目が数字じゃなくて英字なのは、n4-xxと数字がぶつかって見分けにくくなるのを避けただけ。「意味づけ」じゃないよ。合体するときは若い方の棚に寄せる。</p>
+    </div>
+
+    <div class="card">
+      <h2>✅ n1・n2・n3 はこのまま</h2>
+      <p class="caption">確認済み。今回さわらない。</p>
+    </div>
+
+  </div>
+
+  <div class="panel" id="beta">
+    <p class="card" style="padding:12px 20px;font-size:12.5px;color:var(--sub);border-style:dashed">ここはまだ決まってない、今日の会話の本体だよ。</p>
+
+    <div class="card">
+      <h2>🗺️ 今のトップページの地図</h2>
+      <p class="caption">今のnav.ymlをそのまま絵にすると、こう。</p>
+      <div class="map">
+        <div class="zone">
+          <div class="zone-title">📔 記録</div>
+          <div class="chip-row">
+            <span class="chip" style="background:var(--tag-d)">n1</span>
+            <span class="chip" style="background:var(--tag-d)">n2</span>
+            <span class="chip" style="background:var(--tag-d)">n3</span>
+          </div>
+        </div>
+        <div class="zone">
+          <div class="zone-title">📝 内部メモ</div>
+          <div class="chip-row">
+            <span class="chip" style="background:var(--tag-b)">ba</span>
+            <span class="chip" style="background:var(--tag-b)">bb</span>
+            <span class="chip" style="background:var(--tag-c)">bc</span>
+          </div>
+        </div>
+        <div class="zone">
+          <div class="zone-title">🎲 あそび</div>
+          <div class="chip-row">
+            <span class="chip" style="background:var(--tag-a)">k1</span>
+            <span class="chip" style="background:var(--tag-a)">bc</span>
+            <span class="chip" style="background:var(--tag-a)">bd</span>
+            <span class="chip" style="background:var(--tag-a)">bf</span>
+            <span class="chip" style="background:var(--tag-a)">bh</span>
+            <span class="chip" style="background:var(--tag-a)">bi</span>
+            <span class="chip" style="background:var(--tag-a)">ro</span>
+          </div>
+        </div>
+        <div class="zone">
+          <div class="zone-title">🔧 ツール・手順</div>
+          <div class="chip-row">
+            <span class="chip" style="background:var(--solid);color:#12161a">s1</span>
+            <span class="chip" style="background:var(--solid);color:#12161a">s2</span>
+            <span class="chip" style="background:var(--solid);color:#12161a">s3</span>
+            <span class="chip" style="background:var(--solid);color:#12161a">s4</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🏠 「あそび」のおうちがない問題 <span class="src">ba-97</span></h2>
+      <p class="caption">aaの家にもab家にも、しっくりこないかも?という話。</p>
+      <div class="houses">
+        <div class="house">
+          <svg viewBox="0 0 100 84"><polygon points="50,6 94,42 82,42 82,78 18,78 18,42 6,42" fill="none" stroke="var(--beta)" stroke-width="4" stroke-linejoin="round"/><rect x="42" y="54" width="16" height="24" fill="var(--beta)"/></svg>
+          <div class="house-name">aa</div>
+          <div class="house-note">ろれき本体<br>記録・内部メモ</div>
+        </div>
+        <div class="house">
+          <svg viewBox="0 0 100 84"><polygon points="50,6 94,42 82,42 82,78 18,78 18,42 6,42" fill="none" stroke="var(--solid)" stroke-width="4" stroke-linejoin="round"/><rect x="42" y="54" width="16" height="24" fill="var(--solid)"/></svg>
+          <div class="house-name">ab</div>
+          <div class="house-note">たかしさん向け図解<br>すま・利尻の思考窓</div>
+        </div>
+        <div class="house">
+          <svg viewBox="0 0 100 84"><polygon points="50,6 94,42 82,42 82,78 18,78 18,42 6,42" fill="none" stroke="var(--toss)" stroke-width="4" stroke-dasharray="6 5" stroke-linejoin="round"/><text x="50" y="60" text-anchor="middle" font-size="30" fill="var(--toss)">?</text></svg>
+          <div class="house-name">3つ目?</div>
+          <div class="house-note">まだ無い</div>
+        </div>
+      </div>
+      <div class="qmark">↑ この子たち、どこの子?</div>
+      <div class="floaters">
+        <span class="float-chip">k1</span>
+        <span class="float-chip">bc</span>
+        <span class="float-chip">bd</span>
+        <span class="float-chip">bf</span>
+        <span class="float-chip">bh</span>
+        <span class="float-chip">bi</span>
+        <span class="float-chip">ro</span>
+      </div>
+      <p class="caption">一案: 今もnav.yml上で他と混ざらず独立した棚(tier)になってはいる。「混ざってない」だけで一旦オッケーとする読み方もできそう。3つ目の家が本当に要るかは要相談。</p>
+    </div>
+
+    <div class="card">
+      <h2>📊 bc(旧k2、レーダーチャート)がちょっと寂しい <span class="src">ba-93</span></h2>
+      <p class="caption">レーダーチャートだけじゃ物足りないよね、という声。内部メモの並びを触るならここも一緒に。</p>
+    </div>
+
+    <div class="card">
+      <h2>🔤 k1のコード、bに寄せる?それとも逆?</h2>
+      <p class="caption">「あそび」の中でk1だけbじゃない。k1をb系に寄せるか、逆にbc〜biたちをk系(かどこか別)に寄せるか、方向は未定。どちらにしてもaa(フォルダ・nav.yml)・ab(t4/t13/t14の説明文にk1表記あり)・ba(古い記録は書き換え不可)の3箇所に跨る話なので、計画してから動かす。</p>
+    </div>
+
+  </div>
+
+  <div class="panel" id="toss">
+    <div class="card">
+      <h2>📦 t0x・t1x・t2x…でバケツに分ける <span class="src">ba-97</span></h2>
+      <p class="caption">t3〜t18みたいにフォルダが1個ずつ増えていくと、VSCodeの左パネルが見づらくなる問題への案(たかしさん発案、まだ捨て案級・未着手)。</p>
+      <ul style="font-size:12.5px;color:var(--sub);padding-left:1.1em;margin:0">
+        <li><code>src/t0x/</code>・<code>src/t1x/</code>・<code>src/t2x/</code>…と10刻みでバケツフォルダに分ける</li>
+        <li>各バケツの中は<code>t3.html</code>のようにフラットなファイルにする(index.htmlフォルダをやめる)</li>
+        <li>「t/を1個にまとめる」案より、バケツの中身が一定サイズに収まるのでスケールする</li>
+        <li>番号範囲での機械的な区切りなので、ba-193(コードは意味を持たない番地)の原則とも矛盾しない</li>
+        <li>s系(現状4個)はまだ分割不要</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function(){
+    var tabs = document.querySelectorAll('.tab-btn');
+    var panels = document.querySelectorAll('.panel');
+    function activate(tabId){
+      tabs.forEach(function(b){ b.classList.toggle('on', b.dataset.tab === tabId); });
+      panels.forEach(function(p){ p.classList.toggle('on', p.id === tabId); });
+    }
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){ activate(btn.dataset.tab); });
+    });
+  })();
+</script>
+</body>
+</html>

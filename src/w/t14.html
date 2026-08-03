@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t14 / 地図アプリ・地図ゲームの充実(ba-91)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:720px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block p{font-size:13px;margin:0 0 8px}
+  .theme-block p:last-child{margin-bottom:0}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:520px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:44px;height:44px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12.5px;margin:0 0 6px}
+  .toss-card p{font-size:11.5px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+
+  <p class="mock-label">案件の可視化パターン</p>
+  <h1>地図アプリ・地図ゲームの充実(ba-91)</h1>
+  <p class="lede">確定事項タブは、baに文字通り書かれていることだけに絞っている。</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button>
+    <button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button>
+    <button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button>
+  </div>
+
+  <div class="panel on" id="solid">
+    <p class="panel-note">ba-91に文字通り書かれていることだけ。</p>
+    <div class="theme-block">
+      <h2>発案 <span class="src">ba-91・takashi本人</span></h2>
+      <p>「地図というコンセプトを活かした、なんか、こう、いいもの、面白いものを作る」</p>
+      <p style="font-size:12px;color:var(--sub)">t4(k1×n2ゲーム化、ba-52/ba-55)はこの一部を具体化したものだが、ba-91自体はより広い「地図もの全般」を指している。</p>
+    </div>
+  </div>
+
+  <div class="panel" id="beta">
+    <p class="panel-note">まだ何も無い。捨て案から絞り込む前の段階。</p>
+    <div class="theme-block">
+      <h2>未着手 <span class="src">今回は発散のみ</span></h2>
+      <p>今回はあえて収束させず、捨て案タブに数を出すことを優先した。ベータ版への絞り込みはまた別の機会に。</p>
+    </div>
+  </div>
+
+  <div class="panel" id="toss">
+    <p class="panel-note">お遊び枠。テーマから外れてよい。数を出すことを優先。</p>
+    <div class="toss-grid">
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><path d="M14 44 L46 44 L46 20 L30 10 L14 20 Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="28" r="3" fill="currentColor"/></svg></div>
+        <h3>願望マップ(行きたい場所)</h3>
+        <p>訪問済みでなく「行きたい」場所をピンで置ける地図。願望リストを地図上に可視化する、n2の逆バージョン。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="10" y="14" width="12" height="12" fill="currentColor" opacity=".8"/><rect x="24" y="14" width="12" height="12" fill="currentColor" opacity=".4"/><rect x="38" y="14" width="12" height="12" fill="currentColor" opacity=".15"/><rect x="10" y="30" width="12" height="12" fill="currentColor" opacity=".6"/></svg></div>
+        <h3>都道府県制覇ヒートマップ</h3>
+        <p>訪問回数や滞在日数を濃淡で塗り分ける。t4は「移動」寄りだが、これは「達成度の可視化」寄り。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="10" y="10" width="10" height="10" fill="currentColor"/><rect x="24" y="10" width="10" height="10" fill="none" stroke="currentColor"/><rect x="10" y="24" width="10" height="10" fill="none" stroke="currentColor"/><rect x="24" y="24" width="10" height="10" fill="currentColor"/></svg></div>
+        <h3>k1内ドット絵世界地図</h3>
+        <p>n2の地図をNESエミュレータ(k1)内の自作ROMとして動かす。GamePad Pollerがそのまま流用できる。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><path d="M10 40 Q30 10 50 40" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="32" r="3" fill="currentColor"/><circle cx="40" cy="32" r="3" fill="currentColor"/></svg></div>
+        <h3>Visits/Scoresを地図に重ねる</h3>
+        <p>既存テーブルのデータを一覧でなく地図上に可視化する。得点と場所が繋がって見える、新しい切り口。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="10" y="10" width="40" height="40" rx="4" fill="currentColor" opacity=".2"/><circle cx="30" cy="30" r="10" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <h3>フォグ・オブ・ウォー地図</h3>
+        <p>未訪問の地域を霧で隠し、訪問すると晴れて見えるようになる。スクラッチくじのような開封感。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><circle cx="30" cy="24" r="12" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 44 q10 -14 20 0" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+        <h3>ご当地スタンプ収集</h3>
+        <p>訪問県ごとに御城印・御朱印風のスタンプ画像がもらえる。実質何も変わらないが達成感だけ演出。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><path d="M14 44 L46 44 L46 20 L30 10 L14 20 Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="28" r="2.5" fill="currentColor"/><circle cx="36" cy="30" r="2.5" fill="currentColor"/></svg></div>
+        <h3>安藤家・窓辺家キャラが地図を歩く</h3>
+        <p>山/雲の家系キャラ(すま・利尻・阿蘇・小雲・朝雲)を地図上のアイコンにして、訪問先を一緒に歩いている演出。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="10" y="16" width="40" height="28" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="30" y="34" text-anchor="middle" font-size="9">知育?</text></svg></div>
+        <h3>「地図」を「知育」と空目した謎機能</h3>
+        <p>完全に言葉の見間違いから始まった案。地図と関係なく都道府県の豆知識クイズを出す、脱線したままのミニゲーム。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function(){
+    var tabs = document.querySelectorAll('.tab-btn');
+    var panels = document.querySelectorAll('.panel');
+    function activate(tabId){
+      tabs.forEach(function(b){ b.classList.toggle('on', b.dataset.tab === tabId); });
+      panels.forEach(function(p){ p.classList.toggle('on', p.id === tabId); });
+    }
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        activate(btn.dataset.tab);
+        history.replaceState(null, '', '#' + btn.dataset.tab);
+      });
+    });
+    var initial = location.hash.replace('#', '');
+    if (initial && document.getElementById(initial)) {
+      activate(initial);
+    }
+  })();
+</script>
+</body>
+</html>

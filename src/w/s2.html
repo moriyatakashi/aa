@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>s2 / Google OAuthクライアントID 発行手順</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <p><a href="../../">&larr; 戻る</a></p>
+  <h1>Google OAuthクライアントID 発行手順</h1>
+  <p>「Sign in with Google」用の、ウェブアプリケーション向けOAuth 2.0クライアントIDを発行する手順。クライアントシークレットは使わない構成(フロントエンドのみで完結するIDトークン方式)。値はここに書かない。案件ごとの値は別ファイル(yml想定)に残す。</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-spine"><div class="step-num">1</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">Google Cloud Consoleでプロジェクトを用意する</h2>
+        <p><span class="path">console.cloud.google.com</span> にアクセスし、上部のプロジェクト選択から「新しいプロジェクト」を作成する。既存の別プロジェクトを流用せず、新規プロジェクトを切ることを推奨する(対象を分離するため)。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">2</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">OAuth同意画面を設定する</h2>
+        <p>左メニュー <span class="path">APIとサービス &rarr; OAuth同意画面</span> を開く。</p>
+        <ul>
+          <li>User Type: 個人利用中心なら「External」。あとでテストユーザーを追加すれば、Google審査なしで使える。</li>
+          <li>アプリ名、サポートメール、デベロッパー連絡先メールを入力する。</li>
+          <li>承認済みドメインを追加する(GitHub Pagesなら <span class="field">github.io</span>)。</li>
+          <li>スコープはデフォルトのままでよい(<span class="field">email</span> / <span class="field">profile</span> / <span class="field">openid</span>)。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">3</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">テストユーザーを追加する</h2>
+        <p>同意画面保存後、「テストユーザー」セクションで、ログインさせたい人のGoogleアカウントのメールアドレスを追加する。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">4</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">OAuthクライアントIDを作成する</h2>
+        <p>左メニュー <span class="path">認証情報 &rarr; 認証情報を作成 &rarr; OAuthクライアントID</span>。</p>
+        <ul>
+          <li>アプリケーションの種類: 「ウェブアプリケーション」</li>
+          <li>名前: 任意</li>
+          <li>承認済みのJavaScript生成元: 対象サイトのオリジン(例 <span class="field">https://&lt;ユーザー名&gt;.github.io</span>)</li>
+          <li>承認済みのリダイレクトURI: Google Identity Services(IDトークンがJS側に直接返る方式)を使うなら基本不要</li>
+        </ul>
+        <p>作成すると <span class="field">xxxxxxxxxx.apps.googleusercontent.com</span> 形式のクライアントIDが発行される。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">5</div></div>
+      <div class="step-body">
+        <h2 class="step-title">発行された値を控える</h2>
+        <div class="callout">
+          <div class="label">この手順書には書かない</div>
+          <p>発行されたクライアントIDは、案件ごとの設定値ファイル(yml想定)に記録する。クライアントID自体はフロントエンドのソースに埋め込んで公開する前提の値のため、秘密として扱う必要はない。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="color:var(--dim); font-size:0.85rem; margin-top:32px;">自動化について: この発行操作はGoogleがConsole UI経由のみに限定している認識(確証度は高くない)。公式APIからの自動作成はできない前提で計画した方がよい。</p>
+</body>
+</html>

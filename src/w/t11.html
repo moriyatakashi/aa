@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t11 / 環境変数の命名ルール(ba-82)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:700px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block p{font-size:13px;margin:0 0 8px}
+  .theme-block p:last-child{margin-bottom:0}
+  .theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:5px 0}
+  .quote-src{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .quote-src b{color:var(--ink);font-weight:600}
+  .scope-note{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .scope-note b{color:var(--ink);font-weight:600}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .diagram{margin:6px 0 12px;color:var(--sub)}
+  .diagram svg{width:100%;height:auto;display:block}
+  .diagram text{fill:currentColor;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:44px;height:44px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12px;margin:0 0 6px}
+  .toss-card p{font-size:11px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+
+  <p class="mock-label">確定仕様の可視化パターン</p>
+  <h1>環境変数の命名ルール(ba-82)</h1>
+  <p class="lede">確定事項タブは、baに文字通り書かれていることだけに絞っている。</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button>
+    <button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button>
+    <button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button>
+  </div>
+
+  <div class="panel on" id="solid">
+    <p class="panel-note">ba-82に文字通り書かれていることだけ。</p>
+
+    <div class="theme-block">
+      <h2>出発点の懸念 <span class="src">ba-82</span></h2>
+      <ul>
+        <li>TEMP_PASSCODEのような、用途と無関係・使い捨てに見える名前を繰り返したくない</li>
+        <li>2文字ページコード単独では短すぎ、Azure Portal上はフラット表示で文脈が無く後から追いにくい</li>
+        <li>ROREKIをフルスペルすると長すぎる</li>
+      </ul>
+    </div>
+
+    <div class="theme-block">
+      <h2>決定ルール <span class="src">ba-82</span></h2>
+      <div class="diagram">
+        <svg viewBox="0 0 320 90">
+          <rect x="10" y="10" width="26" height="26" rx="4" fill="var(--solid)" opacity="0.18" stroke="var(--solid)"/>
+          <text x="23" y="27" text-anchor="middle" font-size="12" font-weight="700">R</text>
+          <rect x="44" y="10" width="90" height="26" rx="4" fill="var(--beta)" opacity="0.15" stroke="var(--beta)"/>
+          <text x="89" y="27" text-anchor="middle" font-size="10">ページコード</text>
+          <rect x="142" y="10" width="120" height="26" rx="4" fill="none" stroke="currentColor"/>
+          <text x="202" y="27" text-anchor="middle" font-size="10">用途語[_詳細]</text>
+          <text x="10" y="58" font-size="10">例: RBA_LANE_ANDO_RISHIRI</text>
+          <text x="10" y="76" font-size="10">共通は例外的に RCOMMON_GITHUB_TOKEN</text>
+        </svg>
+      </div>
+      <p><code>R&lt;ページコード&gt;_&lt;用途語&gt;[_詳細]</code>。Rはろれき(ROREKI)系の印、ページコードは<code>src/README.md</code>の対応表を流用。複数ページ共通のものは<code>RCOMMON_&lt;用途語&gt;</code>と明示する。</p>
+    </div>
+
+    <div class="theme-block">
+      <h2>この形の利点 <span class="src">ba-82</span></h2>
+      <ul>
+        <li>ページ廃止時、そのページコードのprefixでgrepすれば削除対象が一目で洗い出せる</li>
+        <li>単一ページ用から複数ページ共有に変わった時、prefixを書き換えることでスコープ変更が名前自体に表れる(黙って共有化されない)</li>
+      </ul>
+    </div>
+
+    <div class="theme-block">
+      <h2>実施状況 <span class="src">ba-82・azure envで確認</span></h2>
+      <p>設計段階の記録のみで、既存のAzure Function App設定へのリネーム適用はまだ行われていない(ba-82本文に明記)。</p>
+      <div class="scope-note"><b>現状(2026-08-02、azure env確認):</b> BA_CLAUDE_KEY_PC/MOBILE・GITHUB_TOKEN等、実在する変数の大半が<code>[naming: ba-82非準拠]</code>のまま。RBA_MANUAL_PASSCODE(ba-83でTEMP_PASSCODEから改名)のみ、この命名ルールに沿っていない別形式で対応済み。</div>
+    </div>
+  </div>
+
+  <div class="panel" id="beta">
+    <p class="panel-note">構想はあるが未実装。</p>
+    <div class="theme-block">
+      <h2>既存変数への適用 <span class="src">未着手</span></h2>
+      <p>BA_CLAUDE_KEY_PC/MOBILE・GITHUB_TOKEN等、非準拠のまま残っている変数群を、いつ・どの順でリネームするか。ba-82本文には計画が書かれていない。</p>
+    </div>
+    <div class="theme-block">
+      <h2>fa/ad登場人物との対応 <span class="src">ba-78関連</span></h2>
+      <p>安藤利尻/安藤須磨/窓辺阿蘇/羽生小雲/羽生朝雲(ba-78)ごとの投稿レーン変数が今後増える見込み。実際に増えた時にこの命名ルールがどこまで綺麗に運用できるかは未検証。</p>
+    </div>
+    <div class="theme-block">
+      <h2>非準拠チェックの自動化(軽め) <span class="src">azure env拡張案</span></h2>
+      <p>実は<code>run azure env</code>は既に<code>[naming: ba-82非準拠]</code>という形で軽く指摘してくれている。これをもう少し育てて、非準拠一覧だけ抜き出す・件数を出す、くらいの軽い拡張ならすぐ作れそう。</p>
+    </div>
+  </div>
+
+  <div class="panel" id="toss">
+    <p class="panel-note">お遊び枠。テーマから外れてよい。</p>
+    <div class="toss-grid">
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="10" y="20" width="40" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="30" y="34" text-anchor="middle" font-size="8" font-family="ui-monospace,monospace">R??_??</text></svg></div>
+        <h3>命名警察AI</h3>
+        <p>非準拠の変数名を見つけたら赤ペンで容赦なく指摘してくるだけの、実装権限は無いAI審査員。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><path d="M14 44 L46 44 L46 20 L30 10 L14 20 Z" fill="none" stroke="currentColor" stroke-width="2"/><text x="30" y="34" text-anchor="middle" font-size="8">準拠</text></svg></div>
+        <h3>準拠率バッジ</h3>
+        <p>Azure Function Appの環境変数準拠率を「◯%」でトップページに常時表示する、誰得か分からない健全性メーター。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="18" fill="none" stroke="currentColor" stroke-width="2"/><text x="30" y="35" text-anchor="middle" font-size="16">R</text></svg></div>
+        <h3>「R」の由来を聞かれ続けるbot</h3>
+        <p>新しい人が来るたびに「Rって何の略ですか」と聞かれ続け、毎回律儀に「ろれき(ROREKI)です」と答えるだけの一問一答bot。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="8" y="24" width="26" height="16" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><line x1="15" y1="32" x2="21" y2="32" stroke="currentColor" stroke-width="2"/><line x1="18" y1="29" x2="18" y2="35" stroke="currentColor" stroke-width="2"/><rect x="40" y="20" width="14" height="24" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></div>
+        <h3>GamePadでリネーム一括承認</h3>
+        <p>非準拠変数の一覧をGamePadのD-padで送り、Aボタンでリネームを一括承認していく謎の物理インターフェース。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function(){
+    var tabs = document.querySelectorAll('.tab-btn');
+    var panels = document.querySelectorAll('.panel');
+    function activate(tabId){
+      tabs.forEach(function(b){ b.classList.toggle('on', b.dataset.tab === tabId); });
+      panels.forEach(function(p){ p.classList.toggle('on', p.id === tabId); });
+    }
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        activate(btn.dataset.tab);
+        history.replaceState(null, '', '#' + btn.dataset.tab);
+      });
+    });
+    var initial = location.hash.replace('#', '');
+    if (initial && document.getElementById(initial)) {
+      activate(initial);
+    }
+  })();
+</script>
+</body>
+</html>

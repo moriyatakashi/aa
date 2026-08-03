@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>s3 / 自作Google Drive MCPサーバー セットアップ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <p><a href="../../">&larr; 戻る</a></p>
+  <h1>自作Google Drive MCPサーバー セットアップ</h1>
+  <p>既存のGoogle Drive連携には「既存ファイルの中身を更新する」機能が無いため、それを補うために作った自作MCPサーバー(gdrive-mcp)。<span class="field">files.update</span>でfileIdを保ったまま中身を差し替える。</p>
+  <div class="scope-row">
+    <span class="scope-tag warn">ブラウザ操作が1回必要</span>
+    <span class="scope-tag">スコープ: drive(全体への読み書き)</span>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-spine"><div class="step-num">1</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">OAuthクライアントIDを作る(デスクトップアプリ)</h2>
+        <p>Google Cloud Consoleで新しいOAuthクライアントIDを作成する。種類は「デスクトップアプリ」を選ぶ(s2で書いた「ウェブアプリケーション」とは別種類)。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">2</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">credentials.json を配置する</h2>
+        <p>ダウンロードしたJSONを、<span class="field">server.py</span>と同じフォルダに <span class="field">credentials.json</span> という名前で置く。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">3</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">依存関係をインストールする</h2>
+        <pre class="cmd">pip install -r requirements.txt</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">4</div><div class="step-line"></div></div>
+      <div class="step-body">
+        <h2 class="step-title">初回のみブラウザで認可する</h2>
+        <pre class="cmd">py server.py --auth-only</pre>
+        <p>実行すると既定のブラウザが開き、Googleアカウントでのログインと権限の許可を求められる。成功すると <span class="field">token.json</span> が生成され、以降は自動で使われる。</p>
+        <div class="callout warn">
+          <div class="label">ここは利尻にはできない</div>
+          <p>ブラウザでの認可操作は、たかしさんのPC・ブラウザ・Googleアカウントで完結する必要がある。代行できない。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-spine"><div class="step-num">5</div></div>
+      <div class="step-body">
+        <h2 class="step-title">Claude Codeに登録する(次のステップ・未実施)</h2>
+        <p><span class="field">claude mcp add</span> で登録する。ここまではまだ進めていない。</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="step-title" style="margin-top:8px;">使えるツール(5個)</p>
+  <div class="tool-grid">
+    <div class="tool-card"><div class="tool-name">list_files</div><div class="tool-desc">ファイルを検索・一覧する</div></div>
+    <div class="tool-card"><div class="tool-name">get_file_metadata</div><div class="tool-desc">名前・種類・更新日時などを取得する</div></div>
+    <div class="tool-card"><div class="tool-name">read_file</div><div class="tool-desc">中身をテキストとして読む</div></div>
+    <div class="tool-card"><div class="tool-name">create_file</div><div class="tool-desc">新規ファイルを作成する</div></div>
+    <div class="tool-card highlight"><div class="tool-name">update_file</div><div class="tool-desc">既存ファイルの中身を差し替える — 今回作った本命の機能</div></div>
+  </div>
+
+  <div class="callout" style="margin-top:24px;">
+    <div class="label">スコープについての注記</div>
+    <p>drive.file(このアプリが作った/開いたファイルのみ)の方が権限は狭く安全だが、日次バックアップなど既存の別経路で作られたファイルも更新したいという要件のため、今回は広めのdriveスコープにしている。狭めることも可能。</p>
+  </div>
+
+  <p style="color:var(--dim); font-size:0.85rem; margin-top:32px;">コード本体: <span class="field">gdrive-mcp/</span>(このrepoとは別、ローカルのみ)。まだClaude Codeへの登録は済んでいない。</p>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t6 / baのメンテ担当方針(ba-21、確定仕様の可視化)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:680px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:5px 0}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .diagram{margin:6px 0 12px;color:var(--sub)}
+  .diagram svg{width:100%;height:auto;display:block}
+  .diagram text{fill:currentColor;font-family:"Hiragino Kaku Gothic ProN",sans-serif}
+
+  .empty-note{font-size:12.5px;color:var(--sub);text-align:center;padding:20px 10px}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:48px;height:48px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12px;margin:0 0 6px}
+  .toss-card p{font-size:11px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+
+  <p class="mock-label">確定仕様の可視化パターン</p>
+  <h1>baのメンテ担当方針(ba-21)</h1>
+  <p class="lede">確定仕様(close済み)を、成熟度3タブの型に当てはめたもの。</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button>
+    <button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button>
+    <button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button>
+  </div>
+
+  <div class="panel on" id="solid">
+    <p class="panel-note">ba-21で確定・close済みの方針そのもの。</p>
+    <div class="theme-block">
+      <h2>担当の決まり方 <span class="src">ba-21</span></h2>
+      <div class="diagram">
+        <svg viewBox="0 0 300 130">
+          <rect x="90" y="8" width="120" height="26" rx="13" fill="none" stroke="currentColor"/>
+          <text x="150" y="25" text-anchor="middle" font-size="10.5">baのメンテが発生</text>
+          <text x="150" y="46" text-anchor="middle" font-size="12">↓</text>
+          <rect x="20" y="58" width="120" height="30" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
+          <text x="80" y="72" text-anchor="middle" font-size="10.5" font-weight="700">すまさん</text>
+          <text x="80" y="84" text-anchor="middle" font-size="8.5">メイン担当(常時)</text>
+          <rect x="170" y="58" width="120" height="30" rx="4" fill="none" stroke="currentColor" stroke-dasharray="3 3"/>
+          <text x="230" y="72" text-anchor="middle" font-size="10.5">利尻</text>
+          <text x="230" y="84" text-anchor="middle" font-size="8.5">PCが開いていて作業中の時だけ代行</text>
+          <text x="150" y="112" text-anchor="middle" font-size="9">役割分担が崩れたわけではなく、その場に居合わせた方が対応する運用</text>
+        </svg>
+      </div>
+      <ul>
+        <li>2026-07-13、takashi指示で確定</li>
+        <li>close済み(2026-07-29)。close理由は「方針に変更なし、保留事項なし」。close後も方針自体は継続して有効</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="panel" id="beta">
+    <p class="empty-note">正直に言うと、今のところ「実は改良したい点」は見当たりません。<br>close時のnoteにも「方針に変更なし」とあるだけで、具体的な改善候補は本文に記載がありませんでした。</p>
+  </div>
+
+  <div class="panel" id="toss">
+    <p class="panel-note">お遊び枠。テーマから外れてよい。</p>
+    <div class="toss-grid">
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><circle cx="20" cy="30" r="10" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="40" cy="30" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 22 l16 16 M28 22 l-16 16" stroke="currentColor" stroke-width="1.5"/></svg></div>
+        <h3>じゃんけん担当決め</h3>
+        <p>実務は変えず、「今日はどっちが対応した気分か」だけをじゃんけんで決める儀式を挟む。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><circle cx="30" cy="24" r="10" fill="none" stroke="currentColor" stroke-width="2"/><rect x="18" y="38" width="24" height="14" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="42" cy="18" r="4" fill="currentColor"/></svg></div>
+        <h3>「今どっちが起きてる」バッジ</h3>
+        <p>PC/スマホどちらが今アクティブかをdiscord風のオンライン表示でbaページに出す。実務上意味は薄いが楽しい。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="20" fill="none" stroke="currentColor" stroke-width="2"/><line x1="30" y1="30" x2="30" y2="14" stroke="currentColor" stroke-width="2"/><line x1="30" y1="30" x2="42" y2="36" stroke="currentColor" stroke-width="2"/></svg></div>
+        <h3>インチキ担当ルーレット</h3>
+        <p>ルーレットを回す演出だけあって、針は物理的にすまさんの方に重心が寄っていて絶対すまさんで止まる。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="8" y="24" width="26" height="16" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="27" cy="30" r="1.6" fill="currentColor"/><circle cx="30" cy="33" r="1.6" fill="currentColor"/><text x="40" y="35" font-size="9">代行!</text></svg></div>
+        <h3>GamePad早押しで代行宣言</h3>
+        <p>k1のコントローラでボタン早押し、勝った方が「今日は俺が代行する」を宣言する謎機能。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function(){
+    var tabs = document.querySelectorAll('.tab-btn');
+    var panels = document.querySelectorAll('.panel');
+    function activate(tabId){
+      tabs.forEach(function(b){ b.classList.toggle('on', b.dataset.tab === tabId); });
+      panels.forEach(function(p){ p.classList.toggle('on', p.id === tabId); });
+    }
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        activate(btn.dataset.tab);
+        history.replaceState(null, '', '#' + btn.dataset.tab);
+      });
+    });
+    var initial = location.hash.replace('#', '');
+    if (initial && document.getElementById(initial)) {
+      activate(initial);
+    }
+  })();
+</script>
+</body>
+</html>

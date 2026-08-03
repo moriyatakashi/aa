@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t17 / 引っかかりを残したまま動かす(ba-73)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:700px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block p{font-size:13px;margin:0 0 8px}
+  .theme-block p:last-child{margin-bottom:0}
+  .theme-block ol,.theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ol:last-child,.theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:6px 0}
+  .quote-src{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .quote-src b{color:var(--ink);font-weight:600}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:44px;height:44px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12px;margin:0 0 6px}
+  .toss-card p{font-size:11px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+
+  <p class="mock-label">確定仕様の可視化パターン</p>
+  <h1>引っかかりを残したまま動かす(ba-73)</h1>
+  <p class="lede">確定事項タブは、baに文字通り書かれていることだけに絞っている。「台帳全体を貫く考え方」と位置づけられている根本方針。</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button>
+    <button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button>
+    <button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button>
+  </div>
+
+  <div class="panel on" id="solid">
+    <p class="panel-note">ba-73に文字通り書かれていることだけ。</p>
+
+    <div class="theme-block">
+      <h2>4つの方針 <span class="src">ba-73</span></h2>
+      <ol>
+        <li><b>迷ったら動かす側に倒す。</b>何もしなかった問題は起きたことにすら気づけないが、動かして出た問題は手掛かりが残る。</li>
+        <li><b>引っかかりは消さず、記録して一緒に進む。</b>後で問題化した時「最初から気になっていたやつだ」と分かるようにするため。</li>
+        <li><b>正解が分からない事柄は事前に決めない。</b>ただし「決めない」のではなく、決めて動かし、細部は回してから決まる。不作為と取り違えないこと。</li>
+        <li><b>取り返しがつかないのは2つだけ。</b>書いてはいけないものを書く(鍵・個人情報等)/内容そのものを失う。それ以外は後から気づいて直せる。</li>
+      </ol>
+      <div class="quote-src"><b>takashi原文:</b> 「何かして起きる問題と何もしなかった時に起きる問題では、前者の方がいいよね?」「結果が、おかしくなったら、それが気づきで、打ち手がわかれば打てばいいし、打ち手なければそのままでよくない?正解わかんないんだから」</div>
+    </div>
+
+    <div class="theme-block">
+      <h2>スマホClaudeの振り返り(来歴) <span class="src">ba-73</span></h2>
+      <p>議論を通じて、まだ起きていない問題の正解を先に決めようとし続けていた(二重計上の先回り、再発防止の体系化)ことに気づいた。正解が分からないものに事前に正解を決める作業は成立しない。仕組みで防ぐ方向に寄りすぎていた。</p>
+      <p>今後は、提案時に自分で引っかかっている点を同時に出す。後から撤回するより、最初から弱点を示す方が判断が早いため。</p>
+    </div>
+
+    <div class="theme-block">
+      <h2>close理由 <span class="src">ba-73・2026-07-29</span></h2>
+      <p>「判断基準そのものは確定済みの方針であり、追加の保留事項の記載も無いためclose。close後もこの方針は引き続き参照・遵守する(ba-36の通り、close=別軸)。」</p>
+    </div>
+  </div>
+
+  <div class="panel" id="beta">
+    <p class="panel-note">構想はあるが未実装。</p>
+    <div class="theme-block">
+      <h2>具体適用の事例(n1加点仕様) <span class="src">ba-73本文・別スレッド関連</span></h2>
+      <p>ba-73本文には、この方針をn1の加点仕様(idea_09/パターンC)に当てはめた具体例が詳しく書かれている。この部分は今回の確定事項からは外し、n1関連の別のtXページを作る時の材料として温存する案。</p>
+    </div>
+  </div>
+
+  <div class="panel" id="toss">
+    <p class="panel-note">お遊び枠。テーマから外れてよい。</p>
+    <div class="toss-grid">
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><path d="M20 44 L40 44 L40 16 L30 6 L20 16 Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M30 24 v10" stroke="currentColor" stroke-width="2"/></svg></div>
+        <h3>「動かす側に倒す」おみくじ</h3>
+        <p>迷った時、実際にサイコロを振って「動かす/動かさない」を決める儀式的な補助ツール。方針上どちらも動かす寄りに重心を仕込んでおく。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="10" y="14" width="40" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="30" y="34" text-anchor="middle" font-size="9">引っかかり</text></svg></div>
+        <h3>引っかかり貯金箱</h3>
+        <p>「引っかかり」を記録するたびに貯金箱にコインが1枚溜まる。後で問題化した時、貯まったコイン数で「どれだけ先読みできていたか」を可視化する。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="18" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 4"/><text x="30" y="35" text-anchor="middle" font-size="16">?</text></svg></div>
+        <h3>「正解わかんない」スタンプ</h3>
+        <p>未決事項に「正解わかんないんだから」というtakashi語録そのままのスタンプを押して、埋めに来ないよう牽制する。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="8" y="24" width="26" height="16" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><line x1="15" y1="32" x2="21" y2="32" stroke="currentColor" stroke-width="2"/><line x1="18" y1="29" x2="18" y2="35" stroke="currentColor" stroke-width="2"/><rect x="40" y="20" width="14" height="24" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></div>
+        <h3>GamePadで「弱点先出し」ボタン</h3>
+        <p>提案する時、GamePadの専用ボタンを押すと自動で「引っかかってる点」欄が開く、スマホClaudeの反省を物理ボタン化した謎機能。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function(){
+    var tabs = document.querySelectorAll('.tab-btn');
+    var panels = document.querySelectorAll('.panel');
+    function activate(tabId){
+      tabs.forEach(function(b){ b.classList.toggle('on', b.dataset.tab === tabId); });
+      panels.forEach(function(p){ p.classList.toggle('on', p.id === tabId); });
+    }
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        activate(btn.dataset.tab);
+        history.replaceState(null, '', '#' + btn.dataset.tab);
+      });
+    });
+    var initial = location.hash.replace('#', '');
+    if (initial && document.getElementById(initial)) {
+      activate(initial);
+    }
+  })();
+</script>
+</body>
+</html>
