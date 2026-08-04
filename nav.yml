@@ -26,6 +26,9 @@ categories:
       - code: w
         desc: 窓（図解・baの可視化）
         href: src/w/
+      - code: ab
+        desc: 実験場（ab）姉妹サイト
+        href: https://moriyatakashi.github.io/ab/src/
   - label: あそび
     items:
       - code: g1
