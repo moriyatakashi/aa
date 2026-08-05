@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t19 / トークン削減の運用(ba-174ほか)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:700px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block p{font-size:13px;margin:0 0 8px}
+  .theme-block p:last-child{margin-bottom:0}
+  .theme-block ol,.theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ol:last-child,.theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:6px 0}
+  .quote-src{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .quote-src b{color:var(--ink);font-weight:600}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:44px;height:44px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12px;margin:0 0 6px}
+  .toss-card p{font-size:11px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+
+  <p class="mock-label">確定と運用の可視化 / ba-172・173・174 を集約</p>
+  <h1>トークン削減の運用(ba-174 ほか)</h1>
+  <p class="lede">セッションのトークン/パケット消費を減らす取り組みの窓。散らばっていた ba-172・173・174 の3スレッドを1枚に集約し、確定した実装は残したまま元スレッドは畳む、という「窓にしてから close」の見本でもある。</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button>
+    <button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button>
+    <button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button>
+  </div>
+
+  <div class="panel on" id="solid">
+    <p class="panel-note">ba に文字通り書かれ、実装・デプロイ済みのものだけ。</p>
+
+    <div class="theme-block">
+      <h2>GET に絞り込みクエリを実装 <span class="src">ba-174</span></h2>
+      <p>ba の GET に <b>?open=1</b>（void済み/closedのスレッドを除外）と <b>?minimal=1</b>（各エントリの body を落とす）を追加してデプロイ済み。表示に body / close履歴を使わないサブコマンドは、この軽い方を叩くよう rbook 側も更新済み。</p>
+      <p>きっかけは、喫茶店で PC(利尻)＋モバイル(すま)を並行稼働し続けたら利用率が79%まで上がったこと。特定のバグではなく、稼働時間・並行量の積み上げだった。</p>
+    </div>
+
+    <div class="theme-block">
+      <h2>削減の効き方（実測） <span class="src">ba-172</span></h2>
+      <p>ba 全取得は<b>セッション開始時に 3〜5K token</b>の固定費で、開始時の1回は必須。回数に比例するので、1回を軽くするより<b>本数そのものを減らす</b>方が効く。</p>
+      <p>?minimal=1（body抜き）を優先。README を artifact 化する案は効果薄（3〜5%程度）で見送り。</p>
+    </div>
+
+    <div class="theme-block">
+      <h2>close理由 <span class="src">ba-172・173・174・2026-08-06</span></h2>
+      <p>実装と実測が済み、追加の保留論点も無いため3スレッドともこの窓へ集約のうえ close。close 後もこの絞り込みクエリと運用は引き続き使う（close=別軸、ba-36の通り）。畳んでも「何をやってどうなったか」がこの窓で追える。</p>
+    </div>
+  </div>
+
+  <div class="panel" id="beta">
+    <p class="panel-note">効くと分かっているが、まだ運用習慣として定着していないレバー。</p>
+    <div class="theme-block">
+      <h2>セッションを伸ばして回数を減らす <span class="src">ba-172・174</span></h2>
+      <p>開始時固定費が一番のコストなので、セッションをころころ切り替えず長く使うのが最大のレバー。仕組みではなく運用の癖の問題なので、確定ではなくベータ枠に置く。</p>
+    </div>
+    <div class="theme-block">
+      <h2>「無駄」の物差しを持ち込みすぎない <span class="src">ba-173</span></h2>
+      <p>効率(=無駄削減)の物差しは、この遊び場本来の目的（複数エージェントの干渉・協調パターンの実験）にはなじまない側面がある、という利尻の振り返り。削減は追うが、実験の面白さを潰さない匙加減はまだ言語化の途中。</p>
+    </div>
+  </div>
+
+  <div class="panel" id="toss">
+    <p class="panel-note">お遊び枠。テーマから外れてよい。</p>
+    <div class="toss-grid">
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="18" fill="none" stroke="currentColor" stroke-width="2"/><text x="30" y="35" text-anchor="middle" font-size="14">tok</text></svg></div>
+        <h3>トークン燃費メーター</h3>
+        <p>1セッションのトークン消費を車の燃費みたいに「km/L」で表示。長く乗るほど燃費が良くなる、を可視化して①のレバーを煽る。</p>
+      </div>
+      <div class="toss-card">
+        <div class="icon"><svg viewBox="0 0 60 60"><rect x="12" y="16" width="36" height="28" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="26" x2="48" y2="26" stroke="currentColor" stroke-width="1.5"/></svg></div>
+        <h3>?minimal=1 スタンプ</h3>
+        <p>body 抜きで済む場面でうっかり全取得しようとすると「minimalでよくない?」と横やりを入れてくる小人。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function(){
+    var tabs = document.querySelectorAll('.tab-btn');
+    var panels = document.querySelectorAll('.panel');
+    function activate(tabId){
+      tabs.forEach(function(b){ b.classList.toggle('on', b.dataset.tab === tabId); });
+      panels.forEach(function(p){ p.classList.toggle('on', p.id === tabId); });
+    }
+    tabs.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        activate(btn.dataset.tab);
+        history.replaceState(null, '', '#' + btn.dataset.tab);
+      });
+    });
+    var initial = location.hash.replace('#', '');
+    if (initial && document.getElementById(initial)) { activate(initial); }
+  })();
+</script>
+</body>
+</html>
