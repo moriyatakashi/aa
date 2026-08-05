@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t20 / スコア加点軸の発散(2026-07-26)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:700px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block p{font-size:13px;margin:0 0 8px}
+  .theme-block p:last-child{margin-bottom:0}
+  .theme-block ol,.theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ol:last-child,.theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:6px 0}
+  .quote-src{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .quote-src b{color:var(--ink);font-weight:600}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:44px;height:44px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12px;margin:0 0 6px}
+  .toss-card p{font-size:11px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="back"><a href="../../">&larr; 戻る</a></p>
+  <p class="mock-label">発散の可視化 / ba-140〜156 集約</p>
+  <h1>スコア加点軸の発散(2026-07-26)</h1>
+  <p class="lede">加点の対象を一気に洗い出した回。難易度3段階と週次得点の器(ba-53)の上に「何を載せるか」の候補群。どれもまだベータで、採用時に確定仕様へ立て直す。</p>
+  <div class="tabs">
+    <button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button>
+    <button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button>
+    <button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button>
+  </div>
+  <div class="panel on" id="solid"><p class="panel-note">確定しているのは「器」だけ。個々の加点軸はまだ発散段階。</p><div class="theme-block"><h2>確定しているのは器（点数の枠） <span class="src">ba-53</span></h2><p>難易度は3段階（low=2 / normal=5 / high=10点）。週次得点＝毎日スコア合計＋クローズ件数×係数、という枠は決まっている。</p><p>この回（2026-07-26）で出たのは、その器に<b>何を載せるか</b>の候補出し。以下はすべてまだ確定ではなく、ベータ枠の加点案。</p></div><div class="theme-block"><h2>close理由 <span class="src">ba-140〜156・2026-08-06</span></h2><p>加点対象を一気に洗い出した発散回。個々の案はこの窓のベータ枠に保存し、散らばった元スレッドは close する。採用が決まった軸は、その時あらためて確定仕様として立て直す。<b>ba-154 だけは「カレンダー案件」「8/10予定」を含むため close せず残す。</b></p></div></div>
+  <div class="panel" id="beta"><p class="panel-note">出た加点案。どれも未実装・要調整。</p><div class="theme-block"><h2>生活・片付け <span class="src">ba-140</span></h2><p>衣装ケースを片す、計画的にゴミを捨てる（多く捨てるより計画的に）、勇気ある買い物（食洗機・シュレッダー等）を加点。</p></div><div class="theme-block"><h2>稼ぐ <span class="src">ba-142・ba-143</span></h2><p>「お金を稼いだ」ときに加点。節約やボランティアは対象外（副業不可のため出版・YouTube 等を想定）。会社内の知名度も近い、が定義は曖昧なまま。</p></div><div class="theme-block"><h2>移動・訪問 <span class="src">ba-146・ba-147</span></h2><p>行った市・町・県をカウント、初訪問は加点。新しい県は加点大、市町はそこまで。名物を食べたら加点。難易度は経年で変わる（易化も難化も）。</p></div><div class="theme-block"><h2>運動・継続 <span class="src">ba-148・ba-156</span></h2><p>運動は単発も長期継続も加点。長期継続＝習慣かジム契約か未定義。連続作業の基準は弱く、ズルできる懸念あり（歩数計は面倒）。</p></div><div class="theme-block"><h2>ロレキ内の活動 <span class="src">ba-149・ba-151・ba-153・ba-155</span></h2><p>レーダーチャートの是正（いびつ解消。義務感もあるが楽しめてはいる）、家のガジェット/ラズパイ/クラコンを発掘・有効活用、AI・人・動画での気づき（曖昧・ガセ懸念）、難しい案件を思いついたら加点。</p></div><div class="theme-block"><h2>予測を当てる <span class="src">ba-145</span></h2><p>資産・体重を月単位できっちり当てたら加点（課金してもいい）。※予定達成の予測当ては ba-154 に生きた案件として残置。</p></div></div>
+  <div class="panel" id="toss"><p class="panel-note">Takashi 自身が挙げた弱点＋お遊び。</p><div class="toss-grid"><div class="toss-card"><h3>「曖昧すぎ」棚</h3><p>気づき加点はガセ混じりで曖昧、継続加点は水飲んだ/電車で立った でズルできる、稼ぐの定義が狭い ―― 自分で挙げた弱点をここに集約。</p></div><div class="toss-card"><h3>予測ドンピシャ賞</h3><p>「来週は片付けで30点」と宣言して正確に当てたらボーナス。外したら供養。</p></div><div class="toss-card"><h3>ズル検知の歩数計小人</h3><p>「電車で立ってただけ」を歩数に数えようとすると首を振ってくる。</p></div></div></div>
+</div>
+<script>
+  (function(){
+    var tabs=document.querySelectorAll('.tab-btn');var panels=document.querySelectorAll('.panel');
+    function act(id){tabs.forEach(function(b){b.classList.toggle('on',b.dataset.tab===id)});panels.forEach(function(p){p.classList.toggle('on',p.id===id)})}
+    tabs.forEach(function(b){b.addEventListener('click',function(){act(b.dataset.tab);history.replaceState(null,'','#'+b.dataset.tab)})});
+    var h=location.hash.replace('#','');if(h&&document.getElementById(h))act(h);
+  })();
+</script>
+</body>
+</html>
