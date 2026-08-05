@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t23 / ロレキ哲学(2026-07-31)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:700px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block p{font-size:13px;margin:0 0 8px}
+  .theme-block p:last-child{margin-bottom:0}
+  .theme-block ol,.theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ol:last-child,.theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:6px 0}
+  .quote-src{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .quote-src b{color:var(--ink);font-weight:600}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:44px;height:44px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12px;margin:0 0 6px}
+  .toss-card p{font-size:11px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<p class="back"><a href="../../">&larr; 戻る</a></p>
+<p class="mock-label">設計思想の束 / ba-182〜210 集約</p>
+<h1>ロレキ哲学(2026-07-31)</h1>
+<p class="lede">07-31に takashi 発・すま整理で出た、ロレキの設計思想と自戒の束。多くはまだ問い(保留論点)だが、棚に飾って畳む。</p>
+<div class="tabs"><button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button><button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button><button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button></div>
+<div class="panel on" id="solid"><p class="panel-note">芯になりつつある考え方。</p><div class="theme-block"><h2>不確実性を潰さない＝開けるまで分からない＝ロマン <span class="src">ba-198</span></h2><p>運勢ルーレット・宝箱・あそび。決め打ちにしない、確率をいじる(不正)のもダメ。回るから「大吉じゃーん」が成立する。同じ形が一日に何度も出た、設計思想の芯かもしれないもの。</p></div><div class="theme-block"><h2>リスクは会話で振り直す <span class="src">ba-201</span></h2><p>失敗を(軽)やり直すだけ/(中)権限で弾かれる/(重)取り返しがつかない、に分ける。単独評価は後ろ盾(4時のバックアップ等)を忘れて過大になりがちなので、会話で情報を補完して振り直す。</p></div><div class="theme-block"><h2>すまの癖：きれいな図式に飛びつくと外す <span class="src">ba-197</span></h2><p>n1/n2/n3を「過去/現在/未来できれい」と図式化したら、数字の若さと合わず崩れた。時間は芯でなく要素の一つ。実物と揺れを先に置く。</p></div><div class="theme-block"><h2>close理由 <span class="src">ba-182〜210・2026-08-06</span></h2><p>思想の束をこの窓に集約。保留論点は「棚上げ確定」として畳む(close=別軸、思想は生きる)。</p></div></div>
+<div class="panel" id="beta"><p class="panel-note">まだ問いのまま探っているもの。</p><div class="theme-block"><h2>なぜロレキを作るのか：実用か、宝箱か <span class="src">ba-199</span></h2><p>あそび系(将来のt一族)は実用でなく“開けて楽しむ”ため。これはロレキ全体の目的に片足を突っ込む問い。</p></div><div class="theme-block"><h2>名前とチャネル：あちらは元から在る、こちらが結ぶ <span class="src">ba-194</span></h2><p>機能やページは名付ける前から在る。こちらは名前を「結ぶ」側。まだ探り中。</p></div><div class="theme-block"><h2>日記一族 n と 宝箱一族 t <span class="src">ba-195</span></h2><p>n1/n2/n3＝日記一族、t系＝宝箱一族。現 k2→t1。全部まだ仮称で、改名・href張替はまだしない。</p></div><div class="theme-block"><h2>n3 に過去の予定も入れるか <span class="src">ba-196</span></h2><p>n3は「これからの予定→達成で加点」だが、過去の予定も入れたい。記録に過去をどう含めるかで揺れた。</p></div><div class="theme-block"><h2>「区」：ページ体系のいつか整える器 <span class="src">ba-182</span></h2><p>src配下の2文字コード・nav.ymlのカテゴリ・符牒の“いつか整える”置き場に「区」と命名。地図(n2)由来、山・雲の世界観と地続き。</p></div><div class="theme-block"><h2>見る＝観測なので「見ない」前提で設計 <span class="src">ba-210</span></h2><p>量子のように「見る」と観測になる。だから「見ない」ことを前提に設計する、という視点。</p></div></div>
+<div class="panel" id="toss"><p class="panel-note">お遊び枠。</p><div class="toss-grid"><div class="toss-card"><h3>宝箱UI</h3><p>開けるまで中身が分からない、を字義通りやる箱コンポーネント。ba-198の思想の実装ごっこ。</p></div><div class="toss-card"><h3>図式おみくじ</h3><p>すまが「きれいな図式」に飛びつきそうな時に引く戒めのおみくじ(ba-197)。</p></div></div></div>
+</div>
+<script>(function(){var t=document.querySelectorAll('.tab-btn'),p=document.querySelectorAll('.panel');function a(i){t.forEach(function(b){b.classList.toggle('on',b.dataset.tab===i)});p.forEach(function(x){x.classList.toggle('on',x.id===i)})}t.forEach(function(b){b.addEventListener('click',function(){a(b.dataset.tab);history.replaceState(null,'','#'+b.dataset.tab)})});var h=location.hash.replace('#','');if(h&&document.getElementById(h))a(h);})();</script>
+</body>
+</html>

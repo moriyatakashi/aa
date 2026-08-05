@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t24 / 旅・生活のメモ(宝箱)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:700px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block p{font-size:13px;margin:0 0 8px}
+  .theme-block p:last-child{margin-bottom:0}
+  .theme-block ol,.theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ol:last-child,.theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:6px 0}
+  .quote-src{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .quote-src b{color:var(--ink);font-weight:600}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:44px;height:44px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12px;margin:0 0 6px}
+  .toss-card p{font-size:11px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<p class="back"><a href="../../">&larr; 戻る</a></p>
+<p class="mock-label">決着しない個人メモ / ba-115〜240 集約</p>
+<h1>旅・生活のメモ(宝箱)</h1>
+<p class="lede">旅程や生活の思いつきメモ。決着型でない個人メモを宝箱として飾る。畳んでも ba には残るので、いつでも開けられる。</p>
+<div class="tabs"><button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button><button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button><button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button></div>
+<div class="panel on" id="solid"><p class="panel-note">これは遊び・記録の棚。</p><div class="theme-block"><h2>close理由 <span class="src">ba-115〜240・2026-08-06</span></h2><p>旅・生活メモをこの宝箱窓に集約して畳む。案件になったものは別途 案件として立て直す。</p></div></div>
+<div class="panel" id="beta"><p class="panel-note">やってみたいこと。</p><div class="theme-block"><h2>深夜バス旅 <span class="src">ba-115・ba-117・ba-168</span></h2><p>大阪発の夜行バス候補（名古屋は近すぎ、高知は約6h50m など）。金曜発→土曜 東横イン泊→日曜帰りが良さそう。広島・高知、金沢も候補。</p></div><div class="theme-block"><h2>相模線・途中下車のきっぷ運用 <span class="src">ba-240</span></h2><p>「4日間・途中下車OK」は切符自体の効力で、無人駅でも権利は消えない。完全無人駅では切符を箱に入れず持ったまま、が要点。</p></div><div class="theme-block"><h2>京都の名店開拓 <span class="src">ba-221</span></h2><p>天ぷら等テーマを決めて回る。食べログ等ツールも使い、予約が要る店も狙う。</p></div><div class="theme-block"><h2>本を読む習慣 <span class="src">ba-139</span></h2><p>電子で読む習慣をつけたい（一回しか読まないのがもったいない、という迷いつき）。</p></div></div>
+<div class="panel" id="toss"><p class="panel-note">生活の細かいメモ。</p><div class="toss-grid"><div class="toss-card"><h3>手洗いうがい歯磨きを一度に</h3><p>動線をまとめる生活ハック(ba-170)。</p></div><div class="toss-card"><h3>半袖シャツが足りない</h3><p>買い足しメモ(ba-204)。</p></div><div class="toss-card"><h3>USB/BTキーボード</h3><p>買う。USBかBTか迷い中(ba-229)。</p></div></div></div>
+</div>
+<script>(function(){var t=document.querySelectorAll('.tab-btn'),p=document.querySelectorAll('.panel');function a(i){t.forEach(function(b){b.classList.toggle('on',b.dataset.tab===i)});p.forEach(function(x){x.classList.toggle('on',x.id===i)})}t.forEach(function(b){b.addEventListener('click',function(){a(b.dataset.tab);history.replaceState(null,'','#'+b.dataset.tab)})});var h=location.hash.replace('#','');if(h&&document.getElementById(h))a(h);})();</script>
+</body>
+</html>

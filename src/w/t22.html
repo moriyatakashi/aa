@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>t22 / ba運用・分類の初期Q&A(2026-07-26)</title>
+<style>
+  :root{
+    --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
+    --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
+      --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+    padding:18px 16px 60px;line-height:1.65}
+  .wrap{max-width:700px;margin:0 auto}
+  .back{font-size:13px}
+  .back a{color:var(--beta)}
+  .mock-label{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--sub);margin:14px 0 6px 0;display:flex;align-items:center;gap:10px;
+  }
+  .mock-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{font-size:19px;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--sub);margin:0 0 22px}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab-btn{
+    font-size:13px;padding:9px 16px;border:none;background:none;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tab-btn .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .tab-btn[data-tab="solid"] .dot{background:var(--solid)}
+  .tab-btn[data-tab="beta"] .dot{background:var(--beta)}
+  .tab-btn[data-tab="toss"] .dot{background:var(--toss)}
+  .tab-btn.on{color:var(--ink);font-weight:700}
+  .tab-btn.on[data-tab="solid"]{border-color:var(--solid)}
+  .tab-btn.on[data-tab="beta"]{border-color:var(--beta)}
+  .tab-btn.on[data-tab="toss"]{border-color:var(--toss)}
+
+  .panel{display:none}
+  .panel.on{display:block}
+  .panel-note{font-size:12.5px;color:var(--sub);margin:0 0 16px;padding:10px 14px;
+    border-radius:8px;border:1px dashed var(--line)}
+
+  .theme-block{border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:14px 16px;margin:0 0 14px}
+  .theme-block h2{font-size:14px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .theme-block .src{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--sub);font-weight:400}
+  .theme-block p{font-size:13px;margin:0 0 8px}
+  .theme-block p:last-child{margin-bottom:0}
+  .theme-block ol,.theme-block ul{margin:0 0 10px;padding-left:1.1em;font-size:13px}
+  .theme-block ol:last-child,.theme-block ul:last-child{margin-bottom:0}
+  .theme-block li{margin:6px 0}
+  .quote-src{
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;font-size:12px;color:var(--sub);margin:8px 0 0;
+  }
+  .quote-src b{color:var(--ink);font-weight:600}
+
+  .panel#solid .theme-block{border-left:3px solid var(--solid)}
+  .panel#beta .theme-block{border-left:3px solid var(--beta)}
+  .panel#toss .theme-block{border-left:3px solid var(--toss)}
+
+  .toss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){.toss-grid{grid-template-columns:1fr}}
+  .toss-card{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:center}
+  .toss-card .icon{width:44px;height:44px;margin:0 auto 8px;color:var(--toss)}
+  .toss-card .icon svg{width:100%;height:100%}
+  .toss-card h3{font-size:12px;margin:0 0 6px}
+  .toss-card p{font-size:11px;color:var(--sub);margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<p class="back"><a href="../../">&larr; 戻る</a></p>
+<p class="mock-label">答えの出た問答 / ba-96〜164 集約</p>
+<h1>ba運用・分類の初期Q&A(2026-07-26)</h1>
+<p class="lede">07-26にTakashiが分類・運用まわりで投げた質問群。多くは分類規約(t3/ba-32)や第2版(ba-181)で答えが出ている。索引 ba-164 の後継。</p>
+<div class="tabs"><button type="button" class="tab-btn on" data-tab="solid"><span class="dot"></span>確定事項</button><button type="button" class="tab-btn" data-tab="beta"><span class="dot"></span>ベータ版</button><button type="button" class="tab-btn" data-tab="toss"><span class="dot"></span>捨て案(お遊び)</button></div>
+<div class="panel on" id="solid"><p class="panel-note">答え・方向が出たもの。</p><div class="theme-block"><h2>点数と分類の付け方 <span class="src">ba-127・ba-128</span></h2><p>難易度・点数の付け方は ba-32 に記載。旧仕様は最初は選べない。</p><p>「軽いコメント」は気づきではない → のちに「記録」クラスを新設し6分類化(ba-181)。</p></div><div class="theme-block"><h2>数字ページは無くす方向 <span class="src">ba-152</span></h2><p>数字入りページ名は呼びにくくテーブル名に向かない。ba/baページ/ba番号で一気に呼びやすくなった、という実感から、数字ページは無くす方向。</p></div><div class="theme-block"><h2>関連番号は「持たせる」 <span class="src">ba-162</span></h2><p>Redmine の関連チケットのように関連番号を持たせる方向で決定（頭10文字が見えれば関係が分かり、付け間違いも減る）。</p></div><div class="theme-block"><h2>“latest(1日分)”コマンドは無い <span class="src">ba-163</span></h2><p>「今日/昨日の1日分をまとめて見たい」気持ちはあるが、run.py の閲覧コマンドに latest という選択肢はそもそも存在しない（利尻の事実確認）。</p></div><div class="theme-block"><h2>close理由 <span class="src">ba-96〜164・2026-08-06</span></h2><p>初期の運用Q&Aは分類規約で解消、または方向が出た。索引 ba-164 ごとこの窓に集約して畳む。ba-166（訂正ログ）は生きた参照なので残す。</p></div></div>
+<div class="panel" id="beta"><p class="panel-note">方向は出たが、まだ確定していないもの。</p><div class="theme-block"><h2>タイトルの「家」を後で直す <span class="src">ba-96</span></h2><p>曖昧に書いたタイトルを、後で安藤家/窓辺家/羽生家に直してもらう運用。どの家が主になるかは未確定。</p></div><div class="theme-block"><h2>承認・権限委譲ボタンの再設計 <span class="src">ba-122</span></h2><p>承認/いいね/権限委譲ボタンが想定と違う。作り直し候補。</p></div><div class="theme-block"><h2>入口を定義する ba 番号 <span class="src">ba-126</span></h2><p>入口(エントリポイント)を定義する ba 番号を確定仕様で持ちたい。</p></div><div class="theme-block"><h2>クラスはガチガチにしない <span class="src">ba-129・ba-131</span></h2><p>クラスの状態遷移や役割定義は見直すが、あまりガチガチにしない緩い運用にしたい。</p></div><div class="theme-block"><h2>保留の意味／説明文のずれ／偏り <span class="src">ba-132・ba-120・ba-100</span></h2><p>保留議論が単純後回しか意味ある保留か曖昧（旧仕様と絡む）。baの説明文がトップとずれ・テストの扱い。気づきの偏りの整理。</p></div><div class="theme-block"><h2>スレ担当者は緩く <span class="src">ba-144</span></h2><p>スレッドに担当者を付ける案。実質 Takashi になるので、付けるとしても緩く。</p></div></div>
+<div class="panel" id="toss"><p class="panel-note">運用こぼれ話。</p><div class="toss-grid"><div class="toss-card"><h3>yes/no疲れ</h3><p>Claude Codeがcdのたびにyes/noを聞く件から、単純作業とAI判断の切り分け・bypassモード検証へ広がった一幕(ba-105)。</p></div><div class="toss-card"><h3>ba-127誤爆</h3><p>タグの在り処を聞くつもりが ba-127 にコメントしてしまった、の記録(ba-125)。追記型なので消さず残る。</p></div></div></div>
+</div>
+<script>(function(){var t=document.querySelectorAll('.tab-btn'),p=document.querySelectorAll('.panel');function a(i){t.forEach(function(b){b.classList.toggle('on',b.dataset.tab===i)});p.forEach(function(x){x.classList.toggle('on',x.id===i)})}t.forEach(function(b){b.addEventListener('click',function(){a(b.dataset.tab);history.replaceState(null,'','#'+b.dataset.tab)})});var h=location.hash.replace('#','');if(h&&document.getElementById(h))a(h);})();</script>
+</body>
+</html>
