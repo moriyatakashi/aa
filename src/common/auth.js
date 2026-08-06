@@ -34,6 +34,24 @@ function setText(id, text) {
   if (el) el.textContent = text;
 }
 
+const CORNER_LINK_STYLE =
+  "position:fixed; top:8px; right:8px; font-size:0.72rem; color:#888; " +
+  "background:rgba(0,0,0,0.35); padding:3px 8px; border-radius:5px; z-index:1000; text-decoration:none;";
+
+function createCornerLink(id, text, onClick) {
+  if (!document || !document.body) return null;
+  if (document.getElementById(id)) return null;
+  const a = document.createElement("a");
+  a.id = id;
+  a.href = "#";
+  a.textContent = text;
+  a.className = "aa-corner-link";
+  a.style.cssText = CORNER_LINK_STYLE;
+  a.addEventListener("click", onClick);
+  document.body.appendChild(a);
+  return a;
+}
+
 function decodeJwtPayload(credential) {
   if (typeof credential !== "string") throw new Error("Invalid credential");
   const parts = credential.split(".");
@@ -52,23 +70,13 @@ function decodeJwtPayload(credential) {
 // ページ側が<script>window.AA_PUBLIC_VIEW = true;</script>を1行足すだけで有効化する
 // (未指定なら既定でfalse相当=従来通りのゲート必須動作、baは対象外のため無変更)。
 function renderLoginLink() {
-  if (!document || !document.body) return;
-  if (document.getElementById("aa-login-link")) return;
-  const a = document.createElement("a");
-  a.id = "aa-login-link";
-  a.href = "#";
-  a.textContent = "ログイン";
-  a.className = "aa-corner-link";
-  a.style.cssText =
-    "position:fixed; top:8px; right:8px; font-size:0.72rem; color:#888; " +
-    "background:rgba(0,0,0,0.35); padding:3px 8px; border-radius:5px; z-index:1000; text-decoration:none;";
-  a.addEventListener("click", (e) => {
+  createCornerLink("aa-login-link", "ログイン", (e) => {
     e.preventDefault();
     const gate = getElement("login-gate");
     if (gate) gate.style.display = "block";
-    a.remove();
+    const link = getElement("aa-login-link");
+    if (link) link.remove();
   });
-  document.body.appendChild(a);
 }
 
 // ba-35残課題(2) Stage5: 公開閲覧モードで書き込みを試みた際、ログインへ誘導するための
@@ -81,21 +89,10 @@ window.aaShowLoginGate = () => {
 };
 
 function renderLogoutLink() {
-  if (!document || !document.body) return;
-  if (document.getElementById("aa-logout-link")) return;
-  const a = document.createElement("a");
-  a.id = "aa-logout-link";
-  a.href = "#";
-  a.textContent = "ログアウト";
-  a.className = "aa-corner-link";
-  a.style.cssText =
-    "position:fixed; top:8px; right:8px; font-size:0.72rem; color:#888; " +
-    "background:rgba(0,0,0,0.35); padding:3px 8px; border-radius:5px; z-index:1000; text-decoration:none;";
-  a.addEventListener("click", (e) => {
+  createCornerLink("aa-logout-link", "ログアウト", (e) => {
     e.preventDefault();
     window.aaLogout();
   });
-  document.body.appendChild(a);
 }
 
 function activateSession(credential, name) {
