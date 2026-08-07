@@ -82,7 +82,7 @@ function relatedRowHtml(relatedSeqs, seqTitle) {
   return `<div class="related-row"><span class="related-label">関連:</span>${chips}</div>`;
 }
 
-function threadCardHtml(thread, seqTitle) {
+function threadCardHtml(thread, seqTitle, autoExpand) {
   const { threadId, root, children, status } = thread;
   const title = thread.displayTitle || root.body || "(無題)";
   const tags = Array.isArray(root.tags) ? root.tags : [];
@@ -94,11 +94,13 @@ function threadCardHtml(thread, seqTitle) {
     ? `<span class="cls-badge cls-badge--${CLS_KEY[thread.cls]}">${thread.cls}${thread.clsVia === "note" ? '<span class="cls-via">note</span>' : ""}</span>`
     : "";
   const isOpen = status === "open";
+  // 表示件数が多いときはautoExpand=falseにして、openスレッドも既定でたたんでおく(手動で開ける)。
+  const expand = isOpen && autoExpand;
   const takashiVoid = thread.voidView.takashi;
   const takashiReact = thread.reactByLane.takashi;
 
   return `
-    <details class="thread-card${thread.hiddenVoid ? " thread-card--void" : ""}" data-thread-id="${threadId}" data-seq="${root.seq || ""}" ${isOpen ? "open" : ""}>
+    <details class="thread-card${thread.hiddenVoid ? " thread-card--void" : ""}" data-thread-id="${threadId}" data-seq="${root.seq || ""}" ${expand ? "open" : ""}>
       <summary>
         <div class="thread-top-row">
           <span class="chevron">▶</span>
@@ -232,6 +234,10 @@ let filterCls = "all";
 let searchQuery = "";
 let cachedThreads = [];
 
+// 表示中のカード数がこれを超えたら、openスレッドも既定でたたむ(1件ずつクリックで開ける)。
+// 少数なら今まで通り中身が見えたほうが便利なので、閾値以下は自動展開のまま。
+const AUTO_EXPAND_MAX = 6;
+
 // "50" "ba-50" "#50" のような数字入力を判定する。マッチすれば番号部分(文字列)を返す(なければnull)。
 function parseSeqInput(q) {
   const m = q.trim().match(/^(?:ba-|#)?(\d+)$/i);
@@ -292,7 +298,9 @@ function render() {
   const emptyMsg = searching
     ? `<p class="empty">タグ「${esc(searchQuery.trim())}」に一致するスレッドはありません</p>`
     : `<p class="empty">表示できるスレッドがありません(分類フィルタと「closedも表示」を確認)</p>`;
-  listEl.innerHTML = visible.map((t) => threadCardHtml(t, cachedThreads.seqTitle)).join("") || emptyMsg;
+  // 表示件数がAUTO_EXPAND_MAXを超えたら、openスレッドも既定でたたんで一覧を見渡しやすくする。
+  const autoExpand = visible.length <= AUTO_EXPAND_MAX;
+  listEl.innerHTML = visible.map((t) => threadCardHtml(t, cachedThreads.seqTitle, autoExpand)).join("") || emptyMsg;
   visible.forEach((t) => attachThreadHandlers(listEl, t));
 }
 
