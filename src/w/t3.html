@@ -8,11 +8,13 @@
   :root{
     --bg:#14171a; --card:#1c2024; --ink:#e7ebe9; --sub:#98a0a0; --line:#2c3237;
     --solid:#7ce0c4; --beta:#66ccff; --toss:#ff6b6b;
+    --gold:#e8b64f; --lock:#4a5162; /* スキルツリーもどき用(捨て案#3を実際に描いた分、ba-32-toss3) */
   }
   @media (prefers-color-scheme: light){
     :root{
       --bg:#f3f1ea; --card:#fbfaf6; --ink:#23262b; --sub:#6b7160; --line:#dcd8cc;
       --solid:#2a8f6f; --beta:#0a6c96; --toss:#c94545;
+      --gold:#a97a1f; --lock:#8a8f80;
     }
   }
   *{box-sizing:border-box}
@@ -97,6 +99,26 @@
   .toss-card .icon svg{width:100%;height:100%}
   .toss-card h3{font-size:12px;margin:0 0 6px}
   .toss-card p{font-size:11px;color:var(--sub);margin:0}
+
+  /* 捨て案#3(六角形をスキルツリー風に)を実際に描いた分 */
+  .unlock-stage{border:1px solid var(--line);border-radius:12px;background:var(--bg);
+    padding:8px 4px 4px;margin:10px 0 14px;overflow:hidden}
+  .unlock-stage svg{width:100%;height:auto;display:block}
+  .unlock-stage text{font-family:"Hiragino Kaku Gothic ProN",sans-serif;fill:currentColor}
+  .unlock-stage .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+  .unlock-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:var(--sub);margin:0 0 8px}
+  .unlock-legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+  .unlock-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}
+  @media (max-width:480px){.unlock-grid{grid-template-columns:1fr}}
+  .ucard{border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:10px 12px}
+  .ucard.g-gold{border-left:3px solid var(--gold)}
+  .ucard.g-solid{border-left:3px solid var(--solid)}
+  .ucard.g-beta{border-left:3px solid var(--beta)}
+  .ucard.g-lock{border-left:3px solid var(--lock)}
+  .ucard.g-dead{border-left:3px solid var(--toss)}
+  .ucard h4{font-size:12.5px;margin:0 0 4px}
+  .ucard p{font-size:11px;color:var(--sub);margin:0}
+  .ucard .csrc{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9.5px;color:var(--sub);margin-top:5px;opacity:.8}
 </style>
 </head>
 <body>
@@ -279,6 +301,89 @@
         <div class="icon"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="6" fill="currentColor"/><circle cx="12" cy="14" r="4" fill="none" stroke="currentColor"/><circle cx="48" cy="14" r="4" fill="none" stroke="currentColor"/><circle cx="12" cy="46" r="4" fill="none" stroke="currentColor"/><circle cx="48" cy="46" r="4" fill="none" stroke="currentColor"/><line x1="30" y1="30" x2="12" y2="14" stroke="currentColor"/><line x1="30" y1="30" x2="48" y2="14" stroke="currentColor"/><line x1="30" y1="30" x2="12" y2="46" stroke="currentColor"/><line x1="30" y1="30" x2="48" y2="46" stroke="currentColor"/></svg></div>
         <h3>六角形をスキルツリー風に</h3>
         <p>bmの六角形図を、ゲームのスキルツリーのように「解放条件」付きで描き直す。</p>
+      </div>
+    </div>
+
+    <div class="theme-block" style="margin-top:14px;border-left:3px solid var(--gold)">
+      <h2>六角形をスキルツリー風に <span class="src">実際に描いてみた・モック</span></h2>
+      <p>上の3枚目のアイデアを実寸で描くとこうなる、という一案。6分類・2軸の構造はそのまま、遷移の実例(ba-39/ba-16/22件)を「解放条件」に読み替えている。</p>
+
+      <div class="unlock-legend">
+        <span><span class="sw" style="background:var(--gold)"></span>初期解放</span>
+        <span><span class="sw" style="background:var(--solid)"></span>活動側・解放済</span>
+        <span><span class="sw" style="background:var(--beta)"></span>参照側・解放済</span>
+        <span><span class="sw" style="background:var(--lock)"></span>未解放</span>
+        <span><span class="sw" style="background:var(--toss)"></span>行き止まり</span>
+      </div>
+
+      <div class="unlock-stage">
+        <svg viewBox="0 0 700 600" role="img" aria-label="6分類をゲームのスキルツリーに見立てた図。気づきを起点に案件・確定仕様が解放済み、旧仕様は未解放、保留論点は出口のない行き止まりとして描かれている">
+          <defs>
+            <marker id="uk-ar-gold" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--gold)"/></marker>
+            <marker id="uk-ar-beta" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--beta)"/></marker>
+            <marker id="uk-ar-sub" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--sub)"/></marker>
+            <marker id="uk-ar-toss" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--toss)"/></marker>
+          </defs>
+
+          <text x="180" y="34" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--sub)">活動側(閉じる)</text>
+          <text x="520" y="34" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--sub)">参照側(残る)</text>
+          <line x1="350" y1="20" x2="350" y2="580" stroke="var(--line)" stroke-width="1.2" stroke-dasharray="2 7"/>
+
+          <path d="M180,206 L180,294" fill="none" stroke="var(--solid)" stroke-width="2.2" marker-end="url(#uk-ar-gold)"/>
+          <text class="mono" x="196" y="255" font-size="9.5" fill="var(--gold)">22件蓄積</text>
+
+          <path d="M155,203 Q90,340 152,478" fill="none" stroke="var(--sub)" stroke-width="1.8" stroke-dasharray="4 5" marker-end="url(#uk-ar-sub)"/>
+          <text class="mono" x="66" y="345" font-size="9.5" text-anchor="middle" fill="var(--sub)">いつでも分岐可</text>
+
+          <path d="M218,320 Q380,240 480,175" fill="none" stroke="var(--gold)" stroke-width="2.6" marker-end="url(#uk-ar-gold)"/>
+          <text class="mono" x="360" y="222" font-size="9.5" text-anchor="middle" fill="var(--gold)">ba-39 格上げ</text>
+
+          <path d="M520,206 L520,294" fill="none" stroke="var(--beta)" stroke-width="2.2" stroke-dasharray="3 4" marker-end="url(#uk-ar-beta)"/>
+          <text class="mono" x="536" y="255" font-size="9.5" fill="var(--sub)">ba-16 退役</text>
+
+          <path d="M482,145 Q330,60 172,118" fill="none" stroke="var(--toss)" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#uk-ar-toss)"/>
+          <text class="mono" x="330" y="80" font-size="9.5" text-anchor="middle" fill="var(--toss)">ba-53/171 訂正(逆行)</text>
+
+          <g><polygon points="180,114 220,137 220,183 180,206 140,183 140,137" fill="var(--gold)" opacity="0.16" stroke="var(--gold)" stroke-width="2.4"/>
+            <text x="180" y="158" text-anchor="middle" font-size="14" font-weight="700" fill="var(--gold)">気づき</text>
+            <text x="180" y="174" text-anchor="middle" font-size="9.5" fill="var(--sub)">観察・学び</text>
+            <text class="mono" x="180" y="122" text-anchor="middle" font-size="8" fill="var(--gold)">INITIAL</text></g>
+
+          <g><polygon points="180,294 220,317 220,363 180,386 140,363 140,317" fill="var(--solid)" opacity="0.14" stroke="var(--solid)" stroke-width="2.4"/>
+            <text x="180" y="338" text-anchor="middle" font-size="14" font-weight="700" fill="var(--solid)">案件</text>
+            <text x="180" y="354" text-anchor="middle" font-size="9.5" fill="var(--sub)">やること</text>
+            <text class="mono" x="180" y="302" text-anchor="middle" font-size="8" fill="var(--solid)">UNLOCKED</text></g>
+
+          <g><polygon points="180,474 220,497 220,543 180,566 140,543 140,497" fill="var(--toss)" opacity="0.10" stroke="var(--toss)" stroke-width="2.4" stroke-dasharray="4 3"/>
+            <text x="180" y="518" text-anchor="middle" font-size="14" font-weight="700" fill="var(--toss)">保留論点</text>
+            <text x="180" y="534" text-anchor="middle" font-size="9.5" fill="var(--sub)">いつか考える</text>
+            <text class="mono" x="180" y="482" text-anchor="middle" font-size="8" fill="var(--toss)">DEAD-END</text></g>
+
+          <g><polygon points="520,114 560,137 560,183 520,206 480,183 480,137" fill="var(--beta)" opacity="0.14" stroke="var(--beta)" stroke-width="2.4"/>
+            <text x="520" y="158" text-anchor="middle" font-size="14" font-weight="700" fill="var(--beta)">確定仕様</text>
+            <text x="520" y="174" text-anchor="middle" font-size="9.5" fill="var(--sub)">決めた規約</text>
+            <text class="mono" x="520" y="122" text-anchor="middle" font-size="8" fill="var(--beta)">UNLOCKED</text></g>
+
+          <g><polygon points="520,294 560,317 560,363 520,386 480,363 480,317" fill="var(--beta)" opacity="0.10" stroke="var(--beta)" stroke-width="2.4" stroke-dasharray="2 3"/>
+            <text x="520" y="338" text-anchor="middle" font-size="14" font-weight="700" fill="var(--beta)">記録</text>
+            <text x="520" y="354" text-anchor="middle" font-size="9.5" fill="var(--sub)">ただの情報</text>
+            <text class="mono" x="520" y="302" text-anchor="middle" font-size="8" fill="var(--beta)">FREE</text></g>
+
+          <g><polygon points="520,474 560,497 560,543 520,566 480,543 480,497" fill="var(--lock)" opacity="0.10" stroke="var(--lock)" stroke-width="2.4"/>
+            <text x="520" y="518" text-anchor="middle" font-size="14" font-weight="700" fill="var(--sub)">旧仕様</text>
+            <text x="520" y="534" text-anchor="middle" font-size="9.5" fill="var(--sub)">退役した参照</text>
+            <text class="mono" x="520" y="482" text-anchor="middle" font-size="8" fill="var(--sub)">LOCKED</text>
+            <g transform="translate(520,555)"><rect x="-6" y="-1" width="12" height="9" rx="1.5" fill="none" stroke="var(--sub)" stroke-width="1.3"/><path d="M-4,-1 v-3 a4,4 0 0 1 8,0 v3" fill="none" stroke="var(--sub)" stroke-width="1.3"/></g></g>
+        </svg>
+      </div>
+
+      <div class="unlock-grid">
+        <div class="ucard g-gold"><h4>気づき</h4><p>解放条件は<b>なし</b>。スレッド作成と同時に習得する初期スキル。</p><div class="csrc">src: ba-32</div></div>
+        <div class="ucard g-solid"><h4>案件</h4><p>「気づき」からの遷移が<b>22件</b>観測され、自然習得(=育つ)扱い。</p><div class="csrc">src: bj分析</div></div>
+        <div class="ucard g-beta"><h4>確定仕様</h4><p>「案件」が<b>ba-39</b>で格上げされたことで解放。ツリー上いちばん大きな一手。</p><div class="csrc">src: ba-39</div></div>
+        <div class="ucard g-beta"><h4>記録</h4><p>「だから」を持たない気づきの置き場。前提スキル不要のフリーノード。</p><div class="csrc">src: bmページ</div></div>
+        <div class="ucard g-lock"><h4>旧仕様</h4><p>「確定仕様」が<b>ba-16</b>で退役すると解放。入る経路は実例あり(観測済み)、出る経路は未定義。</p><div class="csrc">src: ba-16</div></div>
+        <div class="ucard g-dead"><h4>保留論点</h4><p>気づき/案件からいつでも分岐できるが、出口(復活)ルートが未実装のため行き止まり。</p><div class="csrc">src: bjの宿題 → ba-220</div></div>
       </div>
     </div>
   </div>
