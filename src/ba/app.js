@@ -137,7 +137,11 @@ function threadCardHtml(thread, seqTitle, autoExpand) {
             </select>
             <button type="button" class="btn-reclassify">変更</button>
           </div>
-          <div class="lane-form-hint">使える種別: note / void / status / react / 分類変更のみ(id・時刻・by は自動)</div>
+          <div class="lane-form-row" style="margin-top:6px;">
+            <input type="text" class="title-fix-input" value="${esc(title)}">
+            <button type="button" class="btn-fix-title">タイトルを直す</button>
+          </div>
+          <div class="lane-form-hint">使える種別: note / void / status / react / 分類変更 / タイトル訂正(id・時刻・by は自動)</div>
         </div>
       </div>
     </details>`;
@@ -208,6 +212,21 @@ function attachThreadHandlers(container, thread) {
       load();
     } catch (e) {
       alert("分類の変更に失敗しました: " + e.message);
+    }
+  });
+
+  // タイトル訂正。追記オンリーの制約上、直接書き換えではなくtitle付きcorrectionを
+  // 積む(thread-logic.jsのdisplayTitle解決が最新のcorrectionを優先する)。
+  // 元のnewエントリのtitleは変わらず残るため、付け直しの履歴もタイムラインに残る。
+  const titleFixInput = card.querySelector(".title-fix-input");
+  card.querySelector(".btn-fix-title").addEventListener("click", async () => {
+    const newTitle = titleFixInput.value.trim();
+    if (!newTitle || newTitle === (thread.displayTitle || "")) return;
+    try {
+      await postEntry({ ref: thread.threadId, type: "correction", title: newTitle });
+      load();
+    } catch (e) {
+      alert("タイトルの訂正に失敗しました: " + e.message);
     }
   });
 
