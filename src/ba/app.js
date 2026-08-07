@@ -228,28 +228,40 @@ let showVoided = false;
 let showClosed = false;
 // ba-33: 分類フィルタ(単一選択)。"all"は分類なしスレッドも含めて表示。
 let filterCls = "all";
-// タグ・タイトル・本文を横断する絞り込みキーワード(空なら絞り込みなし)。
+// 検索ボックスの現在値。数字ならジャンプ、それ以外ならタグ抽出に使う(空なら絞り込みなし)。
 let searchQuery = "";
 let cachedThreads = [];
 
-// スレッド内の全テキスト(タイトル・タグ・root/子の本文)にキーワードが含まれるか。
-// 大文字小文字は無視。空白区切りの複数語はAND(すべて含む)で判定する。
-function threadMatchesQuery(thread, q) {
+// "50" "ba-50" "#50" のような数字入力を判定する。マッチすれば番号部分(文字列)を返す(なければnull)。
+function parseSeqInput(q) {
+  const m = q.trim().match(/^(?:ba-|#)?(\d+)$/i);
+  return m ? m[1] : null;
+}
+
+// 指定seqのスレッドへジャンプする。絞り込みで隠れていても辿り着けるよう、
+// void/closed/分類/検索をすべて解除してから開いてスクロールする(ba-162の関連チップと同じ動き)。
+function jumpToSeq(seq) {
+  showVoided = true;
+  showClosed = true;
+  filterCls = "all";
+  searchQuery = "";
+  const searchEl = document.getElementById("baSearch");
+  if (searchEl) searchEl.value = "";
+  render();
+  const target = document.querySelector(`[data-seq="${seq}"]`);
+  if (target) {
+    target.open = true;
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+// タグのみで絞り込む(タイトル・本文は見ない)。分類変更のnote(ba-130)で乗ったタグも拾うため、
+// rootだけでなく全エントリのtagsを見る。大文字小文字は無視、部分一致。
+function threadMatchesTag(thread, q) {
   const needle = q.trim().toLowerCase();
   if (!needle) return true;
-  const parts = [];
-  if (thread.displayTitle) parts.push(thread.displayTitle);
-  const root = thread.root || {};
-  if (root.title) parts.push(root.title);
-  for (const e of thread.entries || []) {
-    if (e.title) parts.push(e.title);
-    if (e.body) parts.push(e.body);
-    if (e.reason) parts.push(e.reason);
-    if (Array.isArray(e.tags)) parts.push(e.tags.join(" "));
-  }
-  if (root.seq) parts.push("ba-" + root.seq);
-  const hay = parts.join("\n").toLowerCase();
-  return needle.split(/\s+/).every((w) => hay.includes(w));
+  const allTags = (thread.entries || []).flatMap((e) => (Array.isArray(e.tags) ? e.tags : []));
+  return allTags.some((t) => String(t).toLowerCase().includes(needle));
 }
 
 function render() {
@@ -258,10 +270,10 @@ function render() {
   const closedCount = cachedThreads.filter((t) => t.status !== "open").length;
   const searching = searchQuery.trim() !== "";
   let visible = showVoided ? cachedThreads : cachedThreads.filter((t) => !t.hiddenVoid);
-  // 検索中はclosedも対象にする(過去の案件を番号やキーワードで辿れるように)。
+  // タグ抽出中はclosedも対象にする(過去の案件をタグで辿れるように)。
   if (!showClosed && !searching) visible = visible.filter((t) => t.status === "open");
   if (filterCls !== "all") visible = visible.filter((t) => t.cls === filterCls);
-  if (searching) visible = visible.filter((t) => threadMatchesQuery(t, searchQuery));
+  if (searching) visible = visible.filter((t) => threadMatchesTag(t, searchQuery));
 
   renderSummary(cachedThreads);
   renderClsFilter();
@@ -273,8 +285,12 @@ function render() {
   const closedEl = document.getElementById("btnToggleClosed");
   closedEl.textContent = showClosed ? `closedを隠す(${closedCount})` : `closedも表示(${closedCount})`;
 
+  // ③タグ抽出中(②)だけリセットボタンを出す。
+  const resetEl = document.getElementById("btnSearchReset");
+  if (resetEl) resetEl.style.display = searching ? "" : "none";
+
   const emptyMsg = searching
-    ? `<p class="empty">「${esc(searchQuery.trim())}」に一致するスレッドはありません</p>`
+    ? `<p class="empty">タグ「${esc(searchQuery.trim())}」に一致するスレッドはありません</p>`
     : `<p class="empty">表示できるスレッドがありません(分類フィルタと「closedも表示」を確認)</p>`;
   listEl.innerHTML = visible.map((t) => threadCardHtml(t, cachedThreads.seqTitle)).join("") || emptyMsg;
   visible.forEach((t) => attachThreadHandlers(listEl, t));
@@ -358,29 +374,41 @@ function onLoginSuccess() {
     render();
   });
   const searchEl = document.getElementById("baSearch");
+  const searchResetEl = document.getElementById("btnSearchReset");
   if (searchEl) {
+    // ②数字以外はタグ絞り込みを都度適用。数字入力中(ジャンプ待ち)はタグ絞り込みをかけない。
     searchEl.addEventListener("input", (ev) => {
-      searchQuery = ev.target.value;
+      const val = ev.target.value;
+      if (parseSeqInput(val) !== null) {
+        if (searchQuery !== "") { searchQuery = ""; render(); }
+        return;
+      }
+      searchQuery = val;
+      render();
+    });
+    // ①番号+Enterでジャンプ。
+    searchEl.addEventListener("keydown", (ev) => {
+      if (ev.key !== "Enter") return;
+      const seq = parseSeqInput(ev.target.value);
+      if (seq !== null) {
+        ev.preventDefault();
+        jumpToSeq(seq);
+      }
+    });
+  }
+  // ③タグ絞り込み(②)のリセットボタン。
+  if (searchResetEl) {
+    searchResetEl.addEventListener("click", () => {
+      searchQuery = "";
+      if (searchEl) searchEl.value = "";
       render();
     });
   }
-  // ba-162: 関連チップのジャンプ。ジャンプ先が絞り込みで隠れている場合に備え、
-  // フィルタを全解除してから探す(void/closed/分類/検索、どれで隠れていても辿り着けるように)。
+  // ba-162: 関連チップのジャンプも同じ経路(jumpToSeq)に統一。
   document.getElementById("threadList").addEventListener("click", (ev) => {
     const btn = ev.target.closest(".related-chip");
     if (!btn) return;
-    const seq = btn.dataset.jumpSeq;
-    showVoided = true;
-    showClosed = true;
-    filterCls = "all";
-    searchQuery = "";
-    if (searchEl) searchEl.value = "";
-    render();
-    const target = document.querySelector(`[data-seq="${seq}"]`);
-    if (target) {
-      target.open = true;
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    jumpToSeq(btn.dataset.jumpSeq);
   });
   load();
 }
