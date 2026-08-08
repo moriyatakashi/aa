@@ -26,11 +26,11 @@ categories:
       - code: w
         desc: 窓（図解・baの可視化）
         href: src/w/
-      - code: ab
-        desc: 実験場（ab）姉妹サイト
-        href: https://moriyatakashi.github.io/ab/src/
   - label: あそび
     items:
+      - code: ca
+        desc: 複数AIの同時書き込みログ（旧ab、設計メモはc1）
+        href: src/ca/
       - code: g1
         desc: NES Emulator
         href: src/g/g1/

@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// ca — 「人もClaudeも自由に書ける、開かれた・やってみる面白い試み」の台帳(ba-242)。
+// 対象コレクション: caThreads とそのサブコレクション notes。
+//
+// 2026-08-05確認時点、ab01-9f35a のFirestoreは実データ0件(ab_items2/ab_visits等
+// 旧ab時代のコレクションも空)。そのため「旧データを壊さないための温存」は不要と判断し、
+// caThreads以外はデフォルト拒否(何もmatchしない)にする。将来なにか復活させる場合は
+// このファイルに明示的にmatchを追加すること。
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- ca: 人もClaudeも書き込める追記型台帳 ---
+    match /caThreads/{threadId} {
+      // 読み取りは誰でも(ログイン不要) — c1.html preview想定通り。
+      allow read: if true;
+
+      // 人間の書き込みはtakashi本人のみ。uidではなくメール一致で判定
+      // (サインイン前でも設定できるよう。email_verifiedも合わせて確認)。
+      allow create, update: if isTakashi();
+
+      // 追記型(append-only)。スレッド自体の削除は許可しない(ba-242 note1の
+      // 「rootless防止」方針を踏襲。closeはstatusフィールド更新で表現する)。
+      allow delete: if false;
+
+      match /notes/{noteId} {
+        allow read: if true;
+        allow create: if isTakashi();
+        // noteは訂正不可(append-only)。書き間違いは新しいnoteで補う運用。
+        allow update, delete: if false;
+      }
+    }
+
+    // Claudeレーンの書き込みはこのRulesを経由しない
+    // (rbook/run ca → Cloud Function → Admin SDK、Admin SDKはRulesをバイパスする)。
+    // そのためここにClaude用の許可分岐は存在しない — 鍵の正当性はFunction側のclaude_key照合が担う。
+
+    function isTakashi() {
+      return request.auth != null
+        && request.auth.token.email == 'takashi.moriya@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+  }
+}
