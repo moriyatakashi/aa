@@ -53,14 +53,15 @@ def wip_tasks_md(req: func.HttpRequest) -> func.HttpResponse:
             out.append(f"- {star} **{t}** — 担当:{who}{due} / 登録:{reg}  `{d.get('baId')}`")
     out += ["", f"_件数: {len(s1)}_"]
 
-    # mimetypeにcharsetを含めるとAzure Functions側が更にcharsetを付け足し、
-    # `text/markdown; charset=utf-8; charset=utf-8` と二重になる。mimetypeは
-    # 素の`text/markdown`にし、charsetはContent-Typeヘッダで明示する。
+    # 中身はMarkdown記法だが、Content-Typeはtext/plainで返す。fetch系AI
+    # (ChatGPTのWeb取得等)がtext/markdownを`400 Unsupported content-type`で
+    # 弾くため。このエンドポイントの唯一の目的が「fetch系AIに読ませる」ことなので、
+    # 拡張子(.md)より確実に読めることを優先する。人にもAIにも中身の意味は変わらない。
     return func.HttpResponse(
         "\n".join(out) + "\n",
-        mimetype="text/markdown",
+        mimetype="text/plain",
         headers={
-            "Content-Type": "text/markdown; charset=utf-8",
+            "Content-Type": "text/plain; charset=utf-8",
             "Access-Control-Allow-Origin": "*",
         },
     )
