@@ -53,8 +53,14 @@ def wip_tasks_md(req: func.HttpRequest) -> func.HttpResponse:
             out.append(f"- {star} **{t}** — 担当:{who}{due} / 登録:{reg}  `{d.get('baId')}`")
     out += ["", f"_件数: {len(s1)}_"]
 
+    # mimetypeにcharsetを含めるとAzure Functions側が更にcharsetを付け足し、
+    # `text/markdown; charset=utf-8; charset=utf-8` と二重になる。mimetypeは
+    # 素の`text/markdown`にし、charsetはContent-Typeヘッダで明示する。
     return func.HttpResponse(
         "\n".join(out) + "\n",
-        mimetype="text/markdown; charset=utf-8",
-        headers={"Access-Control-Allow-Origin": "*"},
+        mimetype="text/markdown",
+        headers={
+            "Content-Type": "text/markdown; charset=utf-8",
+            "Access-Control-Allow-Origin": "*",
+        },
     )
