@@ -6,16 +6,19 @@ from bp_ba import BA_TABLE, BA_SEQ_PARTITION, _ba_entry_dict
 
 bp = func.Blueprint()
 
-# /api/s1.md (ba-XX): WIP作業台(s1)をJS不要・認証不要のMarkdownで外部AIに公開する。
+# /api/s1.md, /api/s1.html (ba-XX): WIP作業台(s1)をJS不要・認証不要で外部AIに公開する。
 # 外部のfetch系AI(M365 Copilot等)はJSを実行しないため、s1.htmlの生HTMLは
 # 「読み込み中…」の殻しか読めない。ここでサーバ側でs1とbaを結合し、タイトル付きの
 # Markdownを1回のfetchで返す。既存のGET /api/s1・/api/ba(いずれも公開)と同じ
 # テーブル読み取り関数を使い回し、自己HTTPは挟まない(HTTP一往復を省く)。
+#
+# 中身(Markdownテキスト)は同一で、Content-Typeだけ2系統を用意する:
+#   - s1.md   : text/plain  … 拡張子.mdを見て弾くfetch系AI向けの保険(no-store付き)
+#   - s1.html : text/html   … ChatGPT等が拡張子.mdを自前でmarkdown判定して弾くため、
+#                             .html拡張子+text/htmlで確実に読ませる。
 
 
-@bp.function_name(name="wip-tasks-md")
-@bp.route(route="s1.md", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
-def wip_tasks_md(req: func.HttpRequest) -> func.HttpResponse:
+def _render_s1_body() -> str:
     # s1(WipTasks)とba(BaLog)を既存関数でそのまま読む。s1のGETと同じ_wip_task_dict、
     # baのGETと同じ_ba_entry_dictを使うので、公開APIと同じ見え方になる。
     s1_table = _ensure_wip_table()
@@ -52,16 +55,31 @@ def wip_tasks_md(req: func.HttpRequest) -> func.HttpResponse:
             t = title.get(d.get("baId"), "(タイトル未取得)")
             out.append(f"- {star} **{t}** — 担当:{who}{due} / 登録:{reg}  `{d.get('baId')}`")
     out += ["", f"_件数: {len(s1)}_"]
+    return "\n".join(out) + "\n"
 
-    # 中身はMarkdown記法だが、Content-Typeはtext/plainで返す。fetch系AI
-    # (ChatGPTのWeb取得等)がtext/markdownを`400 Unsupported content-type`で
-    # 弾くため。このエンドポイントの唯一の目的が「fetch系AIに読ませる」ことなので、
-    # 拡張子(.md)より確実に読めることを優先する。人にもAIにも中身の意味は変わらない。
+
+@bp.function_name(name="wip-tasks-md")
+@bp.route(route="s1.md", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def wip_tasks_md(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse(
-        "\n".join(out) + "\n",
+        _render_s1_body(),
         mimetype="text/plain",
         headers={
             "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
+
+
+@bp.function_name(name="wip-tasks-html")
+@bp.route(route="s1.html", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def wip_tasks_html(req: func.HttpRequest) -> func.HttpResponse:
+    return func.HttpResponse(
+        _render_s1_body(),
+        mimetype="text/html",
+        headers={
+            "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "no-store",
             "Access-Control-Allow-Origin": "*",
         },
