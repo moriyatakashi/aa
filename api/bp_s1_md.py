@@ -62,6 +62,7 @@ def wip_tasks_md(req: func.HttpRequest) -> func.HttpResponse:
         mimetype="text/plain",
         headers={
             "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store",
             "Access-Control-Allow-Origin": "*",
         },
     )
