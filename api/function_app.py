@@ -167,11 +167,12 @@ import bp_streak
 import bp_session
 import bp_last_updated
 import bp_s1
+import bp_s1_md
 
 for _bp_module in (
     bp_visits, bp_points, bp_calendar, bp_declarations, bp_scores_daily,
     bp_ba, bp_scoring_rules, bp_weekly, bp_monthly, bp_streak,
-    bp_session, bp_last_updated, bp_s1,
+    bp_session, bp_last_updated, bp_s1, bp_s1_md,
 ):
     app.register_blueprint(_bp_module.bp)
 
@@ -200,3 +201,4 @@ session = bp_session.session
 last_updated = bp_last_updated.last_updated
 _last_updated_cache = bp_last_updated._last_updated_cache
 wip_tasks = bp_s1.wip_tasks
+wip_tasks_md = bp_s1_md.wip_tasks_md
